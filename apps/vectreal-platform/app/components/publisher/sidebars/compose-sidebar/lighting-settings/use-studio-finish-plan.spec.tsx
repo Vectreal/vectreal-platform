@@ -129,21 +129,21 @@ describe('planning the studio finish', () => {
 	it('runs no bake the plan says nothing can take, before and at publish', async () => {
 		const { hook } = setup()
 		// Until the plan lands, every bake asked for runs, as before.
-		expect(hook.result.current.publishExport.request).toMatchObject({
+		expect(hook.result.current.publishExport.finishRequest).toMatchObject({
 			occlusion: true,
 			lights: expect.objectContaining({ lights: expect.any(Array) })
 		})
-		const keyBefore = hook.result.current.publishExport.key
+		const keyBefore = hook.result.current.publishExport.finishKey
 
 		await waitFor(() => expect(hook.result.current.plan).toEqual(depthOnly))
 
-		expect(hook.result.current.publishExport.request).toMatchObject({
+		expect(hook.result.current.publishExport.finishRequest).toMatchObject({
 			occlusion: true,
 			lights: false
 		})
 		expect(hook.result.current.publishExport.bakesAnything).toBe(true)
 		// The same file either way, so a preview made before it stays current.
-		expect(hook.result.current.publishExport.key).toBe(keyBefore)
+		expect(hook.result.current.publishExport.finishKey).toBe(keyBefore)
 	})
 
 	it('asks for no bake at all when no material can take either', async () => {
@@ -183,7 +183,7 @@ describe('planning the studio finish', () => {
 		setPassRevision(1)
 		expect(hook.result.current.plan).toBeNull()
 		expect(store.get(studioFinishPlanAtom)).toBeNull()
-		expect(hook.result.current.publishExport.request).toMatchObject({
+		expect(hook.result.current.publishExport.finishRequest).toMatchObject({
 			lights: expect.objectContaining({ lights: expect.any(Array) })
 		})
 	})
@@ -216,7 +216,7 @@ describe('planning the studio finish', () => {
 			)
 		)
 		expect(hook.result.current.plan).toBeNull()
-		expect(hook.result.current.publishExport.request).toMatchObject({
+		expect(hook.result.current.publishExport.finishRequest).toMatchObject({
 			occlusion: true
 		})
 	})

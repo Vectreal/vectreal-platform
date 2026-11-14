@@ -233,7 +233,10 @@ export function parseStudioFinish(
 		return ApiResponse.badRequest('studioFinish must be JSON')
 	}
 	if (parsed === null) return null
-	const { assetId, reports } = (parsed ?? {}) as Record<string, unknown>
+	const { assetId, reports, unencoded } = (parsed ?? {}) as Record<
+		string,
+		unknown
+	>
 	if (typeof assetId !== 'string' || !UUID_REGEX.test(assetId)) {
 		return ApiResponse.badRequest('studioFinish.assetId must be a valid UUID')
 	}
@@ -245,7 +248,12 @@ export function parseStudioFinish(
 	if (!isBakeReports(reports)) {
 		return ApiResponse.badRequest('studioFinish.reports is malformed')
 	}
-	return { assetId, reports }
+	if (unencoded !== undefined && unencoded !== true) {
+		return ApiResponse.badRequest(
+			'studioFinish.unencoded must be true or absent'
+		)
+	}
+	return { assetId, reports, ...(unencoded ? { unencoded } : {}) }
 }
 
 const isStrings = (value: unknown): value is string[] =>

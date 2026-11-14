@@ -33,6 +33,7 @@ import {
 import {
 	SceneAssetBinaryDataMap,
 	SaveSceneSettingsParams,
+	SaveStudioFinish,
 	UpdateSceneSettingsParams
 } from '../../../../types/api'
 import { reportServerError } from '../../../observability/report-server-error.server'
@@ -48,11 +49,15 @@ import {
 	selectUnreferencedAssetIds
 } from '../../asset/asset-storage.server'
 import { optimizationsMatch } from '../client/optimization-inference'
-import { describePublishSource, publishSourceMatches } from '../publish-source'
+import {
+	describeFinishSource,
+	describePublishSource,
+	publishSourceMatches,
+	storedFinishSource
+} from '../publish-source'
 import { haveSceneSettingsChanged } from '../scene-settings-comparison'
 
 import type { SceneMetaState } from '../../../../types/publisher-config'
-import type { SavedStudioFinish } from '../studio-finish'
 import type {
 	ExtendedGLTFDocument,
 	OptimizationReport,
@@ -81,6 +86,20 @@ async function readPublishSource(
 	})
 }
 
+/** What a studio finish of the saved scene would be made from; see `describeFinishSource`. */
+async function readFinishSource(
+	tx: SceneSettingsTransaction,
+	sceneId: string
+): Promise<string | null> {
+	const saved = await getSceneSettingsWithAssetsRow(tx, sceneId)
+	return saved
+		? describeFinishSource({
+				assets: saved.assets,
+				lighting: saved.settings.lighting
+			})
+		: null
+}
+
 type SaveSceneFromAssetIdsParams = Omit<SaveSceneSettingsParams, 'gltfJson'> & {
 	sceneAssetIds: string[]
 	/** The kept original. Left out, any original the scene had is unlinked. */
@@ -91,10 +110,7 @@ type SaveSceneFromAssetIdsParams = Omit<SaveSceneSettingsParams, 'gltfJson'> & {
 	 * finish. Left out, as a save that only edits settings leaves it, the
 	 * stored finish stays, and is shown only while it still matches.
 	 */
-	studioFinish?: {
-		assetId: string
-		reports: SavedStudioFinish['reports']
-	} | null
+	studioFinish?: SaveStudioFinish | null
 }
 
 // Every id the request names, so each is checked to belong to the project.
@@ -497,8 +513,9 @@ class SceneSettingsService {
 				.update(sceneSettings)
 				.set({
 					studioFinish: studioFinish && {
-						source: (await readPublishSource(tx, updatedScene.id)) ?? '',
-						reports: studioFinish.reports
+						source: (await readFinishSource(tx, updatedScene.id)) ?? '',
+						reports: studioFinish.reports,
+						...(studioFinish.unencoded ? { unencoded: true as const } : {})
 					}
 				})
 				.where(eq(sceneSettings.id, savedSettings.id))
@@ -863,19 +880,26 @@ class SceneSettingsService {
 	}
 
 	/**
-	 * The scene's saved studio finish while it is current: its file and what
-	 * each bake did. Null when there is none, or once a save, a pass or a
-	 * lighting change has left it describing a file publishing no longer ships.
+	 * The scene's saved studio finish while it is current: its file, what each
+	 * bake did, and whether publish can encode it rather than bake again. Null
+	 * when there is none, or once a new model or a lighting change has left it
+	 * describing something else; see `SavedStudioFinish`.
 	 */
 	async resolveSceneFinish(sceneId: string) {
 		return this.db.transaction(async (tx) => {
 			const saved = await getSceneSettingsWithAssetsRow(tx, sceneId)
 			const finish = saved?.settings.studioFinish
 			if (!saved?.finishAsset || !finish) return null
-			const current = await readPublishSource(tx, sceneId)
-			if (finish.source !== current) return null
+			const current = await readFinishSource(tx, sceneId)
+			if (!current || !finish.source) return null
+			if (storedFinishSource(finish.source) !== current) return null
 			const { bakes = null } = JSON.parse(current) as { bakes?: string | null }
-			return { asset: saved.finishAsset, reports: finish.reports, bakes }
+			return {
+				asset: saved.finishAsset,
+				reports: finish.reports,
+				bakes,
+				unencoded: finish.unencoded === true
+			}
 		})
 	}
 

@@ -68,7 +68,11 @@ describe('a saved studio finish', () => {
 		const { uploaded, studioFinish } = await save(() => finish)
 
 		expect(uploaded).toEqual([STUDIO_FINISH_FILENAME])
-		expect(studioFinish).toEqual({ assetId: 'finish-new', reports })
+		expect(studioFinish).toEqual({
+			assetId: 'finish-new',
+			reports,
+			unencoded: true
+		})
 	})
 
 	it('reuses the stored finish when its bytes are the ones saved', async () => {
@@ -83,7 +87,11 @@ describe('a saved studio finish', () => {
 		})
 
 		expect(uploaded).toEqual([])
-		expect(studioFinish).toEqual({ assetId: 'finish-old', reports })
+		expect(studioFinish).toEqual({
+			assetId: 'finish-old',
+			reports,
+			unencoded: true
+		})
 	})
 
 	it('reads the finish when the save starts, not after its uploads', async () => {

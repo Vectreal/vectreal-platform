@@ -8,17 +8,25 @@ import type {
 import type { LightingSettings } from '@vctrl/core'
 
 /**
- * What a draft records about the studio finish it saved: the publish
- * fingerprint it was made for, so it is shown only while the scene would
- * still publish the same file, and what each bake did, which decides whether
- * there is anything to show.
+ * What a draft records about the studio finish it saved: what it was made
+ * from, so it is shown only while the scene still is that, and what each bake
+ * did, which decides whether there is anything to show.
+ *
+ * Every finish is current while its model and bakes are, as
+ * `describeFinishSource` and `storedFinishSource` read them, so a codec
+ * switch leaves it in place. One saved now is the model with its bakes drawn
+ * in and no codec applied (`unencoded`), which publish encodes with the
+ * codecs asked for then. One saved before is a whole published file, Draco
+ * and KTX2 included: still the right bake to show, but publish bakes again
+ * rather than encode a file that is already encoded.
  */
 export interface SavedStudioFinish {
 	source: string
 	reports: Pick<PublishExportOutcome, 'occlusion' | 'lights'>
+	unencoded?: true
 }
 
-/** The studio finish a save sends: its file and what each bake did. */
+/** The studio finish a save sends: its file, before any codec, and what each bake did. */
 export interface StudioFinishToSave {
 	bytes: ArrayBuffer
 	reports: SavedStudioFinish['reports']
