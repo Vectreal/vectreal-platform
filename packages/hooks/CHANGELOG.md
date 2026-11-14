@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.5.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v3.4.0...hooks-v3.5.0) (2026-11-14)
+
+
+### Features
+
+* **hooks:** the model loader says where a load is: phase, bytes and files ([#1376](https://github.com/Vectreal/vectreal-platform/issues/1376)) ([02e539e](https://github.com/Vectreal/vectreal-platform/commit/02e539eadc6f2c6d19fd0c55fddd69f9a828b409))
+* **viewer:** the viewer shows and reports where a load is ([#1388](https://github.com/Vectreal/vectreal-platform/issues/1388)) ([e8a6127](https://github.com/Vectreal/vectreal-platform/commit/e8a6127bbaacb99e9a571a242acdc6f454055acd))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 3.5.0
+
 ## [3.4.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v3.3.0...hooks-v3.4.0) (2026-11-04)
 
 

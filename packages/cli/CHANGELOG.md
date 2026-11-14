@@ -1,5 +1,25 @@
 # Changelog
 
+## [3.5.0](https://github.com/Vectreal/vectreal-platform/compare/cli-v3.4.0...cli-v3.5.0) (2026-11-14)
+
+
+### Features
+
+* **cli:** make cameras and hotspots writable through update_scene_settings ([#1288](https://github.com/Vectreal/vectreal-platform/issues/1288)) ([540b469](https://github.com/Vectreal/vectreal-platform/commit/540b469292818708e8fc1f7159007b880107b8e8))
+* load environment maps compressed as gain map JPEGs ([#1315](https://github.com/Vectreal/vectreal-platform/issues/1315)) ([619e7c6](https://github.com/Vectreal/vectreal-platform/commit/619e7c650c20813d4826b286c215db8be256e3b7))
+* **platform:** reorder cameras in the Publisher; the list is the switcher's order ([#1310](https://github.com/Vectreal/vectreal-platform/issues/1310)) ([fa587b0](https://github.com/Vectreal/vectreal-platform/commit/fa587b0c8e33504e0e53b38508b95818175dcd46))
+* **viewer:** no bare stage when a scene scrolls back into view, and Unload when off-screen as a publish setting ([#1347](https://github.com/Vectreal/vectreal-platform/issues/1347)) ([0df7936](https://github.com/Vectreal/vectreal-platform/commit/0df7936b7a65ea25a1bcb9eff04401174f067851))
+* **viewer:** one typed message catalog for the viewer's words, each language loaded only when shown ([#1348](https://github.com/Vectreal/vectreal-platform/issues/1348)) ([55eed3a](https://github.com/Vectreal/vectreal-platform/commit/55eed3a5151742cddfe56ac1524f017ec4846a9b))
+* **viewer:** tap to activate, chosen per scene in Publish &gt; Viewer ([#1344](https://github.com/Vectreal/vectreal-platform/issues/1344)) ([0c1e1f5](https://github.com/Vectreal/vectreal-platform/commit/0c1e1f5e7b4ae18e35d2177526454522c2c23add))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 3.5.0
+    * @vctrl/sdk bumped to 3.5.0
+
 ## [3.4.0](https://github.com/Vectreal/vectreal-platform/compare/cli-v3.3.0...cli-v3.4.0) (2026-11-04)
 
 

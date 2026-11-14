@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.5.0](https://github.com/Vectreal/vectreal-platform/compare/embed-v3.4.0...embed-v3.5.0) (2026-11-14)
+
+
+### Features
+
+* **embed:** a host page hears a failed load, and ready() waits out silence, not a slow scene ([#1394](https://github.com/Vectreal/vectreal-platform/issues/1394)) ([2943848](https://github.com/Vectreal/vectreal-platform/commit/29438487e38f3d53ffc94b3e65ecaddd6305e92a))
+* **viewer:** first-time interaction hint and How to move in the info popover ([#1309](https://github.com/Vectreal/vectreal-platform/issues/1309)) ([c6d36f7](https://github.com/Vectreal/vectreal-platform/commit/c6d36f7be4ec989cf08c468b3f4f7f1d81c37a7b))
+* **viewer:** the viewer shows and reports where a load is ([#1388](https://github.com/Vectreal/vectreal-platform/issues/1388)) ([e8a6127](https://github.com/Vectreal/vectreal-platform/commit/e8a6127bbaacb99e9a571a242acdc6f454055acd))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @vctrl/viewer bumped to 3.5.0
+
 ## [3.4.0](https://github.com/Vectreal/vectreal-platform/compare/embed-v3.3.0...embed-v3.4.0) (2026-11-04)
 
 
