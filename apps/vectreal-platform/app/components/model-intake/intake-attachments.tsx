@@ -9,7 +9,8 @@ import {
 	intakeAttachmentName,
 	isIntakeAttachmentSizeAcceptable,
 	MODEL_INTAKE_ATTACHMENT_ACCEPT,
-	MODEL_INTAKE_MAX_ATTACHMENT_BYTES
+	MODEL_INTAKE_ATTACHMENT_TOO_LARGE_MESSAGE,
+	MODEL_INTAKE_MAX_ATTACHMENT_LABEL
 } from '../../lib/domain/model-intake/model-intake-shared'
 import { ConfirmDestructiveDialog } from '../shared/confirm-destructive-dialog'
 
@@ -57,7 +58,7 @@ function uploadFile(
 							/exists|duplicate/i.test(request.responseText)
 								? 'A file with this name is already attached.'
 								: request.status === 413 || /size/i.test(request.responseText)
-									? 'Storage refused a file this large.'
+									? MODEL_INTAKE_ATTACHMENT_TOO_LARGE_MESSAGE
 									: `Upload failed (${request.status}).`
 						)
 					)
@@ -111,9 +112,7 @@ export function IntakeAttachments({
 			return
 		}
 		if (!isIntakeAttachmentSizeAcceptable(file.size)) {
-			setError(
-				`Files up to ${megabytes(MODEL_INTAKE_MAX_ATTACHMENT_BYTES)} can be attached.`
-			)
+			setError(MODEL_INTAKE_ATTACHMENT_TOO_LARGE_MESSAGE)
 			return
 		}
 		pending.current = file
@@ -164,6 +163,9 @@ export function IntakeAttachments({
 					<Paperclip aria-hidden="true" />
 					Attach file
 				</Button>
+				<span className="text-muted-foreground text-body-sm">
+					Up to {MODEL_INTAKE_MAX_ATTACHMENT_LABEL}
+				</span>
 				{progress !== null ? (
 					<span role="status" className="text-muted-foreground text-body-sm">
 						Uploading {Math.round(progress * 100)}%
