@@ -43,7 +43,7 @@ describe('the publisher canvas', () => {
 
 	it('drives its own playback bar from what the viewer reports', () => {
 		expect(page).toMatch(
-			/event\.type === 'animation_state_changed'\) \{\s*setAnimationStatus\(\{\s*playing: event\.playing,\s*complete: event\.complete/
+			/event\.type === 'animation_state_changed'\) \{\s*setAnimationStatus\(\{\s*playing: event\.playing,\s*complete: event\.complete,\s*posed: event\.posed/
 		)
 		expect(page).toMatch(
 			/<AnimationPlaybackBar[\s\S]*?playing=\{animationStatus\.playing\}\s*complete=\{animationStatus\.complete\}/

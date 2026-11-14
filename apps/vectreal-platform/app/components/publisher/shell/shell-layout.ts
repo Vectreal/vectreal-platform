@@ -61,3 +61,11 @@ export const PUBLISHER_EDGE_INSET = 'm-3'
  * 1px border on each side, so 46px), plus the 12px gap: 70px.
  */
 export const PUBLISHER_BELOW_TOOL_BAR = 'pt-17.5 pb-3 pl-3'
+
+/**
+ * Left inset that keeps a bottom-center stage control clear of the tool
+ * panel while it is open on a desktop: the panel's 21rem (`ToolSidebar`),
+ * its 12px inset and a 12px gap, so 360px. From `md`, where `useIsMobile`
+ * swaps the bottom sheet for that column.
+ */
+export const PUBLISHER_BESIDE_TOOL_PANEL = 'md:pl-90'

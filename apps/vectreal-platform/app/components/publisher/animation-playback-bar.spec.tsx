@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 import AnimationPlaybackBar from './animation-playback-bar'
 
 const renderBar = (
-	overrides: { visible?: boolean; playing?: boolean } = {}
+	overrides: { visible?: boolean; playing?: boolean; note?: string } = {}
 ) => {
 	const onToggle = vi.fn()
 	const onRestart = vi.fn()
@@ -16,6 +16,7 @@ const renderBar = (
 			complete={false}
 			onToggle={onToggle}
 			onRestart={onRestart}
+			note={overrides.note}
 		/>
 	)
 	return { onToggle, onRestart }
@@ -49,6 +50,21 @@ describe('AnimationPlaybackBar', () => {
 				.getByRole('group', { name: 'Animation playback' })
 				.classList.contains('vctrl-viewer-animation-controls')
 		).toBe(true)
+	})
+
+	it('says what the animation holds back, above the controls', () => {
+		renderBar({ note: 'Held back' })
+		expect(screen.getByRole('status').textContent).toBe('Held back')
+	})
+
+	// A hotspot clip poses the model with the scene's program, and its
+	// controls, switched off.
+	it('keeps its note while the controls are hidden', () => {
+		renderBar({ visible: false, note: 'Held back' })
+		expect(screen.getByRole('status').textContent).toBe('Held back')
+		expect(
+			screen.queryByRole('group', { name: 'Animation playback' })
+		).toBeNull()
 	})
 
 	it('renders nothing while hidden', () => {

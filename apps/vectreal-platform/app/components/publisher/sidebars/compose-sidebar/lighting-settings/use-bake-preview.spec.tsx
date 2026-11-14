@@ -91,7 +91,8 @@ function setup(
 	viewer: ShownBakeContext = {
 		isLightingOpen: false,
 		canAnimate: false,
-		isAnimating: false
+		isAnimating: false,
+		isPosed: false
 	}
 ) {
 	const store = createStore()
@@ -104,12 +105,13 @@ function setup(
 	const rendered: { shown?: unknown } = {}
 	const hook = renderHook(
 		() => {
-			const shown = useShownBake(viewer)
+			const { model: shown, heldByPose } = useShownBake(viewer)
 			rendered.shown = shown
 			return {
 				preview: useBakePreview(),
 				publishExport: usePublishExport(),
-				shown
+				shown,
+				heldByPose
 			}
 		},
 		{ wrapper }
@@ -348,23 +350,41 @@ describe('the bake preview', () => {
 		expect(hook.result.current.shown).toBeUndefined()
 	})
 
-	it('keeps an animatable model live outside the Lighting tool, where it may be posed', async () => {
+	// The finish used to show only inside the Lighting tool for any model
+	// that could animate, even one standing in its bind pose.
+	it('shows an animatable model baked in every tool while it rests in its bind pose', async () => {
+		const { hook } = setup({
+			isLightingOpen: false,
+			canAnimate: true,
+			isAnimating: false,
+			isPosed: false
+		})
+		await act(() => hook.result.current.preview.bake())
+
+		expect(hook.result.current.shown).toBeInstanceOf(Group)
+		expect(hook.result.current.heldByPose).toBe(false)
+	})
+
+	it('holds the finish back outside the Lighting tool while a clip poses the model, and says so', async () => {
 		const { store, hook } = setup({
 			isLightingOpen: false,
 			canAnimate: true,
-			isAnimating: false
+			isAnimating: false,
+			isPosed: true
 		})
 		await act(() => hook.result.current.preview.bake())
 
 		expect(store.get(bakePreviewAtom)?.status).toBe('ready')
 		expect(hook.result.current.shown).toBeUndefined()
+		expect(hook.result.current.heldByPose).toBe(true)
 	})
 
 	it('shows an animatable model baked inside the Lighting tool while no clip plays', async () => {
 		const { hook } = setup({
 			isLightingOpen: true,
 			canAnimate: true,
-			isAnimating: false
+			isAnimating: false,
+			isPosed: true
 		})
 		await act(() => hook.result.current.preview.bake())
 
@@ -375,12 +395,27 @@ describe('the bake preview', () => {
 		const { store, hook } = setup({
 			isLightingOpen: true,
 			canAnimate: true,
-			isAnimating: true
+			isAnimating: true,
+			isPosed: true
 		})
 		await act(() => hook.result.current.preview.bake())
 
 		expect(store.get(bakePreviewAtom)?.status).toBe('ready')
 		expect(hook.result.current.shown).toBeUndefined()
+		expect(hook.result.current.heldByPose).toBe(true)
+	})
+
+	it('says nothing about the pose when the author switched the finish off', async () => {
+		const { hook } = setup({
+			isLightingOpen: false,
+			canAnimate: true,
+			isAnimating: true,
+			isPosed: true
+		})
+		await act(() => hook.result.current.preview.bake())
+		act(() => hook.result.current.preview.setShown(false))
+
+		expect(hook.result.current.heldByPose).toBe(false)
 	})
 
 	it('drops a preview made for another optimization pass', async () => {
