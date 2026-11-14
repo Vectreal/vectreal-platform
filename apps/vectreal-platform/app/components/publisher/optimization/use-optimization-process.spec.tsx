@@ -4,7 +4,7 @@
  * persists it. It must follow the document: set by a pass that produced it, and
  * cleared by one that failed, because a failed pass puts the original back.
  */
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -476,6 +476,19 @@ describe('useOptimizationProcess', () => {
 			vi.stubGlobal('fetch', fetchSpy)
 			return { fetchSpy, responders }
 		}
+		/**
+		 * A real `Response` reads its body through a stream the runtime schedules
+		 * itself, so how long `arrayBuffer()` takes depends on how busy the
+		 * process is. This one answers on microtasks, which `settle` has always
+		 * finished by the time a macrotask runs.
+		 */
+		const answer = (bytes: Uint8Array) =>
+			({
+				ok: true,
+				status: 200,
+				arrayBuffer: async () => bytes.slice().buffer
+			}) as Response
+		/** Runs every pending microtask chain to its end, however busy the runner is. */
 		const settle = () =>
 			act(() => new Promise((resolve) => setTimeout(resolve, 0)))
 
@@ -487,7 +500,7 @@ describe('useOptimizationProcess', () => {
 		it('becomes the source when the drawer opens, before any choice', async () => {
 			vi.stubGlobal(
 				'fetch',
-				vi.fn(async () => new Response(new Uint8Array([7, 7, 7])))
+				vi.fn(async () => answer(new Uint8Array([7, 7, 7])))
 			)
 			let sourceAtPass: Uint8Array | null = null
 			runOptimizationPass.mockImplementation(async () => {
@@ -503,18 +516,15 @@ describe('useOptimizationProcess', () => {
 			})
 			act(() => store.set(keptOriginalAtom, keptAs(stored)))
 
-			// The default 1 s is too tight on a loaded CI runner with coverage on.
-			await waitFor(
-				() => expect(store.get(keptOriginalAtom).stored).toBeNull(),
-				{ timeout: 4_000 }
-			)
+			await settle()
+			expect(store.get(keptOriginalAtom).stored).toBeNull()
 			expect(setSource).toHaveBeenCalledWith(new Uint8Array([7, 7, 7]))
 			expect(store.get(optimizationAtom).sourceSettings).toBe(originalPreset)
 			expect(result.current.isLoadingOriginal).toBe(false)
 
 			await act(() => result.current.derive(balancedPreset))
 			expect(sourceAtPass).toEqual(new Uint8Array([7, 7, 7]))
-		}, 10_000)
+		})
 
 		it('shows the original loading until it has loaded, downloading it once', async () => {
 			const { fetchSpy, responders } = holdDownloads()
@@ -528,19 +538,9 @@ describe('useOptimizationProcess', () => {
 
 			expect(fetchSpy).toHaveBeenCalledOnce()
 			expect(result.current.isLoadingOriginal).toBe(true)
-			/*
-			  One act around the answer and its outcome: reading the body and
-			  stating the source take several ticks. It waits on the store, not
-			  on the hook, which act renders only once it ends.
-			*/
-			await act(async () => {
-				responders[0](new Response(new Uint8Array([7, 7, 7])))
-				// The 4 s the case above needs on a loaded CI runner.
-				await vi.waitFor(
-					() => expect(store.get(keptOriginalAtom).stored).toBeNull(),
-					{ timeout: 4_000 }
-				)
-			})
+			responders[0](answer(new Uint8Array([7, 7, 7])))
+			await settle()
+			expect(store.get(keptOriginalAtom).stored).toBeNull()
 			expect(result.current.isLoadingOriginal).toBe(false)
 		})
 
@@ -574,9 +574,8 @@ describe('useOptimizationProcess', () => {
 			const { result, store } = renderProcess()
 			act(() => store.set(keptOriginalAtom, keptAs(stored)))
 
-			await waitFor(() =>
-				expect(store.get(keptOriginalAtom).unreadable).toBe(true)
-			)
+			await settle()
+			expect(store.get(keptOriginalAtom).unreadable).toBe(true)
 			expect(store.get(keptOriginalAtom).stored).toBe(stored)
 			expect(result.current.isLoadingOriginal).toBe(false)
 			expect(setSource).not.toHaveBeenCalled()
@@ -586,7 +585,8 @@ describe('useOptimizationProcess', () => {
 			drawer.open = true
 			act(() => rerenderHook.current())
 
-			await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2))
+			await settle()
+			expect(fetchSpy).toHaveBeenCalledTimes(2)
 			// Each failed read says so, and nothing else warns.
 			expect(warn).toHaveBeenCalled()
 			for (const [message] of warn.mock.calls) {
@@ -601,18 +601,10 @@ describe('useOptimizationProcess', () => {
 			// The scene hydrates again and states its original anew.
 			act(() => store.set(keptOriginalAtom, keptAs({ ...stored })))
 
-			// One act around the answer and its outcome, as above.
-			await act(async () => {
-				responders[1](new Response(new Uint8Array([2, 2, 2])))
-				// The 4 s the case above needs on a loaded CI runner.
-				await vi.waitFor(
-					() => expect(store.get(keptOriginalAtom).stored).toBeNull(),
-					{ timeout: 4_000 }
-				)
-			})
-			await act(async () => {
-				responders[0](new Response(new Uint8Array([1, 1, 1])))
-			})
+			responders[1](answer(new Uint8Array([2, 2, 2])))
+			await settle()
+			expect(store.get(keptOriginalAtom).stored).toBeNull()
+			responders[0](answer(new Uint8Array([1, 1, 1])))
 			await settle()
 
 			expect(setSource).toHaveBeenCalledOnce()
@@ -627,9 +619,7 @@ describe('useOptimizationProcess', () => {
 			loads.latest = 2
 			renderedLoad.id = 2
 			act(() => store.set(keptOriginalAtom, keptAs(null)))
-			await act(async () => {
-				responders[0](new Response(new Uint8Array([7, 7, 7])))
-			})
+			responders[0](answer(new Uint8Array([7, 7, 7])))
 			await settle()
 
 			expect(setSource).not.toHaveBeenCalled()
