@@ -1,10 +1,13 @@
 import { useEnvironment } from '@react-three/drei'
-import { ENVIRONMENT_MAP_ROOT } from '@vctrl/core'
+import {
+	applyBakedLights,
+	drawnLightsSignature,
+	ENVIRONMENT_MAP_ROOT
+} from '@vctrl/core'
 import { memo, Suspense, useLayoutEffect, useMemo, useState } from 'react'
 import { Object3D } from 'three'
 
 import LoadFailureBoundary from '../load-failure-boundary'
-import { applyBakedLights, drawnLightsSignature } from './baked-lights'
 import { useCanvasEnvironmentFiles } from './scene-environment'
 import {
 	LIGHT_DISTANCE_FACTOR,
