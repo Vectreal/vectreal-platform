@@ -23,6 +23,7 @@ import type { SceneMetaState } from '../../types/publisher-config'
 import type { SaveSceneResult } from '../../types/publisher-scene'
 import type { SceneOptimizationRuntimeState } from '../../types/scene-optimization'
 import type { HotspotDefinition, SceneSettings } from '@vctrl/core'
+import type { MockInstance } from 'vitest'
 
 const {
 	mockSetAtom,
@@ -234,6 +235,15 @@ const renderHarness = () => {
 }
 
 describe('useSceneSaveFlow', () => {
+	/*
+	  A failed save is logged with the scene it was for. That line, and no
+	  other console error.
+	*/
+	let consoleError: MockInstance<typeof console.error>
+	beforeEach(() => {
+		consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+	})
+
 	beforeEach(() => {
 		mockSetAtom.mockImplementation((atom: unknown) =>
 			atom === dispatchSaveProgressAtom ? dispatchSaveProgress : vi.fn()
@@ -242,9 +252,17 @@ describe('useSceneSaveFlow', () => {
 	})
 
 	afterEach(() => {
+		// Before clearAllMocks, which empties the spy's calls.
+		for (const [message, detail] of consoleError.mock.calls) {
+			expect(message).toBe('Failed to save scene settings:')
+			expect(detail).toMatchObject({ sceneId: 'scene-1' })
+		}
 		vi.clearAllMocks()
-		getDefaultStore().set(capturedThumbnailFrameAtom, null)
-		getDefaultStore().set(failedEnvironmentFilesAtom, null)
+		// The harness is still mounted here, and it reads both atoms.
+		act(() => {
+			getDefaultStore().set(capturedThumbnailFrameAtom, null)
+			getDefaultStore().set(failedEnvironmentFilesAtom, null)
+		})
 	})
 
 	/*
