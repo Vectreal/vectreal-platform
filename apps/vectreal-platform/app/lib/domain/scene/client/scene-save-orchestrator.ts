@@ -79,10 +79,13 @@ interface ExecuteSceneSaveOrchestratorParams {
 	captureShadowBake?: () => Promise<ShadowBakeResult | null>
 	/**
 	 * The studio finish to save with the draft: the file the preview drew for
-	 * exactly what is being saved. Without one the stored finish stays as it
-	 * is; the server shows it only while it still matches the scene.
+	 * the lighting being saved, once any bake still drawing has settled.
+	 * Without one the stored finish stays as it is; the server shows it only
+	 * while it still matches the scene.
 	 */
-	captureStudioFinish?: () => StudioFinishToSave | undefined
+	captureStudioFinish?: (
+		lighting: SceneSettings['lighting']
+	) => Promise<StudioFinishToSave | undefined>
 	onProgress?: (event: SaveProgressEvent) => void
 	/** What the save does with the scene's original. Keeps none when left out. */
 	source?: SourceToSave
@@ -190,6 +193,8 @@ export const executeSceneSaveOrchestrator = async ({
 		keptOriginal: KeptOriginalRef | null
 		/** Marker artwork the save moved to a scene asset address. */
 		hotspotArtworkRewrites: HotspotArtworkRewrite[]
+		/** Whether the save committed a studio finish, which the server now holds. */
+		studioFinishSaved: boolean
 	}
 > => {
 	if (!userId) {
@@ -197,14 +202,18 @@ export const executeSceneSaveOrchestrator = async ({
 	}
 
 	onProgress?.({ type: 'preparing' })
-	// Read with the settings, before anything awaits: a finish drawn while the
-	// save runs was drawn for lighting this save does not write.
-	const finish = captureStudioFinish?.()
 	const requestId = createRequestId()
+	// Exported before any wait below, so the model matches the settings and
+	// report this save captured as it started.
 	const gltfJsonToSend = await prepareGltfDocumentForUpload()
 	if (!gltfJsonToSend) {
 		throw new Error('Failed to prepare glTF payload for upload')
 	}
+	// For the lighting this save writes, so a finish drawn for other lighting
+	// meanwhile is not saved with it. A bake still drawing is waited for: it
+	// is the finish the author asked for, and skipping it lost it silently.
+	// One a pass made stale during the wait is not sent.
+	const finish = await captureStudioFinish?.(currentSettings.lighting)
 
 	const endpoint = currentSceneId
 		? `/api/scenes/${currentSceneId}`
@@ -910,7 +919,8 @@ export const executeSceneSaveOrchestrator = async ({
 		return {
 			unchanged: true,
 			keptOriginal,
-			hotspotArtworkRewrites: artwork.rewrites
+			hotspotArtworkRewrites: artwork.rewrites,
+			studioFinishSaved: studioFinish !== undefined
 		}
 	}
 
@@ -918,6 +928,7 @@ export const executeSceneSaveOrchestrator = async ({
 		...data,
 		sceneMeta: sceneMetaForSave,
 		keptOriginal,
-		hotspotArtworkRewrites: artwork.rewrites
+		hotspotArtworkRewrites: artwork.rewrites,
+		studioFinishSaved: studioFinish !== undefined
 	}
 }

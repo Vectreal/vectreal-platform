@@ -379,8 +379,12 @@ interface BakePreview {
 	file?: ArrayBuffer
 	/** Why the UV set laid out for the bakes failed, for error tracking. */
 	uvLayoutFailure?: string
-	/** Restored from the finish saved with the scene, which a save keeps as stored. */
-	restored?: true
+	/**
+	 * The server holds this finish: restored from the one saved with the
+	 * scene, or sent by a save since. A save leaves it as stored rather than
+	 * sending it again, and it is no unsaved change.
+	 */
+	stored?: true
 	durationMs?: number
 	/** Once failed: why nothing was drawn. */
 	failure?: StudioFinishFailure
