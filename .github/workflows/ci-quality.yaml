@@ -42,14 +42,33 @@ on:
 permissions:
   contents: read
 
+# Four kinds of run, four groups.
+#
 # A pull request's runs share one group, so a push replaces the run testing the
-# one before it. A push to main does not: each merge is its own commit that has
-# to be checked, and a shared group cancelled the run of #1384 and #1387 when the
-# next merge landed. GitHub keeps only one pending run per group, so even
-# `cancel-in-progress: false` on a shared group drops the middle of three quick
-# merges; a group per run is what checks every one. A called run is the same case.
+# one before it. A pull_request `edited` event fires for a title or body change
+# as well as for a new base branch. Only a base change needs a run (the affected
+# range moves with it), and it belongs in the PR's group so it replaces the run
+# testing the old base. A title or body edit changes nothing the gate reads, so
+# it gets a group of its own: it still runs to completion and reports honestly,
+# but never cancels the run testing the push. It is not skipped with a job-level
+# `if`, because a skipped second "Quality Gate" next to a running or failed one
+# is ambiguous to the required-check rule, and concurrency is decided before any
+# job `if` is read.
+#
+# A push to main does not share a group either: each merge is its own commit
+# that has to be checked, and a shared group cancelled the run of #1384 and
+# #1387 when the next merge landed. GitHub keeps only one pending run per group,
+# so even `cancel-in-progress: false` on a shared group drops the middle of
+# three quick merges; a group per run is what checks every one. A called run is
+# the same case.
 concurrency:
-  group: ${{ (github.event_name == 'workflow_call' && format('ci-quality-called-{0}', github.run_id)) || (github.event_name == 'push' && format('ci-quality-push-{0}', github.run_id)) || format('ci-quality-{0}', github.event.pull_request.number || github.ref) }}
+  group: >-
+    ${{
+      github.event_name == 'workflow_call' && format('ci-quality-called-{0}', github.run_id)
+      || github.event_name == 'push' && format('ci-quality-push-{0}', github.run_id)
+      || (github.event.action == 'edited' && !github.event.changes.base) && format('ci-quality-edit-{0}', github.run_id)
+      || format('ci-quality-{0}', github.event.pull_request.number || github.ref)
+    }}
   cancel-in-progress: true
 
 jobs:
