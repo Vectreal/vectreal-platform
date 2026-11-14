@@ -11,6 +11,7 @@ import { beforeAll, expect, it, vi } from 'vitest'
 import { HERO_STILLS } from './hero-assets'
 import { HeroSheet } from './hero-sheet'
 import { HOME_PAGE_COPY } from '../../../constants/product-copy'
+import { HERO_MODEL } from '../../../lib/samples/sample-models'
 
 const HERO = HOME_PAGE_COPY.hero
 
@@ -79,4 +80,19 @@ it('marks only the free-model intake as the brand action', () => {
 	expect(brand.map((action) => action.getAttribute('href'))).toEqual([
 		'/free-model'
 	])
+})
+
+/* The file on the stage is part of the figure's caption, beside its label, not a second block under the model. */
+it('captions the figure with its label and the file it shows', () => {
+	const { container } = render(
+		<MemoryRouter>
+			<HeroSheet />
+		</MemoryRouter>
+	)
+	const caption = container.querySelector('figcaption')
+	expect(caption?.textContent).toContain(HOME_PAGE_COPY.stage.figure)
+	expect(caption?.textContent).toContain(HERO_MODEL.fileName)
+	expect(
+		caption?.querySelector(`a[href="/free-model"], a[href^="/publisher"]`)
+	).toBeNull()
 })
