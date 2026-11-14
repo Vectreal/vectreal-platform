@@ -65,14 +65,16 @@ const isOptional = (value: unknown, rule: (value: unknown) => boolean) =>
  */
 export function isCameraTransition(value: unknown): boolean {
 	if (!isRecord(value)) return false
-	if (!(CAMERA_TRANSITION_TYPES as readonly unknown[]).includes(value.type)) {
+	if (
+		!(CAMERA_TRANSITION_TYPES as readonly unknown[]).includes(value['type'])
+	) {
 		return false
 	}
-	if (!isOptional(value.duration, (d) => isFiniteNumber(d) && d >= 0)) {
+	if (!isOptional(value['duration'], (d) => isFiniteNumber(d) && d >= 0)) {
 		return false
 	}
 	if (
-		!isOptional(value.easing, (e) =>
+		!isOptional(value['easing'], (e) =>
 			(CAMERA_TRANSITION_EASINGS as readonly unknown[]).includes(e)
 		)
 	) {
@@ -80,18 +82,18 @@ export function isCameraTransition(value: unknown): boolean {
 	}
 	// Only the type that uses them reads its avoidance settings.
 	if (
-		value.type !== 'object_avoidance' ||
-		value.objectAvoidance === undefined
+		value['type'] !== 'object_avoidance' ||
+		value['objectAvoidance'] === undefined
 	) {
 		return true
 	}
-	const avoidance = value.objectAvoidance
+	const avoidance = value['objectAvoidance']
 	return (
 		isRecord(avoidance) &&
-		isOptional(avoidance.clearance, isFiniteNumber) &&
-		isOptional(avoidance.arcHeight, isFiniteNumber) &&
-		isOptional(avoidance.tension, isFiniteNumber) &&
-		isOptional(avoidance.samples, (n) => isFiniteNumber(n) && n >= 2)
+		isOptional(avoidance['clearance'], isFiniteNumber) &&
+		isOptional(avoidance['arcHeight'], isFiniteNumber) &&
+		isOptional(avoidance['tension'], isFiniteNumber) &&
+		isOptional(avoidance['samples'], (n) => isFiniteNumber(n) && n >= 2)
 	)
 }
 

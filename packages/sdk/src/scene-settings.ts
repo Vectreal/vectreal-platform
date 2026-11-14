@@ -331,5 +331,7 @@ export type UpdateSceneSettingsInput = Omit<
 	 * or as `getSceneSettings` returns it, so a camera read can be sent back
 	 * changed. Either way the server holds it to the schema.
 	 */
-	camera?: z.input<typeof cameraSettingsSchema> | Record<string, unknown>
+	camera?:
+		| z.input<typeof updateSceneSettingsInputSchema>['camera']
+		| Record<string, unknown>
 }
