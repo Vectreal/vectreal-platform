@@ -120,27 +120,42 @@ describe('normalizeCameraSettings repairs what a stored camera cannot use', () =
 		expect(onRepair).not.toHaveBeenCalled()
 	})
 
-	it('makes the first camera of a list with no scene camera the one it opens on', () => {
+	it('carries a list with no scene camera as stored', () => {
+		// The publisher builds one when a hotspot is added to a scene with no
+		// camera; the hotspot's camera is aimed and owned through its kind.
 		const onRepair = vi.fn()
+		const stored = [
+			{ cameraId: 'pin-a', name: 'A', kind: 'hotspot' as const },
+			{ cameraId: 'pin-b', name: 'B', kind: 'hotspot' as const }
+		]
 		const normalized = normalizeCameraSettings(
-			{
-				cameras: [
-					{ cameraId: 'pin-a', name: 'A', kind: 'hotspot', fov: 0 },
-					{ cameraId: 'pin-b', name: 'B', kind: 'hotspot' }
-				]
-			},
+			{ cameras: stored },
 			{ onRepair }
 		)
-		expect(normalized?.activeCameraId).toBe('pin-a')
-		expect(normalized?.cameras?.map((c) => [c.kind, c.initial])).toEqual([
-			['scene', true],
-			['hotspot', false]
-		])
-		expect(normalized?.cameras?.[0]).not.toHaveProperty('fov')
-		expect(onRepair).toHaveBeenCalledWith([
-			{ cameraIndex: 0, field: 'fov' },
-			{ cameraIndex: 0, field: 'kind' }
-		])
+		expect(normalized?.cameras).toEqual(stored)
+		expect(onRepair).not.toHaveBeenCalled()
+	})
+
+	it.each([null, false, 0, '', { type: 'smooth' }])(
+		'drops a sceneTransition of %o, so switches fly the default',
+		(sceneTransition) => {
+			const onRepair = vi.fn()
+			const normalized = normalizeCameraSettings(
+				{ cameras: [{ cameraId: 'a', name: 'A' }], sceneTransition } as never,
+				{ onRepair }
+			)
+			expect(normalized).not.toHaveProperty('sceneTransition')
+			expect(onRepair).toHaveBeenCalledWith([{ field: 'sceneTransition' }])
+		}
+	)
+
+	it('keeps a sceneTransition the viewer can play', () => {
+		const sceneTransition = { type: 'none' as const }
+		const normalized = normalizeCameraSettings({
+			cameras: [{ cameraId: 'a', name: 'A' }],
+			sceneTransition
+		})
+		expect(normalized?.sceneTransition).toEqual(sceneTransition)
 	})
 
 	it('warns once per read by default, naming every value it dropped', () => {

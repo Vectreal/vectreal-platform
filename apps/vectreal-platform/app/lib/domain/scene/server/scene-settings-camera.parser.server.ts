@@ -72,7 +72,7 @@ export function parseCameraSettings(
 
 	return normalizeCameraSettings({
 		...(parsed.data as CameraProps),
-		// The schema guarantees a scene camera, so this is always one of them.
+		// The first scene camera, or the first camera when none is.
 		activeCameraId: resolveDefaultSceneCameraId(normalizedCameras),
 		cameras: applyDefaultCameraFlag(normalizedCameras)
 	})

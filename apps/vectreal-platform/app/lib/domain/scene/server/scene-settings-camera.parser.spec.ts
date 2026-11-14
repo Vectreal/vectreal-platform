@@ -82,14 +82,21 @@ describe('a camera pose on the save path', () => {
 })
 
 describe('the camera list on the save path', () => {
-	it('refuses a list with no scene camera for the scene to open on', async () => {
+	it('stores a list of hotspot cameras only, opening on the first', () => {
+		// What the publisher saves after a hotspot is added to a scene with no
+		// camera.
 		const result = parse({
 			cameras: [{ cameraId: 'pin', name: 'Pin', kind: 'hotspot' }]
 		})
-		expect(result).toBeInstanceOf(Response)
-		expect(await (result as Response).text()).toContain(
-			'camera.cameras must contain at least one scene camera'
-		)
+		expect(result).not.toBeInstanceOf(Response)
+		expect(result).toMatchObject({
+			settings: {
+				camera: {
+					activeCameraId: 'pin',
+					cameras: [{ cameraId: 'pin', kind: 'hotspot' }]
+				}
+			}
+		})
 	})
 
 	it('names only the path for a camera without a name', async () => {

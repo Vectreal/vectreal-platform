@@ -18,8 +18,7 @@ import {
 	CAMERA_FOV_MIN,
 	CAMERA_TRANSITION_EASINGS,
 	CAMERA_TRANSITION_TYPES,
-	CAMERA_VECTOR_FIELDS,
-	isSceneCamera
+	CAMERA_VECTOR_FIELDS
 } from './camera-rules'
 
 export * from './camera-rules'
@@ -139,17 +138,16 @@ export const cameraEntrySchema = z.looseObject(
 )
 
 /**
- * Camera settings as a write must send them: at least one camera, at least one
- * of them a scene camera to open on, every field that has a rule within it.
+ * Camera settings as a write must send them: at least one camera, every field
+ * that has a rule within it. A list of hotspot cameras only is allowed: the
+ * publisher builds one when a hotspot is added to a scene with no camera, and
+ * the scene then opens on the first camera.
  */
 export const cameraSettingsSchema = z.looseObject({
 	activeCameraId: z.string({ error: 'must be a string' }).optional(),
 	cameras: z
 		.array(cameraEntrySchema, { error: 'must be a non-empty array' })
-		.min(1, { error: 'must be a non-empty array' })
-		.refine((cameras) => cameras.some(isSceneCamera), {
-			message: 'must contain at least one scene camera'
-		}),
+		.min(1, { error: 'must be a non-empty array' }),
 	sceneTransition: cameraTransitionSchema.optional(),
 	/** The viewer hides its switcher only for a literal `false`. */
 	showControls: z.boolean({ error: 'must be a boolean' }).optional()

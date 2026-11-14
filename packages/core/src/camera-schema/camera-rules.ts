@@ -60,7 +60,7 @@ const isOptional = (value: unknown, rule: (value: unknown) => boolean) =>
 
 /**
  * Whether `value` is a transition the viewer can play: `cameraTransitionSchema`
- * as a predicate, for readers that carry no zod. `camera-rules.spec.ts` holds
+ * as a predicate, for readers that carry no zod. `camera-schema.spec.ts` holds
  * the two to the same answers.
  */
 export function isCameraTransition(value: unknown): boolean {
@@ -97,7 +97,8 @@ export function isCameraTransition(value: unknown): boolean {
 
 /** One stored value a read repaired, for whoever logs it. */
 export interface CameraRepair {
-	cameraIndex: number
+	/** Absent for a field of the settings rather than of one camera. */
+	cameraIndex?: number
 	field: string
 }
 

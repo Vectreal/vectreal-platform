@@ -14,7 +14,6 @@ describe('updateSceneSettingsInputSchema camera', () => {
 
 	it.each([
 		['a field of view the lens cannot draw', [{ ...hero, fov: 180 }]],
-		['no scene camera to open on', [{ ...hero, kind: 'hotspot' }]],
 		['a vector that is not [x, y, z]', [{ ...hero, position: [0, 5] }]],
 		['no cameras at all', []]
 	])('refuses %s before it is sent', (_case, cameras) => {

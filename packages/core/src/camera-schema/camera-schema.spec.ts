@@ -41,15 +41,11 @@ describe('cameraSettingsSchema', () => {
 		})
 	})
 
-	it('refuses a list with no scene camera to open on', () => {
+	it('accepts a list of hotspot cameras only, which the publisher builds', () => {
 		const result = cameraSettingsSchema.safeParse({
 			cameras: [{ ...scene, kind: 'hotspot' }]
 		})
-		expect(result.success).toBe(false)
-		expect(result.error?.issues[0]).toMatchObject({
-			path: ['cameras'],
-			message: 'must contain at least one scene camera'
-		})
+		expect(result.success).toBe(true)
 	})
 
 	it('reads a camera without a kind as a scene camera', () => {
@@ -179,7 +175,8 @@ describe('a read repair and the write schema', () => {
 						framingAspect: null,
 						transition: { type: 'smooth' }
 					}
-				]
+				],
+				sceneTransition: null
 			} as never,
 			{ onRepair: () => {} }
 		)
