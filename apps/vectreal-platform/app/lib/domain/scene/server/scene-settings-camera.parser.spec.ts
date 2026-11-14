@@ -94,7 +94,9 @@ describe('the camera list on the save path', () => {
 
 	it('names only the path for a camera without a name', async () => {
 		const result = parse({ cameras: [{ cameraId: 'hero', fov: 0 }] })
-		expect(await (result as Response).text()).toContain('between 0 and 180"')
+		expect(await (result as Response).text()).toContain(
+			'"camera.cameras[0].fov must be a number of degrees between 0 and 180"'
+		)
 	})
 })
 

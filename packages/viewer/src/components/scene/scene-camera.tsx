@@ -11,6 +11,7 @@ import {
 	DEFAULT_CAMERA,
 	DEFAULT_SCENE_TRANSITION,
 	resolveCameraPose,
+	resolveFramingAspect,
 	type CameraSelectionSignature,
 	type OpeningPose,
 	type OrbitDistanceLimits,
@@ -294,7 +295,10 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			],
 			target: [controlsTarget.x, controlsTarget.y, controlsTarget.z],
 			fov: activeCamera.fov,
-			framingAspect: stored.framingAspect,
+			// A canvas with no height has no aspect (NaN, sent as null), which
+			// a save refuses. The legacy aspect is what a read gives a camera
+			// stored without one.
+			framingAspect: resolveFramingAspect(stored.framingAspect),
 			viewportAspect: activeCamera.aspect
 		}
 	}, [controls?.target, flight, sceneCamera])
