@@ -1,3 +1,4 @@
+import { dispositionFileName } from '@vctrl/core/model-loader'
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -8,7 +9,6 @@ import {
 	imgTo3dErrorKind,
 	parseImgTo3dSubmission,
 	imgTo3dContentDisposition,
-	imgTo3dFileNameFromDisposition,
 	imgTo3dSourceName,
 	imgTo3dVariantFileName
 } from './img-to-3d-contract'
@@ -170,19 +170,17 @@ describe('the download name, written by the server and read back by the publishe
 	it.each([
 		'chair-7.glb',
 		'Red Chair-1377488089.glb',
-		`Stühl "x"\\y (2)*'s-3.glb`,
+		`Stühl "x" (2)*'s-3.glb`,
 		'椅子-9.glb'
-	])('survives the round trip: %s', (name) => {
-		expect(
-			imgTo3dFileNameFromDisposition(imgTo3dContentDisposition(name))
-		).toBe(name)
+	])('survives the round trip through the loader: %s', (name) => {
+		expect(dispositionFileName(imgTo3dContentDisposition(name))).toBe(name)
 	})
 
-	it('reads nothing from a header it did not write', () => {
-		expect(imgTo3dFileNameFromDisposition(null)).toBeNull()
-		expect(imgTo3dFileNameFromDisposition('inline')).toBeNull()
+	// The loader reads a separator as a path and keeps the last segment, so a
+	// header cannot place the file in a folder of its choosing.
+	it('keeps only the last segment of a name with a path separator in it', () => {
 		expect(
-			imgTo3dFileNameFromDisposition("attachment; filename*=UTF-8''%E0%A4%A")
-		).toBeNull()
+			dispositionFileName(imgTo3dContentDisposition('photos\\chair-7.glb'))
+		).toBe('chair-7.glb')
 	})
 })

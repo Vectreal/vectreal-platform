@@ -58,7 +58,7 @@ export interface ConvertModelReceivedProps {
  * `format_mismatch` true for a drop that was exactly right. The five bundle
  * pages would have read as near-100% mismatch, which is the headline number.
  */
-function droppedFormat(files: readonly File[]): string {
+function droppedFormat(files: readonly ArrivedFile[]): string {
 	return extensionOf(subjectOf(files))
 }
 
@@ -70,7 +70,7 @@ function droppedFormat(files: readonly File[]): string {
  * lone `.3ds` has to reach the property rather than becoming nothing - and a
  * `.3ds` dropped *with* its textures must not be reported as a PNG either.
  */
-function subjectOf(files: readonly File[]): string {
+function subjectOf(files: readonly ArrivedFile[]): string {
 	const model = files.find(
 		(file) => modelFormatForFileName(file.name)?.canImport
 	)
@@ -92,7 +92,7 @@ function subjectOf(files: readonly File[]): string {
  * here would have: a game-asset folder is exactly the FBX segment, and it
  * arrives full of `.tga`, `.dds` and `.exr`.
  */
-function couldBeAModel(file: File): boolean {
+function couldBeAModel(file: ArrivedFile): boolean {
 	if (file.name.startsWith('.')) return false
 	if (file.type.startsWith('image/')) return false
 
@@ -116,9 +116,12 @@ function extensionOf(name: string): string {
 	return dot < 0 ? 'unknown' : name.slice(dot + 1).toLowerCase()
 }
 
+/** What the analytics read of a file that arrived: its name and its type. */
+export type ArrivedFile = Pick<File, 'name' | 'type'>
+
 export function buildConvertModelReceivedProps(
 	pair: Pick<ConvertPair, 'slug' | 'from' | 'to'>,
-	files: readonly File[],
+	files: readonly ArrivedFile[],
 	outcome: ConvertModelReceivedProps['outcome']
 ): ConvertModelReceivedProps {
 	const fileFormat = droppedFormat(files)

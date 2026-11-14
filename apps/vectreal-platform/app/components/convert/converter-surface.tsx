@@ -34,7 +34,6 @@ import {
 } from './converter-surface.utils'
 import { INGESTED_RECIPE, useStageSource } from './use-stage-source'
 import { usePrepareGltfDocument } from '../../hooks/scene-loader/use-scene-document-export'
-import { useSampleDownload } from '../../hooks/use-sample-download'
 import { useTrackedHeight } from '../../hooks/use-tracked-height'
 import {
 	SOURCES_THAT_ARE_BUNDLES,
@@ -59,10 +58,16 @@ import {
 } from '../../lib/domain/analytics/convert-events'
 import { persistPendingSceneDraftOrchestrator } from '../../lib/domain/scene/client/scene-draft-persistence'
 import { usePostHog } from '../../lib/posthog/posthog-react'
+import {
+	sampleModelById,
+	sampleModelSource
+} from '../../lib/samples/sample-models'
 import { sceneViewerSettingsAtom } from '../../lib/stores/scene-settings-store'
 import { useConsent } from '../consent/consent-context'
 import { ClientVectrealViewer } from '../viewer/client-vectreal-viewer'
 
+import type { AddedModelSource } from '../../hooks/scene-loader/use-scene-upload'
+import type { ArrivedFile } from '../../lib/domain/analytics/convert-events'
 import type { LoadOutcome } from '@vctrl/hooks/use-load-model'
 
 interface Props {
@@ -110,7 +115,7 @@ const STAGE_BOUNDS = { margin: 0.9 }
  * than extending it, so one input cannot offer both a file and a folder.
  */
 export const ConverterSurface: FC<Props> = ({ pair }) => {
-	const { load, file, status, progress, optimizer, reset } = useModelContext()
+	const { load, file, status, optimizer, reset } = useModelContext()
 	const posthog = usePostHog()
 	const { consent } = useConsent()
 	const navigate = useNavigate()
@@ -280,17 +285,19 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		setRefusal(null)
 	}, [pair.slug])
 
-	const ingest = useCallback(
-		async (files: File[]) => {
-			/*
-			  Nothing arrived, so nothing was superseded. Clearing the refusal
-			  first wiped the message off the screen and put nothing in its place,
-			  which is the silent-discard outcome that removing `accept` exists to
-			  end. Only an empty folder reaches this: the picker returns earlier.
-			*/
-			if (files.length === 0) return
-
-			/* Whatever was refused before, this drop supersedes the statement. */
+	/*
+	  One way in for a drop, a pick and a sample, so a sample's download is the
+	  loader's own load: the stage shows it from the click, and a drop made
+	  meanwhile supersedes it like any other. `arrival` is what the visitor
+	  brought, for the baseline size and the analytics, because a URL source
+	  has no files to measure until the loader has fetched them.
+	*/
+	const receive = useCallback(
+		async (
+			source: AddedModelSource,
+			arrival: { files: readonly ArrivedFile[]; bytes: number }
+		) => {
+			/* Whatever was refused before, this arrival supersedes the statement. */
 			setRefusal(null)
 
 			/*
@@ -328,14 +335,10 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 			const adopt = (state: LoadOutcome) => {
 				adopted = true
 				const referenced = state.file?.sourcePackageBytes ?? 0
-				adoptSource(
-					referenced || measuredBytes(files),
-					state.stillOnScreen,
-					ingested
-				)
+				adoptSource(referenced || arrival.bytes, state.stillOnScreen, ingested)
 			}
 
-			const loaded = await load({ kind: 'files', files }, { onPublish: adopt })
+			const loaded = await load(source, { onPublish: adopt })
 			markIngested()
 			const refused = loaded.status === 'error'
 
@@ -395,18 +398,41 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 				}
 			}
 
-			if (consentRef.current?.analytics) {
+			/*
+			  A sample arrives only once it is downloaded: one that failed or
+			  was cancelled on the way is not a model the visitor brought, and
+			  counting it would read as a GLB the page could not take.
+			*/
+			const arrived = source.kind === 'files' || loaded.status === 'ready'
+			if (arrived && consentRef.current?.analytics) {
 				posthog?.capture(
 					'convert_model_received',
 					buildConvertModelReceivedProps(
 						pair,
-						files,
+						arrival.files,
 						refused ? 'refused' : 'loaded'
 					)
 				)
 			}
 		},
 		[load, pair, bundleCopy, posthog, adoptSource]
+	)
+
+	const ingest = useCallback(
+		(files: File[]) => {
+			/*
+			  Nothing arrived, so nothing was superseded. Clearing the refusal
+			  first wiped the message off the screen and put nothing in its place,
+			  which is the silent-discard outcome that removing `accept` exists to
+			  end. Only an empty folder reaches this: the picker returns earlier.
+			*/
+			if (files.length === 0) return
+			return receive(
+				{ kind: 'files', files },
+				{ files, bytes: measuredBytes(files) }
+			)
+		},
+		[receive]
 	)
 
 	const { getRootProps, getInputProps, isDragActive, rootRef } = useDropzone({
@@ -442,13 +468,13 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		noKeyboard: true
 	})
 
-	const { download: sampleDownload, openSample } = useSampleDownload()
-	const loadSample = async (id: string) => {
-		try {
-			await openSample(id, (file) => ingest([file]))
-		} catch {
-			toast.error('The sample could not be loaded. Try your own file instead.')
-		}
+	const openSample = (id: string) => {
+		const sample = sampleModelById(id)
+		if (!sample) return
+		void receive(sampleModelSource(sample), {
+			files: [{ name: sample.fileName, type: '' }],
+			bytes: sample.bytes
+		})
 	}
 
 	const toggleOption = (option: ConvertOption) => {
@@ -899,14 +925,11 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 					) : (
 						<ConverterEmptyStage
 							pair={pair}
-							status={status}
-							progress={progress}
 							bundleCopy={bundleCopy}
 							isBundle={isBundle}
 							onChooseFile={openFilePicker}
 							onChooseFolder={openDirectoryPicker}
-							onOpenSample={loadSample}
-							sampleDownload={sampleDownload}
+							onOpenSample={openSample}
 						/>
 					)}
 				</section>

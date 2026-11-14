@@ -101,6 +101,8 @@ interface Pending {
 const listeners = new Set<() => void>()
 let snapshot: Record<string, unknown> = {}
 let loadCalls: File[][] = []
+/** Every source handed to `load`, a sample's URL included. */
+let loadSources: unknown[] = []
 let pending: Pending[] = []
 
 /*
@@ -239,6 +241,7 @@ const optimizer = {
 function resetContext() {
 	listeners.clear()
 	loadCalls = []
+	loadSources = []
 	pending = []
 	snapshot = {
 		status: 'empty',
@@ -252,10 +255,11 @@ function resetContext() {
 			publish({ status: 'empty', file: null })
 		},
 		load: (
-			source: { files: File[] },
+			source: { kind: string; files?: File[] },
 			options?: { onPublish?: (outcome: Record<string, unknown>) => void }
 		) => {
-			loadCalls.push(source.files)
+			loadSources.push(source)
+			if (source.files) loadCalls.push(source.files)
 
 			const token = ++latestToken
 			const stillCurrent = () => latestToken === token
@@ -330,6 +334,7 @@ function resetContext() {
 }
 
 vi.mock('@vctrl/hooks/use-load-model', () => ({
+	useLoadProgress: () => null,
 	useModelContext: () =>
 		useSyncExternalStore(
 			(listener: () => void) => {
@@ -428,32 +433,40 @@ vi.mock('../app/hooks/scene-loader/use-scene-document-export', () => ({
 	}
 }))
 
-/** Holds a sample's download open until a test lets it finish. */
-let sampleBlock: Promise<void> | null = null
-
 vi.mock('../app/lib/samples/sample-models', () => ({
-	// Read by the example scenes `useSampleDownload` also opens.
 	HERO_MODEL: { url: '', fileName: 'camera.glb', bytes: 1 },
 	// Stubs carrying only what the tiles probe reads: which samples it was handed.
 	PASS_SAMPLES: [{ id: 'rocket' }, { id: 'camera' }],
 	sampleModelById: (id: string) =>
-		id === 'rocket' ? { id: 'rocket', label: 'Rocket', bytes: 1 } : null,
-	fetchSampleModel: async () => {
-		if (sampleBlock) await sampleBlock
-		return new File([''], 'sample.glb')
-	}
+		id === 'rocket'
+			? {
+					id: 'rocket',
+					label: 'Rocket',
+					url: '/assets/rocket-hash.glb',
+					fileName: 'rocket.glb',
+					bytes: 4_096
+				}
+			: null,
+	sampleModelSource: (sample: {
+		url: string
+		fileName: string
+		bytes: number
+	}) => ({
+		kind: 'url',
+		url: sample.url,
+		fileName: sample.fileName,
+		expectedBytes: sample.bytes
+	})
 }))
 
-/* A probe for what the page hands the tiles: which samples, and which, if any, is on its way down. */
+/* A probe for what the page hands the tiles: which samples it offers. */
 vi.mock('../app/components/layout-components/sample-tiles', () => ({
 	SampleTiles: (props: {
 		onOpen: (id: string) => void
-		download?: { id: string } | null
 		samples?: { id: string }[]
 	}) => (
 		<button
 			type="button"
-			data-downloading={props.download?.id ?? ''}
 			data-samples={
 				props.samples?.map((sample) => sample.id).join(' ') ?? 'all'
 			}
@@ -556,7 +569,6 @@ beforeEach(() => {
 	modelsExported = []
 	lastReady = null
 	draftBlock = null
-	sampleBlock = null
 	navigated.length = 0
 	/*
 	  Reset rather than cleared: a case that queues a rejection it never
@@ -616,19 +628,43 @@ describe('the samples it offers', () => {
 	})
 })
 
-describe('a sample on its way down', () => {
-	it('tells the tiles which sample is downloading', async () => {
-		let release = () => {}
-		sampleBlock = new Promise<void>((resolve) => (release = resolve))
+describe('a sample', () => {
+	it('opens through the loader, by its URL, and is measured by its own size', async () => {
 		render(<ConverterSurface pair={convertPairBySlug('glb-to-gltf')!} />)
-		const tiles = screen.getByRole('button', { name: 'sample' })
 
-		fireEvent.click(tiles)
+		fireEvent.click(screen.getByRole('button', { name: 'sample' }))
+		await waitFor(() => expect(loadSources).toHaveLength(1))
+		// The loader's own load, so the stage shows the download from the click.
+		expect(loadSources[0]).toEqual({
+			kind: 'url',
+			url: '/assets/rocket-hash.glb',
+			fileName: 'rocket.glb',
+			expectedBytes: 4_096
+		})
 
-		await waitFor(() =>
-			expect(tiles.getAttribute('data-downloading')).toBe('rocket')
+		// A URL source has no files to measure, so the sample's size stands in.
+		await settle(0, loadedFile())
+		await screen.findByTestId('stage')
+		exported.data = new Uint8Array(2_048)
+		fireEvent.click(convertButton())
+
+		await screen.findByText(formatFileSize(4_096))
+	})
+
+	it('that fails to download says so, and is not counted as an arrival', async () => {
+		consentState.analytics = true
+		render(<ConverterSurface pair={convertPairBySlug('glb-to-gltf')!} />)
+
+		fireEvent.click(screen.getByRole('button', { name: 'sample' }))
+		await waitFor(() => expect(loadSources).toHaveLength(1))
+		await refuse(0, 'url_unreachable')
+
+		expect((await screen.findByRole('alert')).textContent).toContain(
+			'The sample did not download. Try your own file instead.'
 		)
-		await act(async () => release())
+		expect(
+			capture.mock.calls.filter(([name]) => name === 'convert_model_received')
+		).toEqual([])
 	})
 })
 

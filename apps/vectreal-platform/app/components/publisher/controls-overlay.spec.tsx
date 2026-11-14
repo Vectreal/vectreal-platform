@@ -29,6 +29,9 @@ const { model, probe, drawerFlow, sizeLabel } = vi.hoisted(() => ({
 	probe: (name: string) => () => <div data-testid={name} />
 }))
 
+/** What the shell hands the loader when it opens a model by URL. */
+const openModel = vi.hoisted(() => vi.fn())
+
 vi.mock('@vctrl/hooks/use-load-model', () => ({
 	useModelContext: () => ({
 		status: model.status,
@@ -106,6 +109,8 @@ vi.mock('../../hooks/use-publisher-scene', () => ({
 		openSceneId: null,
 		isRestoringDraft: false,
 		uploadFiles: vi.fn(),
+		openModel,
+		openingSubject: null,
 		retrySceneLoad: vi.fn(),
 		saveSceneSettings: vi.fn(),
 		saveAvailability: { canSave: false, reason: 'no-model' },
@@ -211,40 +216,33 @@ describe('the publisher shell', () => {
 	})
 
 	/*
-	  Opening a variant downloads it before the loader is handed it, so the
-	  loader still reads empty. The stage waits on the URL instead: an empty
-	  stage in that gap flashed the drop zone and the variant list between the
-	  navigation's loading surface and the loader's.
+	  The stage waits on the URL from the first render, before the open's
+	  effect has handed the loader anything: an empty stage in that gap flashed
+	  the drop zone and the variant list between the navigation's loading
+	  surface and the loader's.
 	*/
 	describe('opening a generated variant', () => {
 		const JOB = '00000000-0000-4000-8000-000000000002'
 		const url = `/publisher?generation=${JOB}`
 
-		afterEach(() => vi.unstubAllGlobals())
+		afterEach(() => openModel.mockReset())
 
 		it('shows the loading surface, not the empty stage, while it downloads', async () => {
-			vi.stubGlobal(
-				'fetch',
-				vi.fn(() => new Promise<Response>(() => undefined))
-			)
+			openModel.mockImplementation(() => new Promise(() => undefined))
 			renderShell({ ...loaderData, imgTo3dBatches: [] }, url)
 
 			expect(await screen.findByTestId('fallback')).toBeTruthy()
 			expect(screen.queryByTestId('empty-stage')).toBeNull()
-			await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))
+			await waitFor(() => expect(openModel).toHaveBeenCalledTimes(1))
 			expect(screen.queryByTestId('empty-stage')).toBeNull()
 		})
 
 		it('returns to the empty stage, where a retry is offered, when it fails', async () => {
-			vi.stubGlobal(
-				'fetch',
-				vi.fn(async () =>
-					Response.json(
-						{ success: false, error: 'runtime_unavailable' },
-						{ status: 503 }
-					)
-				)
-			)
+			openModel.mockResolvedValue({
+				status: 'error',
+				error: { code: 'url_http', context: { status: 503 } },
+				stillCurrent: () => true
+			})
 			renderShell({ ...loaderData, imgTo3dBatches: [] }, url)
 
 			expect(await screen.findByTestId('empty-stage')).toBeTruthy()

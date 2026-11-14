@@ -1,5 +1,7 @@
 import { Button } from '@shared/components/ui/button'
-import { ArrowRight, FolderUp, Loader2 } from 'lucide-react'
+import { LoadProgressIndicator } from '@shared/components/ui/load-progress-indicator'
+import { useLoadProgress, useModelContext } from '@vctrl/hooks/use-load-model'
+import { ArrowRight, FolderUp } from 'lucide-react'
 
 import { articleFor, type ConvertPair } from '../../lib/convert/convert-pairs'
 import { PASS_SAMPLES } from '../../lib/samples/sample-models'
@@ -7,25 +9,20 @@ import { DraftingBackdrop } from '../layout-components/drafting-backdrop'
 import { FadeSwap } from '../layout-components/fade-swap'
 import { SampleTiles } from '../layout-components/sample-tiles'
 
-import type { useSampleDownload } from '../../hooks/use-sample-download'
 import type { BundleSourceCopy } from '../../lib/convert/convert-capabilities'
-import type { useModelContext } from '@vctrl/hooks/use-load-model'
 
 interface Props {
 	pair: ConvertPair
-	status: ReturnType<typeof useModelContext>['status']
-	progress: number
 	bundleCopy: BundleSourceCopy | null
 	isBundle: boolean
 	onChooseFile: () => void
 	onChooseFolder: () => void
 	onOpenSample: (id: string) => void
-	sampleDownload: ReturnType<typeof useSampleDownload>['download']
 }
 
 /**
  * The converter's stage before there is a model on it: the invitation to drop
- * one, or the read progress while one loads.
+ * one, or where the load is while one arrives, a sample's download included.
  *
  * Anchored bottom-left rather than centred. A centred glyph over centred copy
  * over a centred outline button is the stock empty state; putting the
@@ -49,15 +46,13 @@ interface Props {
  */
 export function ConverterEmptyStage({
 	pair,
-	status,
-	progress,
 	bundleCopy,
 	isBundle,
 	onChooseFile,
 	onChooseFolder,
-	onOpenSample,
-	sampleDownload
+	onOpenSample
 }: Props) {
+	const progress = useLoadProgress(useModelContext())
 	return (
 		<>
 			<DraftingBackdrop calm focusX={0.66} horizon={0.45} />
@@ -74,14 +69,11 @@ export function ConverterEmptyStage({
 				value={pair.from}
 				className="grid min-h-[17rem] content-end gap-8 p-6 sm:min-h-[20rem] sm:p-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end"
 			>
-				{status === 'loading' ? (
-					<p
-						aria-live="polite"
-						className="text-muted-foreground flex items-center gap-2 text-sm"
-					>
-						<Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-						Reading your {pair.fromLabel}, {Math.round(progress)}%
-					</p>
+				{progress ? (
+					<LoadProgressIndicator
+						progress={progress}
+						className="justify-self-start"
+					/>
 				) : (
 					<>
 						<div>
@@ -130,7 +122,6 @@ export function ConverterEmptyStage({
 								className="lg:w-md"
 								label="Or open one of these"
 								onOpen={onOpenSample}
-								download={sampleDownload}
 								samples={PASS_SAMPLES}
 							/>
 						)}

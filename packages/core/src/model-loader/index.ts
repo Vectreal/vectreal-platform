@@ -26,6 +26,7 @@ export { isMissingAssetsError, missingAssetsError } from './missing-assets'
   both the loading hook and the viewer's `src` read through it.
 */
 export {
+	dispositionFileName,
 	fetchModelFiles,
 	ModelFetchError,
 	type FetchModelFilesOptions,

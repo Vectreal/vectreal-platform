@@ -1,13 +1,15 @@
 import { Button } from '@shared/components/ui/button'
-import { useModelContext } from '@vctrl/hooks/use-load-model'
+import { LoadProgressIndicator } from '@shared/components/ui/load-progress-indicator'
+import { useLoadProgress, useModelContext } from '@vctrl/hooks/use-load-model'
 
-import { PublisherLoading } from './publisher-loading'
 import { getUploadLoadErrorMessage } from '../../../lib/domain/scene/scene-load-error-messages'
 
 import type { PublisherSurface } from '../../../lib/publisher/publisher-surface'
 
 interface Props {
 	surface: Exclude<PublisherSurface, 'empty' | 'viewer'>
+	/** What is being opened, when it has a name: "Downloading Rocket". */
+	subject?: null | string
 	/** Reloads the scene the route points at. */
 	onRetry: () => void
 }
@@ -18,17 +20,24 @@ interface Props {
  * Both cases used to fall through to the drop zone, which is how a scene route
  * ended up asking the user to upload a file into a scene that already exists.
  */
-export function PublisherSurfaceFallback({ surface, onRetry }: Props) {
-	const { error } = useModelContext()
+export function PublisherSurfaceFallback({ surface, subject, onRetry }: Props) {
+	const model = useModelContext()
+	const progress = useLoadProgress(model)
 
 	if (surface === 'loading') {
 		// The viewer's own ground, so handing over to it changes nothing on screen.
 		return (
-			<div className="bg-muted/50 grow">
-				<PublisherLoading />
+			<div className="bg-muted/50 flex grow">
+				<LoadProgressIndicator
+					progress={progress}
+					subject={subject ?? undefined}
+					className="grow"
+				/>
 			</div>
 		)
 	}
+
+	const { error } = model
 
 	return (
 		<div className="flex h-full w-full items-center justify-center p-6">

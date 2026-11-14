@@ -98,6 +98,12 @@ export function refusalMessage(
 			*/
 			return `Nothing in that selection is a format we can read. This page converts ${pair.fromLabel}.`
 
+		case 'url_http':
+		case 'url_unreachable':
+			// The page loads a URL only for a sample: the download failed, and
+			// the format sentence below would be about a file nobody brought.
+			return 'The sample did not download. Try your own file instead.'
+
 		case 'multiple_models':
 			/*
 			  "One at a time" is impossible advice on a bundle page, which asks
