@@ -1006,13 +1006,18 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 					)}
 
 					{result ? (
-						<Button onClick={handleDownload} className="self-start">
+						<Button
+							variant="brand"
+							onClick={handleDownload}
+							className="self-start"
+						>
 							<Download className="h-4 w-4" aria-hidden />
 							Download {pair.toLabel}
 							{downloadContainer(result.fileName, pair.to)}
 						</Button>
 					) : (
 						<Button
+							variant="brand"
 							onClick={runConversion}
 							disabled={isConverting || isHandingOff}
 							className="self-start"

@@ -39,3 +39,15 @@ it('sends the primary action to the free-model intake and the second to the publ
 		screen.getByRole('link', { name: HERO.secondaryCta }).getAttribute('href')
 	).toBe('/publisher')
 })
+
+it('marks only the free-model intake as the brand action', () => {
+	const { container } = render(
+		<MemoryRouter>
+			<HeroSheet />
+		</MemoryRouter>
+	)
+	const brand = [...container.querySelectorAll('[data-variant="brand"]')]
+	expect(brand.map((action) => action.getAttribute('href'))).toEqual([
+		'/free-model'
+	])
+})

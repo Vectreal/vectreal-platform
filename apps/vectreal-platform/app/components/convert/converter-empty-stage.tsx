@@ -105,7 +105,7 @@ export function ConverterEmptyStage({
 							)}
 
 							<div className="mt-8 flex flex-wrap items-center gap-2">
-								<Button onClick={onChooseFile}>
+								<Button variant="brand" onClick={onChooseFile}>
 									{bundleCopy
 										? bundleCopy.chooseLabel
 										: `Choose ${articleFor(pair.fromLabel)} ${pair.fromLabel} file`}

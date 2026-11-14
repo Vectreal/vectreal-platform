@@ -754,6 +754,7 @@ const SignupPage = ({ loaderData, actionData }: Route.ComponentProps) => {
 				{/* Submit */}
 				<motion.div {...fieldVariants(4)}>
 					<Button
+						variant="brand"
 						type="submit"
 						className="w-full font-semibold"
 						disabled={isSubmitting || (hasTurnstile && !turnstileToken)}
