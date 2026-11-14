@@ -94,21 +94,53 @@ describe('normalizeCameraSettings repairs what a stored camera cannot use', () =
 		expect(onRepair).not.toHaveBeenCalled()
 	})
 
-	it('carries the fields the viewer already reads every value of', () => {
-		const stored = {
-			cameraId: 7,
-			kind: 'drone',
-			transition: { type: 'teleport' }
-		}
+	it('carries the fields it has no read rule for', () => {
+		const stored = { cameraId: 7, near: 0.5 }
 		const { camera, onRepair } = normalizeOne(stored)
 		expect(camera).toMatchObject(stored)
 		expect(onRepair).not.toHaveBeenCalled()
 	})
 
-	it('repairs a list with no scene camera too', () => {
-		const { camera, onRepair } = normalizeOne({ kind: 'hotspot', fov: 0 })
-		expect(camera).not.toHaveProperty('fov')
-		expect(onRepair).toHaveBeenCalledOnce()
+	it.each([
+		{ type: 'teleport' },
+		{ type: 'linear', duration: -1 },
+		{ type: 'object_avoidance', objectAvoidance: { samples: 1 } }
+	])('drops a legacy transition the write schema refuses: %o', (transition) => {
+		const { camera, onRepair } = normalizeOne({ transition })
+		expect(camera).not.toHaveProperty('transition')
+		expect(onRepair).toHaveBeenCalledWith([
+			{ cameraIndex: 0, field: 'transition' }
+		])
+	})
+
+	it('keeps a transition the write schema accepts', () => {
+		const transition = { type: 'linear', duration: 800, easing: 'ease_out' }
+		const { camera, onRepair } = normalizeOne({ transition })
+		expect(camera?.['transition']).toEqual(transition)
+		expect(onRepair).not.toHaveBeenCalled()
+	})
+
+	it('makes the first camera of a list with no scene camera the one it opens on', () => {
+		const onRepair = vi.fn()
+		const normalized = normalizeCameraSettings(
+			{
+				cameras: [
+					{ cameraId: 'pin-a', name: 'A', kind: 'hotspot', fov: 0 },
+					{ cameraId: 'pin-b', name: 'B', kind: 'hotspot' }
+				]
+			},
+			{ onRepair }
+		)
+		expect(normalized?.activeCameraId).toBe('pin-a')
+		expect(normalized?.cameras?.map((c) => [c.kind, c.initial])).toEqual([
+			['scene', true],
+			['hotspot', false]
+		])
+		expect(normalized?.cameras?.[0]).not.toHaveProperty('fov')
+		expect(onRepair).toHaveBeenCalledWith([
+			{ cameraIndex: 0, field: 'fov' },
+			{ cameraIndex: 0, field: 'kind' }
+		])
 	})
 
 	it('warns once per read by default, naming every value it dropped', () => {

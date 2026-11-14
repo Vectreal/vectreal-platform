@@ -5,8 +5,10 @@ import {
 	cameraSettingsSchema,
 	cameraTransitionSchema,
 	isCameraFov,
+	isCameraTransition,
 	repairCameraEntry
 } from '.'
+import { normalizeCameraSettings } from '../scene-camera/camera-settings'
 
 const scene = { cameraId: 'front', name: 'Front' }
 
@@ -137,5 +139,50 @@ describe('cameraTransitionSchema', () => {
 			path: ['objectAvoidance', 'samples'],
 			message: 'must be a number >= 2'
 		})
+	})
+})
+
+describe('isCameraTransition, the read form of cameraTransitionSchema', () => {
+	it.each([
+		{ type: 'none' },
+		{ type: 'linear', duration: 0, easing: 'ease_in_out' },
+		{ type: 'object_avoidance', objectAvoidance: { samples: 2, tension: 0.5 } },
+		{ type: 'linear', objectAvoidance: 'carried as stored' },
+		{ type: 'linear', extra: true },
+		{ type: 'smooth' },
+		{ type: 'linear', duration: -1 },
+		{ type: 'linear', duration: Infinity },
+		{ type: 'linear', easing: 'bounce' },
+		{ type: 'object_avoidance', objectAvoidance: { samples: 1 } },
+		{ type: 'object_avoidance', objectAvoidance: { clearance: '1' } },
+		{ type: 'object_avoidance', objectAvoidance: [] },
+		{},
+		null,
+		'linear'
+	])("gives the write schema's answer for %o", (transition) => {
+		expect(isCameraTransition(transition)).toBe(
+			cameraTransitionSchema.safeParse(transition).success
+		)
+	})
+})
+
+describe('a read repair and the write schema', () => {
+	it('leaves what it returns valid against the write schema', () => {
+		const normalized = normalizeCameraSettings(
+			{
+				cameras: [
+					{
+						cameraId: 'pin',
+						name: 'Pin',
+						kind: 'hotspot',
+						fov: 400,
+						framingAspect: null,
+						transition: { type: 'smooth' }
+					}
+				]
+			} as never,
+			{ onRepair: () => {} }
+		)
+		expect(cameraSettingsSchema.safeParse(normalized).success).toBe(true)
 	})
 })

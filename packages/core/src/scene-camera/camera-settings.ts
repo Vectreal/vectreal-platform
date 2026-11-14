@@ -18,7 +18,7 @@ export { isSceneCamera }
 /** Where a repair is reported when the caller names nowhere else. */
 const warnOfRepairs = (repairs: CameraRepair[]) => {
 	console.warn(
-		`[vectreal] Dropped stored camera values that the viewer cannot use: ${repairs
+		`[vectreal] Repaired stored camera values that the viewer cannot use: ${repairs
 			.map(({ cameraIndex, field }) => `cameras[${cameraIndex}].${field}`)
 			.join(', ')}`
 	)
@@ -58,9 +58,11 @@ export const DEFAULT_SCENE_TRANSITION: Readonly<
  * 3. Fills missing camera ids/names
  * 4. Keeps `initial` flag aligned with the active camera
  * 5. Drops each stored value the viewer cannot use (`repairCameraEntry`:
- *    an fov outside (0, 180) or a malformed `framingAspect`),
- *    and reports what it dropped to `onRepair`, a console warning by default.
- *    A read repairs rather than refuses, so a published scene keeps opening.
+ *    an fov outside (0, 180), a malformed `framingAspect` or legacy
+ *    `transition`), and marks the first camera a scene camera when none is,
+ *    reporting each repair to `onRepair`, a console warning by default.
+ *    A read repairs rather than refuses, so a published scene keeps opening
+ *    and its next save passes the write schema.
  *
  * The semantic is: the first scene camera is ALWAYS the default unless explicitly
  * reordered by the user (moving a camera to the front via the pin action).
@@ -90,14 +92,18 @@ export function normalizeCameraSettings(
 			name: entry.name || `Camera ${index + 1}`
 		}
 	})
+	/*
+	  A list with no scene camera opened on its first entry before any save
+	  required one. Saying so in the data keeps that opening and lets the
+	  scene's next save through the write schema.
+	*/
+	if (!normalizedCameras.some(isSceneCamera)) {
+		normalizedCameras[0] = { ...normalizedCameras[0], kind: 'scene' }
+		repairs.push({ cameraIndex: 0, field: 'kind' })
+	}
 	if (repairs.length > 0) onRepair(repairs)
 
-	// Find the first scene camera (non-hotspot)
 	const firstSceneCameraId = normalizedCameras.find(isSceneCamera)?.cameraId
-
-	if (!firstSceneCameraId) {
-		return { ...camera, cameras: normalizedCameras }
-	}
 
 	return {
 		...camera,

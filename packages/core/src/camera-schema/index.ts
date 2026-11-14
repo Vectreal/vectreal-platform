@@ -16,6 +16,8 @@ import { z } from 'zod'
 import {
 	CAMERA_FOV_MAX,
 	CAMERA_FOV_MIN,
+	CAMERA_TRANSITION_EASINGS,
+	CAMERA_TRANSITION_TYPES,
 	CAMERA_VECTOR_FIELDS,
 	isSceneCamera
 } from './camera-rules'
@@ -70,7 +72,7 @@ const objectAvoidanceSchema = z.looseObject(
 export const cameraTransitionSchema = z
 	.looseObject(
 		{
-			type: z.enum(['linear', 'object_avoidance', 'none'], {
+			type: z.enum(CAMERA_TRANSITION_TYPES, {
 				error: 'must be one of linear, object_avoidance, none'
 			}),
 			duration: z
@@ -78,7 +80,7 @@ export const cameraTransitionSchema = z
 				.min(0, { error: NON_NEGATIVE })
 				.optional(),
 			easing: z
-				.enum(['linear', 'ease_in', 'ease_out', 'ease_in_out'], {
+				.enum(CAMERA_TRANSITION_EASINGS, {
 					error: 'must be one of linear, ease_in, ease_out, ease_in_out'
 				})
 				.optional()
