@@ -12,13 +12,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useSceneUpload } from './use-scene-upload'
 
-const { load, resetSceneState } = vi.hoisted(() => ({
+const { load, resetSceneState, loader } = vi.hoisted(() => ({
 	load: vi.fn(),
-	resetSceneState: vi.fn()
+	resetSceneState: vi.fn(),
+	// The loader's rendered state, which the subject is read against.
+	loader: { status: 'loading', source: 'url' } as {
+		status: string
+		source: string | null
+	}
 }))
 
 vi.mock('@vctrl/hooks/use-load-model', () => ({
-	useModelContext: () => ({ load })
+	useModelContext: () => ({ load, ...loader })
 }))
 vi.mock('./use-scene-settings', () => ({
 	useResetSceneState: () => resetSceneState
@@ -45,6 +50,7 @@ const outcome = (
 
 beforeEach(() => {
 	load.mockReset()
+	Object.assign(loader, { status: 'loading', source: 'url' })
 	resetSceneState.mockReset()
 	vi.mocked(toast.error).mockReset()
 	vi.mocked(toast.success).mockReset()
@@ -114,5 +120,50 @@ describe('useSceneUpload', () => {
 			await opening
 		})
 		expect(result.current.subject).toBeNull()
+	})
+
+	it('does not name a saved scene that superseded the open, while the open still parses', () => {
+		load.mockReturnValue(new Promise(() => undefined))
+		const { result, rerender } = renderHook(() => useSceneUpload())
+
+		act(() => {
+			void result.current.openModel(SOURCE, { label: 'Rocket' })
+		})
+		expect(result.current.subject).toBe('Rocket')
+
+		Object.assign(loader, { source: 'server' })
+		rerender()
+		expect(result.current.subject).toBeNull()
+	})
+
+	it('forgets the name once the open ends, even superseded', async () => {
+		load.mockResolvedValue(outcome('empty', { current: false }))
+		const { result } = renderHook(() => useSceneUpload())
+
+		await act(() => result.current.openModel(SOURCE, { label: 'Rocket' }))
+
+		expect(result.current.subject).toBeNull()
+	})
+
+	it('keeps the name of a newer open over the one it superseded', async () => {
+		let finishFirst: (value: unknown) => void = () => undefined
+		load
+			.mockReturnValueOnce(new Promise((resolve) => (finishFirst = resolve)))
+			.mockReturnValueOnce(new Promise(() => undefined))
+		const { result } = renderHook(() => useSceneUpload())
+
+		let first: Promise<unknown> = Promise.resolve()
+		act(() => {
+			first = result.current.openModel(SOURCE, { label: 'Rocket' })
+		})
+		act(() => {
+			void result.current.openModel(SOURCE, { label: 'Camera' })
+		})
+		await act(async () => {
+			finishFirst(outcome('empty', { current: false }))
+			await first
+		})
+
+		expect(result.current.subject).toBe('Camera')
 	})
 })

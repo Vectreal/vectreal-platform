@@ -398,7 +398,13 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 				}
 			}
 
-			if (consentRef.current?.analytics) {
+			/*
+			  A sample arrives only once it is downloaded: one that failed or
+			  was cancelled on the way is not a model the visitor brought, and
+			  counting it would read as a GLB the page could not take.
+			*/
+			const arrived = source.kind === 'files' || loaded.status === 'ready'
+			if (arrived && consentRef.current?.analytics) {
 				posthog?.capture(
 					'convert_model_received',
 					buildConvertModelReceivedProps(

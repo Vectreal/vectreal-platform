@@ -650,6 +650,22 @@ describe('a sample', () => {
 
 		await screen.findByText(formatFileSize(4_096))
 	})
+
+	it('that fails to download says so, and is not counted as an arrival', async () => {
+		consentState.analytics = true
+		render(<ConverterSurface pair={convertPairBySlug('glb-to-gltf')!} />)
+
+		fireEvent.click(screen.getByRole('button', { name: 'sample' }))
+		await waitFor(() => expect(loadSources).toHaveLength(1))
+		await refuse(0, 'url_unreachable')
+
+		expect((await screen.findByRole('alert')).textContent).toContain(
+			'The sample did not download. Try your own file instead.'
+		)
+		expect(
+			capture.mock.calls.filter(([name]) => name === 'convert_model_received')
+		).toEqual([])
+	})
 })
 
 describe('the size a conversion is measured against', () => {
