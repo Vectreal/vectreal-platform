@@ -43,6 +43,7 @@ import {
 	getRecommendedUpgrade
 } from '../../../lib/domain/billing/entitlement-service.server'
 import { buildDashboardCapabilities } from '../../../lib/domain/dashboard/dashboard-capabilities'
+import { canPerformDashboardOperation } from '../../../lib/domain/dashboard/dashboard-operations'
 import {
 	createProject,
 	getUserProjects
@@ -238,7 +239,7 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 		projectCreationCapabilities
 	).some((cap) => cap.canCreateProject)
 	const hasAnyRolePermission = organizations.some(({ membership }) =>
-		['owner', 'admin', 'member'].includes(membership.role)
+		canPerformDashboardOperation('project:create', { role: membership.role })
 	)
 
 	const openProjectQuotaUpgradeModal = () => {
