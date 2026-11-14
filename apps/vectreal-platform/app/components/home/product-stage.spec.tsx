@@ -61,14 +61,17 @@ describe('placing the stage', () => {
 describe('the live stage', () => {
 	beforeEach(resetHeroSettled)
 
-	it('stays out of the accessibility tree, hint included', () => {
-		render(<ProductStage visible={false} place={PLACE} hint />)
-		const hint = screen.getByText(HOME_PAGE_COPY.stage.status.live)
-		expect(hint.closest('[aria-hidden="true"]')).not.toBeNull()
+	/* The screenshots are pictures: nothing over them can be grabbed or read out, and nothing invites a drag. */
+	it('takes no pointer and stays out of the accessibility tree', () => {
+		const { container } = render(<ProductStage visible={false} place={PLACE} />)
+		const root = container.firstElementChild as HTMLElement
+		expect(root.getAttribute('aria-hidden')).toBe('true')
+		expect(root.className).toContain('pointer-events-none')
+		expect(screen.queryByText(HOME_PAGE_COPY.stage.status.live)).toBeNull()
 	})
 
 	it('starts once the hero has settled, before the window is reached', async () => {
-		render(<ProductStage visible={false} place={PLACE} hint />)
+		render(<ProductStage visible={false} place={PLACE} />)
 		await act(async () => {})
 		expect(screen.queryByText('live stage')).toBeNull()
 
@@ -77,7 +80,7 @@ describe('the live stage', () => {
 	})
 
 	it('starts when the window is on screen first, then keeps running', async () => {
-		const props = { place: PLACE, hint: true }
+		const props = { place: PLACE }
 		const { rerender } = render(<ProductStage visible={false} {...props} />)
 		await act(async () => {})
 		expect(screen.queryByText('live stage')).toBeNull()

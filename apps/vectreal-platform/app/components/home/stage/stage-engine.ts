@@ -50,6 +50,8 @@ export interface StageOptions {
 	posterMode?: boolean
 	/** Dissolve the model into the page in a band at the stage's top and bottom edges. On by default. */
 	edgeFade?: boolean
+	/** Hand the object to the reader to turn once it is shown. On by default; a stage set inside a picture of something else is looked at, not handled. */
+	turnable?: boolean
 	/** Stand the model on the drafting floor, drawn in the scene, and keep the tilt to a band. The home hero only: a 2D floor behind a freely orbiting model never agreed with its shadow. */
 	floor?: boolean
 }
@@ -75,6 +77,7 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 		reducedMotion,
 		posterMode = false,
 		edgeFade = true,
+		turnable = true,
 		floor: withFloor = false
 	} = options
 	const renderer = new THREE.WebGLRenderer({
@@ -688,7 +691,7 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 		el.scale?.setAttribute('data-gone', '')
 		controls.target.copy(target)
 		controls.update()
-		controls.enabled = true
+		controls.enabled = turnable
 	}
 
 	function renderObjectPng() {
