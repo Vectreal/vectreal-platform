@@ -113,8 +113,8 @@ export async function loadAuthenticatedUser(
 			throw redirect('/sign-in?error=email_conflict')
 		}
 
-		throw new Response(`Failed to initialize user data: ${message}`, {
-			status: 500
-		})
+		// No body: the boundary shows its own words for a 500, and the message
+		// (a database or driver error) is in the report above, not on the page.
+		throw new Response(null, { status: 500 })
 	}
 }

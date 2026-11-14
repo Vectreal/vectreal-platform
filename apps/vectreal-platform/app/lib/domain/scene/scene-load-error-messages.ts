@@ -46,6 +46,16 @@ function isStructuredLoadError(error: unknown): error is StructuredLoadError {
 	)
 }
 
+/** The heading over `getDashboardSceneLoadErrorMessage` on the scene page. */
+export const DASHBOARD_SCENE_LOAD_ERROR_HEADING = 'This scene did not load'
+
+const DASHBOARD_SCENE_LOAD_FALLBACK = 'Failed to load scene.'
+
+/**
+ * What the dashboard's scene page says when the scene will not load. Only
+ * mapped copy: a loader's raw message is written for a trace, not a reader,
+ * and an unknown code gets the generic sentence rather than its text.
+ */
 export function getDashboardSceneLoadErrorMessage(error: unknown): string {
 	if (isStructuredLoadError(error)) {
 		switch (error.code) {
@@ -57,18 +67,8 @@ export function getDashboardSceneLoadErrorMessage(error: unknown): string {
 				return 'Scene loading failed due to a server or network issue. Retry in a moment.'
 			case 'missing_assets':
 				return 'Scene assets are incomplete. Re-open this scene in Publisher and re-save to repair asset links.'
-			default:
-				return error.message
 		}
 	}
 
-	if (error instanceof Error) {
-		return error.message
-	}
-
-	if (typeof error === 'string' && error.trim().length > 0) {
-		return error
-	}
-
-	return 'Failed to load scene.'
+	return DASHBOARD_SCENE_LOAD_FALLBACK
 }

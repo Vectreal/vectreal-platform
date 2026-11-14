@@ -100,6 +100,7 @@ export function NotFound() {
 const ERROR_PAGE_TITLE: Record<PublicErrorKind, string> = {
 	not_found: 'Page not found',
 	forbidden: 'Access denied',
+	request_refused: 'Request not completed',
 	server_error: 'Something went wrong'
 }
 

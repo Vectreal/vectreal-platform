@@ -20,7 +20,10 @@ export interface ErrorCopy {
 	description: string
 }
 
-export type PublicErrorKind = 'not_found' | 'forbidden' | 'server_error'
+export type PublicErrorKind =
+	'not_found' | 'forbidden' | 'request_refused' | 'server_error'
+
+/** Also what the dashboard's route boundary says: one set of words per kind. */
 
 export const PUBLIC_ERROR_COPY: Record<PublicErrorKind, ErrorCopy> = {
 	not_found: {
@@ -33,6 +36,15 @@ export const PUBLIC_ERROR_COPY: Record<PublicErrorKind, ErrorCopy> = {
 		description:
 			'It exists, but not for this account. Sign in with another one, or ask whoever shared the link.'
 	},
+	/*
+	  Any other 4xx a loader threw on purpose: a missing id, something gone. Not
+	  "on our side", which would blame the server for a request it refused.
+	*/
+	request_refused: {
+		heading: 'This request could not be completed',
+		description:
+			'Go back and try again. If it keeps happening, the link may be out of date.'
+	},
 	server_error: {
 		heading: 'Something went wrong on our side',
 		description: 'The page did not load. Trying again usually works.'
@@ -43,6 +55,7 @@ export function publicErrorKind(error: unknown): PublicErrorKind {
 	if (isRouteErrorResponse(error)) {
 		if (error.status === 404) return 'not_found'
 		if (error.status === 403) return 'forbidden'
+		if (error.status < 500) return 'request_refused'
 	}
 	return 'server_error'
 }
