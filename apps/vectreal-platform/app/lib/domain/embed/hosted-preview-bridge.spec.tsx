@@ -318,3 +318,77 @@ describe('hosted preview bridge listener', () => {
 		)
 	})
 })
+
+describe('hosted preview bridge, a load that is under way or failed', () => {
+	const sent = () =>
+		vi.mocked(parent.postMessage).mock.calls.map(([message]) => message)
+
+	it('tells a page that pings after the load failed, once per failure', () => {
+		const { rerender } = renderHook(
+			({ loadError }) =>
+				useHostedPreviewBridge({ sceneId: 'scene-1', loadError }),
+			{
+				initialProps: {
+					loadError: null as null | { code: 'url_http'; recoverable: boolean }
+				}
+			}
+		)
+		const failure = { code: 'url_http' as const, recoverable: true }
+		rerender({ loadError: failure })
+		rerender({ loadError: failure })
+
+		post(ping)
+
+		expect(sent()).toEqual([
+			{
+				source: HOSTED_PREVIEW_VIEWER_SOURCE,
+				type: 'load_failed',
+				sceneId: 'scene-1',
+				code: 'url_http',
+				recoverable: true
+			}
+		])
+	})
+
+	it('keeps only the latest progress for a page that has not pinged yet', () => {
+		const bridge = renderBridge()
+		const progress = (loaded: number) => ({
+			type: 'load_progress' as const,
+			progress: { phase: 'fetching' as const, bytes: { loaded, total: 10 } }
+		})
+
+		act(() => {
+			bridge.onInteractionEvent?.({ type: 'model_loaded' })
+			bridge.onInteractionEvent?.(progress(2))
+			bridge.onInteractionEvent?.(progress(6))
+		})
+		post(ping)
+
+		expect(sent().map((message) => message.event)).toEqual([
+			{ type: 'model_loaded' },
+			progress(6)
+		])
+	})
+
+	it('drops a queued failure once a retry is loading', () => {
+		const { result, rerender } = renderHook(
+			({ loadError }) =>
+				useHostedPreviewBridge({ sceneId: 'scene-1', loadError }),
+			{
+				initialProps: {
+					loadError: null as null | { code: 'url_http'; recoverable: boolean }
+				}
+			}
+		)
+		rerender({ loadError: { code: 'url_http', recoverable: true } })
+		const retrying = {
+			type: 'load_progress' as const,
+			progress: { phase: 'fetching' as const }
+		}
+		act(() => result.current.onInteractionEvent?.(retrying))
+
+		post(ping)
+
+		expect(sent()).toEqual([expect.objectContaining({ event: retrying })])
+	})
+})

@@ -19,6 +19,8 @@ import type { VectrealViewerProps } from '@vctrl/viewer'
 
 const executor = { execute: vi.fn() }
 const bridgeCalls: unknown[] = []
+/** What the page handed the bridge on each render. */
+const bridgeParams: Array<{ loadError?: unknown }> = []
 
 vi.mock('../app/components/viewer/client-vectreal-viewer', () => ({
 	ClientVectrealViewer: (props: VectrealViewerProps) => {
@@ -30,9 +32,12 @@ vi.mock('../app/components/viewer/client-vectreal-viewer', () => ({
 }))
 
 vi.mock('../app/lib/domain/embed/hosted-preview-bridge', () => ({
-	useHostedPreviewBridge: () => ({
-		onCommandExecutorReady: (value: unknown) => bridgeCalls.push(value)
-	})
+	useHostedPreviewBridge: (params: { loadError?: unknown }) => {
+		bridgeParams.push(params)
+		return {
+			onCommandExecutorReady: (value: unknown) => bridgeCalls.push(value)
+		}
+	}
 }))
 
 vi.mock('react-router', () => ({
@@ -41,14 +46,17 @@ vi.mock('react-router', () => ({
 }))
 
 const loadState = {
-	current: { sceneData: undefined as ServerSceneData | undefined }
+	current: {
+		sceneData: undefined as ServerSceneData | undefined,
+		loadError: null as unknown
+	}
 }
 
 vi.mock('../app/components/scene-embed/use-scene-embed-scene', () => ({
 	useSceneEmbedScene: () => ({
 		file: loadState.current.sceneData ? { model: {} } : null,
 		sceneData: loadState.current.sceneData,
-		loadError: null,
+		loadError: loadState.current.loadError,
 		retrySceneLoad: () => Promise.resolve()
 	})
 }))
@@ -56,12 +64,13 @@ vi.mock('../app/components/scene-embed/use-scene-embed-scene', () => ({
 describe('the embed bridge', () => {
 	it('is handed the executor only once the scene data has arrived', () => {
 		bridgeCalls.length = 0
-		loadState.current = { sceneData: undefined }
+		loadState.current = { sceneData: undefined, loadError: null }
 		const { rerender } = render(<SceneEmbedPage projectId="p" sceneId="s" />)
 		expect(bridgeCalls).toEqual([])
 
 		loadState.current = {
-			sceneData: { gltfJson: null, assetData: {} } as ServerSceneData
+			sceneData: { gltfJson: null, assetData: {} } as ServerSceneData,
+			loadError: null
 		}
 		rerender(<SceneEmbedPage projectId="p" sceneId="s" />)
 		expect(bridgeCalls).toEqual([executor])
@@ -71,16 +80,26 @@ describe('the embed bridge', () => {
 		bridgeCalls.length = 0
 		const sceneData = () =>
 			({ gltfJson: null, assetData: {} }) as ServerSceneData
-		loadState.current = { sceneData: sceneData() }
+		loadState.current = { sceneData: sceneData(), loadError: null }
 		const { rerender } = render(<SceneEmbedPage projectId="p" sceneId="s" />)
 		expect(bridgeCalls).toEqual([executor])
 
-		loadState.current = { sceneData: sceneData() }
+		loadState.current = { sceneData: sceneData(), loadError: null }
 		rerender(<SceneEmbedPage projectId="p" sceneId="s" />)
 		expect(bridgeCalls).toEqual([executor])
 
-		loadState.current = { sceneData: undefined }
+		loadState.current = { sceneData: undefined, loadError: null }
 		rerender(<SceneEmbedPage projectId="p" sceneId="s" />)
 		expect(bridgeCalls).toEqual([executor, null])
+	})
+
+	// So the host page hears it, rather than waiting out its ready() timeout.
+	it('is told when the scene fails to load', () => {
+		bridgeParams.length = 0
+		const failure = { code: 'url_http', recoverable: true }
+		loadState.current = { sceneData: undefined, loadError: failure }
+		render(<SceneEmbedPage projectId="p" sceneId="s" />)
+
+		expect(bridgeParams.at(-1)?.loadError).toBe(failure)
 	})
 })

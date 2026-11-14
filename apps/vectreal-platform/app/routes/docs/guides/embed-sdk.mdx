@@ -109,7 +109,7 @@ None of them persists to the stored scene configuration.
 ```ts
 const embed = new VectrealEmbed(iframe, {
   iframeOrigin: 'https://vectreal.com', // optional, auto-detected from iframe.src
-  readyTimeout: 15000                   // optional, ms before ready() rejects
+  readyTimeout: 15000                   // optional, ms of silence before ready() rejects
 })
 ```
 
@@ -155,6 +155,8 @@ or sending a host message. `destroy()` discards anything still queued.
 |---|---|---|
 | `viewer_ready` | `void` | The viewer accepts commands. Emitted once per `VectrealEmbed`. |
 | `model_loaded` | `void` | The model has finished loading and initial framing is complete. Fires once per load. |
+| `load_progress` | `{ phase, bytes?, items? }` | Where the scene's load is while the frame shows its loader: `fetching` with `bytes: { loaded, total }` (`total` is `null` when the server did not say), `parsing`, then `preparing` (environment, shaders, framing). On every phase change and at most every 250 ms within one. Each one also restarts `ready()`'s timeout. |
+| `load_failed` | `{ code: string, recoverable: boolean }` | The scene could not be loaded. The frame shows an error with a **Try again** button, and a waiting `ready()` rejects at once. `code` is the loader's error code, such as `url_http`; `recoverable` says whether trying again can help. |
 | `camera_changed` | `{ cameraId: string }` | The active camera changed. |
 | `hotspot_activated` | `{ hotspotId: string, cameraId: string \| null }` | A visitor clicked a marker. `cameraId` is `null` for one that only reveals content. Not emitted for your own `focusHotspot` call. |
 | `animation_state_changed` | `{ playing, activeClipId, complete }` | Playback started, stopped or advanced. `activeClipId` is `null` in simultaneous mode. |
@@ -263,6 +265,7 @@ If you prefer zero dependencies, you can implement the protocol directly. Both s
 |---|---|---|
 | `pong` | `sceneId`, `cameras: EmbedCameraDescriptor[]`, `hotspots?: EmbedHotspotDescriptor[]` | Response to `ping` - scene is ready. `hotspots` is absent on iframes older than the field. |
 | `viewer_event` | `event: ViewerInteractionEvent`, `sceneId?` | Viewer lifecycle event. |
+| `load_failed` | `code: string`, `recoverable: boolean`, `sceneId?` | The scene could not be loaded. Sent even before your first `ping` is answered, once the frame knows your origin. Absent on iframes older than the message. |
 | `interaction_event` | `eventName`, `interactionId?`, `payload?` | A Publisher custom event fired. |
 
 ### Minimal raw example
