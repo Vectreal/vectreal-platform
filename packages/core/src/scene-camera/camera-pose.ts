@@ -7,6 +7,7 @@ import {
 	resolveFramingAspect,
 	scaleOrbitOffset
 } from './viewport-framing'
+import { isCameraFov } from '../camera-schema/camera-rules'
 
 import type { OpeningPose } from './opening-pose'
 import type { ViewportFraming } from './viewport-framing'
@@ -199,7 +200,8 @@ export function resolveCameraPose(
 		position,
 		rotation: rawRotation,
 		target,
-		fov: typeof selectedCamera.fov === 'number' ? selectedCamera.fov : live.fov,
+		// A stored fov the lens cannot take keeps the live one.
+		fov: isCameraFov(selectedCamera.fov) ? selectedCamera.fov : live.fov,
 		framing
 	}
 }

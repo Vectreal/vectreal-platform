@@ -798,6 +798,9 @@ importers:
       watlas:
         specifier: 1.0.1
         version: 1.0.1
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
     devDependencies:
       '@nx/vite':
         specifier: 'catalog:'

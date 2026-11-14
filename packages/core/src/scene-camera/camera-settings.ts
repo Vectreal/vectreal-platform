@@ -1,22 +1,28 @@
-import { isFramingAspect } from './viewport-framing'
+import { isSceneCamera, repairCameraEntry } from '../camera-schema/camera-rules'
 
+import type { CameraRepair } from '../camera-schema/camera-rules'
 import type {
 	CameraConfig,
 	CameraProps,
 	CameraTransitionConfig
 } from '../types'
 
-/**
- * Scene cameras are the ones a viewer can open on and switch between. Entries
- * with another `kind` (a hotspot's close-up) are reached through their marker.
- * A missing `kind` predates the field and means "scene".
- *
- * The one definition. Normalization, the viewer's opening camera and the
- * platform's default-camera and embed rules all ask it, so they cannot drift
- * apart on which camera a scene opens on.
- */
-export const isSceneCamera = (camera: { kind?: string }): boolean =>
-	!camera.kind || camera.kind === 'scene'
+/*
+  The one definition of a scene camera, owned by the camera schema beside the
+  rest of its rules. Normalization, the viewer's opening camera and the
+  platform's default-camera and embed rules all ask it, so they cannot drift
+  apart on which camera a scene opens on.
+*/
+export { isSceneCamera }
+
+/** Where a repair is reported when the caller names nowhere else. */
+const warnOfRepairs = (repairs: CameraRepair[]) => {
+	console.warn(
+		`[vectreal] Dropped stored camera values that the viewer cannot use: ${repairs
+			.map(({ cameraIndex, field }) => `cameras[${cameraIndex}].${field}`)
+			.join(', ')}`
+	)
+}
 
 /** The camera a scene falls back to when it stores none. */
 export const DEFAULT_CAMERA: CameraConfig = {
@@ -51,35 +57,46 @@ export const DEFAULT_SCENE_TRANSITION: Readonly<
  * 2. Resolves a stable `activeCameraId` that points to the first scene camera
  * 3. Fills missing camera ids/names
  * 4. Keeps `initial` flag aligned with the active camera
- * 5. Drops a `framingAspect` that `isFramingAspect` refuses
+ * 5. Drops each stored value the viewer cannot use (`repairCameraEntry`:
+ *    an fov outside (0, 180) or a malformed `framingAspect`),
+ *    and reports what it dropped to `onRepair`, a console warning by default.
+ *    A read repairs rather than refuses, so a published scene keeps opening.
  *
  * The semantic is: the first scene camera is ALWAYS the default unless explicitly
  * reordered by the user (moving a camera to the front via the pin action).
  */
 export function normalizeCameraSettings(
-	camera?: CameraProps
+	camera?: CameraProps,
+	{
+		onRepair = warnOfRepairs
+	}: { onRepair?: (repairs: CameraRepair[]) => void } = {}
 ): CameraProps | undefined {
 	if (!camera?.cameras || camera.cameras.length === 0) {
 		return camera
 	}
 
-	const normalizedCameras = camera.cameras.map((entry, index) => {
-		const { framingAspect, ...rest } = entry
+	const repairs: CameraRepair[] = []
+	const normalizedCameras = camera.cameras.map((stored, index) => {
+		// Dropped rather than fixed up: an absent value has a defined meaning in
+		// the viewer, a malformed one does not.
+		const { entry, repairs: dropped } = repairCameraEntry(
+			stored as typeof stored & Record<string, unknown>,
+			index
+		)
+		repairs.push(...dropped)
 		return {
-			...rest,
+			...entry,
 			cameraId: entry.cameraId || `camera-${index + 1}`,
-			name: entry.name || `Camera ${index + 1}`,
-			// Dropped rather than repaired: an absent aspect has a defined meaning
-			// in the viewer, a malformed one does not.
-			...(isFramingAspect(framingAspect) ? { framingAspect } : {})
+			name: entry.name || `Camera ${index + 1}`
 		}
 	})
+	if (repairs.length > 0) onRepair(repairs)
 
 	// Find the first scene camera (non-hotspot)
 	const firstSceneCameraId = normalizedCameras.find(isSceneCamera)?.cameraId
 
 	if (!firstSceneCameraId) {
-		return camera
+		return { ...camera, cameras: normalizedCameras }
 	}
 
 	return {
