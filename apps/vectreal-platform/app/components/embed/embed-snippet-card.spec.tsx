@@ -65,16 +65,18 @@ const openCopyMenu = () => {
 }
 
 describe('the copy guard', () => {
-	it('copies what it is showing while the code is live', () => {
+	it('copies what it is showing while the code is live', async () => {
 		render(<EmbedSnippetCard code={CODE} ready onTest={vi.fn()} />)
 
 		fireEvent.click(screen.getByRole('button', { name: EMBED_COPY.copyHtml }))
+		// The copy writes, then marks the button copied: let it finish.
+		await act(async () => {})
 
 		expect(writeText).toHaveBeenCalledTimes(1)
 		expect(writeText.mock.calls[0][0]).toBe(CODE.html)
 	})
 
-	it('copies the view a menu item names, without leaving the tab', () => {
+	it('copies the view a menu item names, without leaving the tab', async () => {
 		/*
 		  The only positive assertion in this file used to go through the split
 		  button, so `onClick={() => copyView(candidate)}` on the menu items could
@@ -88,6 +90,8 @@ describe('the copy guard', () => {
 			item.textContent?.includes(EMBED_COPY.copyUrl)
 		)
 		fireEvent.click(copyUrl as HTMLElement)
+		// The copy writes, then marks the button copied: let it finish.
+		await act(async () => {})
 
 		expect(writeText).toHaveBeenCalledTimes(1)
 		expect(writeText.mock.calls[0][0]).toBe(CODE.url)

@@ -12,7 +12,12 @@ Closes #<!-- issue number -->
   call site. If it will not fit in a sentence, investigate further before
   editing. If the fix adds a check rather than removing a cause, go one level
   deeper. For docs, tooling or a pure addition, write "n/a" and why.
+  A bug fix also fills the three lines below.
 -->
+
+- **Why it existed:** <!-- the design gap that allowed it: a rule with no single owner, a decision made in two places, a pattern never settled. Not the line. -->
+- **Shares cause with:** <!-- Work Items rows or PRs with the same cause, or "none, searched <where>" -->
+- **Fails before the fix:** <!-- the test that is red with the fix reverted -->
 
 ## Work items
 

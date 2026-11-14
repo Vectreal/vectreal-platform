@@ -469,7 +469,10 @@ describe('the site nav', () => {
 
 		fireEvent.click(drawer.getByRole('button', { name: 'Log out' }))
 		expect(screen.queryByRole('dialog')).toBeNull()
-		await vi.waitFor(() => expect(logoutAction).toHaveBeenCalledOnce())
+		// The logout action settles the router: wait for that inside act.
+		await act(() =>
+			vi.waitFor(() => expect(logoutAction).toHaveBeenCalledOnce())
+		)
 	})
 
 	it('shows the marketing links everywhere else', () => {

@@ -198,7 +198,8 @@ describe('ModelExporter.exportDocumentGLBForPublish', () => {
 				copy
 					.createAccessor()
 					.setType('VEC2')
-					.setArray(new Float32Array(count * 2).map((_, i) => i / count))
+					// Inside [0, 1], as a UV layout is; quantize warns outside it.
+					.setArray(new Float32Array(count * 2).map((_, i) => i / (count * 2)))
 					.setBuffer(copy.getRoot().listBuffers()[0])
 			)
 		})

@@ -23,7 +23,9 @@ export async function findCliClient(): Promise<CliClient | null> {
 		throw error
 	}
 
-	const client = data.clients.find(
+	// GoTrue leaves `clients` out of an empty list and auth-js passes the body
+	// through as `data`, so its type promises an array the wire may not carry.
+	const client = (data.clients ?? []).find(
 		({ client_name }) => client_name === CLI_OAUTH_CLIENT_NAME
 	)
 	return client

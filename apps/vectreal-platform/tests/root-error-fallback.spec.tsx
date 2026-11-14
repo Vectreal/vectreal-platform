@@ -8,22 +8,26 @@
  * `JSON.stringify` on the error, so visitors read the router's error response
  * as raw JSON, and its meta was the home page's, canonical and `index` included.
  */
+import { format } from 'node:util'
+
 import { render, screen } from '@testing-library/react'
 import {
 	createRoutesStub,
 	data,
 	UNSAFE_ErrorResponseImpl as ErrorResponseImpl
 } from 'react-router'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Layout, meta } from '../app/root'
 
 import type { MetaArgs } from 'react-router'
+import type { MockInstance } from 'vitest'
 
 function renderRootError(thrown: unknown) {
 	const Stub = createRoutesStub([
 		{
 			path: '/x',
+			HydrateFallback: () => null,
 			loader: () => {
 				throw thrown
 			},
@@ -35,8 +39,22 @@ function renderRootError(thrown: unknown) {
 }
 
 describe('root Layout, when an error reaches it', () => {
-	// Rendering <html> into a test container is expected to warn.
-	vi.spyOn(console, 'error').mockImplementation(() => {})
+	/*
+	  Rendering a whole document into a test container warns, and so does a
+	  routes stub with no build manifest, whose <Links> and <Scripts> carry an
+	  empty href. Those two, and nothing else.
+	*/
+	let consoleError: MockInstance<typeof console.error>
+	beforeEach(() => {
+		consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+	})
+	afterEach(() => {
+		for (const args of consoleError.mock.calls) {
+			expect(format(...args)).toMatch(
+				/cannot be a child of|An empty string \(""\) was passed to the href attribute/
+			)
+		}
+	})
 
 	it('shows the not-found page for a 404', async () => {
 		renderRootError(data(null, { status: 404 }))
