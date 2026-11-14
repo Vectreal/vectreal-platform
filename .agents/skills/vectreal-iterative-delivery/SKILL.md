@@ -307,7 +307,9 @@ plan  ──▶  In progress  ──▶  In review  ──▶  Shipped
 
 - **Never write git history unless asked.** Commit, push, merge, rebase and tag
   all count. A plan that authorizes PRs for named phases authorizes those phases
-  and nothing else.
+  and nothing else. A brief from the lead session that asks for a PR counts as
+  asked for that PR's branch, commits and pushes; `vectreal-session` says what
+  such a brief does and does not cover.
 - **No self-attribution anywhere.** Not in commit messages, not in PR titles or
   bodies, not in branch names. Branches take a conventional prefix describing the
   change: `feat/`, `fix/`, `chore/`, `test/`, `docs/`, `refactor/`, `perf/`,
