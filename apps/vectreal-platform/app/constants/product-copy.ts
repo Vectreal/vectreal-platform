@@ -493,16 +493,15 @@ export const HOME_PAGE_COPY = {
 		}
 	},
 	/**
-	  The free-model offer, the page's first section under the hero. It claims
-	  nothing the `/free-model` page (`MODEL_INTAKE_COPY.en`) does not, so the
-	  offer cannot promise what the intake does not deliver: a service we
-	  perform, never how the model is made.
+	  How the free-model offer works, in steps. It claims nothing the
+	  `/free-model` page (`MODEL_INTAKE_COPY.en`) does not, so the offer cannot
+	  promise what the intake does not deliver: a service we perform, never how
+	  the model is made. The offer itself is the hero's, so it is not repeated
+	  here: the band says what happens, then the same door.
 	*/
 	pilot: {
 		heading: 'Your product in 3D, from three photos.',
-		lead: "Send us three photos of one product. We look at them first and tell you whether we can make a model from them. If we can, the first one is free, as GLB and USDZ files for Shopify's own 3D slot.",
 		cta: 'Request a free model',
-		afterCta: 'If you like it, we make five products as a paid pilot.',
 		stepsLabel: 'How it works',
 		steps: [
 			{
