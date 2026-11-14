@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
+
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { format } from 'node:util'
 
 import { act, render, screen } from '@testing-library/react'
 import { Component, type ReactNode, Suspense } from 'react'
@@ -134,7 +136,9 @@ describe('EnvironmentPrewarm', () => {
 	})
 
 	it('keeps a failed load from the page, and prewarms the next environment', () => {
-		vi.spyOn(console, 'error').mockImplementation(() => undefined)
+		const logged = vi
+			.spyOn(console, 'error')
+			.mockImplementation(() => undefined)
 		const pageCaught = vi.fn()
 		useEnvironment.mockImplementation(({ files }: { files: string }) => {
 			if (files === 'missing.hdr') throw new Error('404')
@@ -154,10 +158,22 @@ describe('EnvironmentPrewarm', () => {
 		rerender(page('studio.hdr'))
 		expect(compile).toHaveBeenCalledOnce()
 		unmount()
+		// What this failure logs, and nothing else.
+		for (const args of logged.mock.calls) {
+			expect(format(...args)).toMatch(/404/)
+		}
 	})
 })
 
 describe('EnvironmentPrewarm, after a failed load', () => {
+	afterEach(() => {
+		// React reports the failed load it caught, and nothing else.
+		if (!vi.isMockFunction(console.error)) return
+		for (const args of vi.mocked(console.error).mock.calls) {
+			expect(format(...args)).toMatch(/404/)
+		}
+	})
+
 	const renderFailing = (files: string | string[]) => {
 		vi.spyOn(console, 'error').mockImplementation(() => undefined)
 		const pageCaught = vi.fn()
@@ -193,7 +209,9 @@ describe('EnvironmentPrewarm, after a failed load', () => {
 
 describe('EnvironmentPrewarm, while its environment downloads', () => {
 	it('keeps the viewer showing, and a download that then fails off the page', async () => {
-		vi.spyOn(console, 'error').mockImplementation(() => undefined)
+		const logged = vi
+			.spyOn(console, 'error')
+			.mockImplementation(() => undefined)
 		const pageCaught = vi.fn()
 		let failDownload = (_error: Error) => undefined as void
 		let failed: Error | null = null
@@ -225,6 +243,10 @@ describe('EnvironmentPrewarm, while its environment downloads', () => {
 		expect(pageCaught).not.toHaveBeenCalled()
 		expect(compile).not.toHaveBeenCalled()
 		unmount()
+		// What this failure logs, and nothing else.
+		for (const args of logged.mock.calls) {
+			expect(format(...args)).toMatch(/404/)
+		}
 	})
 })
 

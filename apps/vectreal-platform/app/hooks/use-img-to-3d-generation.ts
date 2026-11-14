@@ -297,7 +297,8 @@ export function useImgTo3dGeneration(
 	const [searchParams] = useSearchParams()
 	const [isSubmitting, setIsSubmitting] = useState(false)
 	const [submitError, setSubmitError] = useState<ImgTo3dErrorKind | null>(null)
-	const [opening, setOpening] = useState<{
+	// How the open below ended for the variant it was for: null while it runs.
+	const [settled, setSettled] = useState<{
 		readonly jobId: string
 		readonly error: ImgTo3dErrorKind | null
 	} | null>(null)
@@ -356,7 +357,6 @@ export function useImgTo3dGeneration(
 		const jobId = linkedJobId
 		const controller = new AbortController()
 		const { signal } = controller
-		setOpening({ jobId, error: null })
 
 		void (async () => {
 			try {
@@ -378,18 +378,25 @@ export function useImgTo3dGeneration(
 				const result = await loadModelRef.current([file])
 				// `uploadFiles` has already said why in a toast.
 				if (result.status !== 'ready') throw new Error('open_failed')
-				setOpening(null)
+				// A load the URL left mid-way: the cleanup already reset the outcome.
+				if (signal.aborted) return
+				setSettled({ jobId, error: null })
 			} catch (error) {
 				if (signal.aborted) return
 				const kind = kindOf(error, 'open_failed')
-				setOpening({ jobId, error: kind })
+				setSettled({ jobId, error: kind })
 				// A link can name a variant the panel does not list, so a failed
 				// download is said here too. A failed load already was, by `uploadFiles`.
 				if (kind !== 'open_failed') toast.error(IMG_TO_3D_ERROR_COPY[kind])
 			}
 		})()
 
-		return () => controller.abort()
+		return () => {
+			controller.abort()
+			// The next open of this variant, by a retry or by coming back to it,
+			// starts unsettled rather than from how the last one ended.
+			setSettled(null)
+		}
 	}, [linkedJobId, openAttempt])
 
 	const retryOpen = useCallback(
@@ -400,8 +407,19 @@ export function useImgTo3dGeneration(
 	return {
 		isSubmitting,
 		submitError,
-		/** The variant the URL names while it opens, or failed to, with why. */
-		opening: opening?.jobId === linkedJobId ? opening : null,
+		/**
+		 * The variant the URL names while it opens, or failed to, with why.
+		 * Read off the URL rather than set by the open, so it holds from the
+		 * first render, the server's included: the publisher shows its loading
+		 * surface for it, and an empty stage in the gap would flash the list.
+		 */
+		opening: !linkedJobId
+			? null
+			: settled?.jobId !== linkedJobId
+				? { jobId: linkedJobId, error: null }
+				: settled.error
+					? settled
+					: null,
 		/** Opens the variant the URL names again, after a failed open. */
 		retryOpen,
 		generate

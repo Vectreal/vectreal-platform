@@ -60,6 +60,7 @@ const report = (marker: string) => ({
 
 describe('useOptimizeModel texturesOptimization', () => {
 	it('reports what a partial pass committed, and still says it was partial', async () => {
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
 		const partial = new TextureCompressionError(1, 3)
 		optimizer.compressTextures.mockRejectedValueOnce(partial)
 		optimizer.getReport.mockResolvedValueOnce(report('after the partial pass'))
@@ -74,9 +75,14 @@ describe('useOptimizeModel texturesOptimization', () => {
 		expect(result.current.report).toMatchObject({
 			marker: 'after the partial pass'
 		})
+		expect(consoleError).toHaveBeenCalledExactlyOnceWith(
+			'Texture optimization failed:',
+			partial
+		)
 	})
 
 	it('keeps the error it owes when the report itself fails', async () => {
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
 		const partial = new TextureCompressionError(1, 3)
 		optimizer.compressTextures.mockRejectedValueOnce(partial)
 		optimizer.getReport.mockRejectedValueOnce(new Error('report failed'))
@@ -87,9 +93,14 @@ describe('useOptimizeModel texturesOptimization', () => {
 				result.current.texturesOptimization({ targetFormat: 'webp' })
 			).rejects.toBe(partial)
 		)
+		expect(consoleError).toHaveBeenCalledExactlyOnceWith(
+			'Texture optimization failed:',
+			partial
+		)
 	})
 
 	it('reports nothing for a pass that changed nothing', async () => {
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
 		optimizer.getReport.mockClear()
 		optimizer.compressTextures.mockRejectedValueOnce(
 			new TextureCompressionError(3, 3)
@@ -103,5 +114,9 @@ describe('useOptimizeModel texturesOptimization', () => {
 		)
 
 		expect(optimizer.getReport).not.toHaveBeenCalled()
+		expect(consoleError).toHaveBeenCalledExactlyOnceWith(
+			'Texture optimization failed:',
+			expect.any(TextureCompressionError)
+		)
 	})
 })

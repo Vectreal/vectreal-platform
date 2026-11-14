@@ -117,6 +117,11 @@ the signature of reviewing your own writing rather than the code, and it does no
 converge. Ship, and file whatever is left.
 
 1. **Review** - several subagents in parallel, each on one distinct dimension.
+   A bug fix always gets a **cause** dimension, given the PR's Root cause
+   section along with the diff: does the fix land where the rule is owned, would
+   the same cause produce another symptom elsewhere, and does the named test
+   fail with the fix reverted. A fix that is right but sits at the symptom is a
+   finding.
 2. **Map** - one subagent consolidates into a fix spec: dedupe, decide, and name
    the single owner of each rule.
 3. **Fix** - subagents implement the spec on disjoint files so they cannot
@@ -174,6 +179,50 @@ HTML.
 Two patches of one symptom is a coincidence. Three is a missing root cause.
 Count shapes rather than files: a guard you keep re-applying somewhere new is
 itself the symptom.
+
+## Bug work
+
+A bug is evidence about the design, not only about the line it shows up on.
+Small fixes that each make sense on their own pile up into a net of patches that
+hides the cause, and that cause - a rule with no single owner, a decision made
+in two layers, a pattern the design system never settled - is what limits the
+next feature. So every bug answers *why the design let it happen* before any
+edit.
+
+**One bug.**
+
+1. Trace the code path to where the wrong value is decided, not where it shows.
+2. Name the decision model behind the symptom: which rule governs it, and
+   whether that rule has exactly one owner. If two places decide it, the fix
+   makes one of them the source of truth. One source of truth beats one more
+   flag, guard or special case.
+3. Before editing, query the open Work Items (the query under Work items below)
+   for rows in the same area or with the same `Cause`, and read the ones that
+   might share it.
+4. Fix it where the cause lives, with a test that fails before the fix for the
+   stated reason (the mutation gate, required for every bug fix).
+5. The PR's Root cause section says what the cause was, why it existed (the
+   design gap, not just the line) and what else shares it, or where you looked
+   and found nothing.
+6. The report names a **cause tag**: a few words for the cause (for example
+   "fetcher state read as arrival"), reusing an existing `Cause` value from
+   Work Items when one fits. The lead sets the `Cause` field from it; sessions
+   do not write that field themselves.
+
+**Several bugs** - a backlog pass, or a brief that names more than one:
+
+1. **Survey.** For each, find the code path and why it exists, as above.
+2. **Group.** Cluster by shared cause, not by symptom or file. File any new bug
+   the survey turns up as its own row.
+3. **Report, then wait.** Send the clusters, the cause tag of each, and the fix you
+   propose at the level of the cause. A question about a pattern - the design
+   system, a UX pattern, how a layer is built - goes to Moritz before any code.
+4. **Fix** one cluster per PR once the report is answered.
+
+A bug whose cause turns out to be a product or pattern decision is not fixed by
+the session that found it: it becomes a catalogue row naming the decision, and
+the symptom fix, if one ships at all, says in its PR that it is a stopgap and
+links that row.
 
 ## Scope discipline
 
@@ -354,6 +403,8 @@ tests fail, say so with the output; if a step was skipped, say that.
 | A round files twenty-five items | Re-read them asking what caused each; most are ours |
 | Test written after the guard, never mutated | Mutate the line, watch it go red |
 | Third patch of one symptom | Find the cause |
+| A bug patched where it shows, with no answer to why the design allowed it | Bug work: name the rule's owner first, fix it there |
+| A batch of bugs fixed one by one as found | Survey, group by cause, report, then wait |
 | Reviewers and fixers running concurrently | Phase barrier |
 | Subagent finding applied without checking the code | Verify, then fix |
 | Done declared from a green suite | Evidence it is reached, and runs where it ships |

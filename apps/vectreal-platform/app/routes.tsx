@@ -86,35 +86,39 @@ export default [
 	route('api/consent', './routes/api/consent.ts'),
 	route('api/theme', './routes/api/theme.ts'),
 	// Agent API: bearer tokens only, through authorizeAgentRequest.
-	route('api/v1/me', './routes/api/v1/me.ts'),
-	route('api/v1/projects', './routes/api/v1/projects.ts'),
-	route(
-		'api/v1/projects/:projectId/scenes',
-		'./routes/api/v1/projects.$projectId.scenes.ts'
-	),
-	route(
-		'api/v1/projects/:projectId/embed-keys',
-		'./routes/api/v1/projects.$projectId.embed-keys.ts'
-	),
-	route(
-		'api/v1/projects/:projectId/allowed-domains',
-		'./routes/api/v1/projects.$projectId.allowed-domains.ts'
-	),
-	route(
-		'api/v1/scenes/:sceneId/publication',
-		'./routes/api/v1/scenes.$sceneId.publication.ts'
-	),
-	route(
-		'api/v1/scenes/:sceneId/embed',
-		'./routes/api/v1/scenes.$sceneId.embed.ts'
-	),
-	route(
-		'api/v1/scenes/:sceneId/settings',
-		'./routes/api/v1/scenes.$sceneId.settings.ts'
-	),
-	// Public: tells the CLI which OAuth client and redirect ports to use.
-	route('api/v1/cli/client', './routes/api/v1/cli-client.ts'),
-	route('api/v1/session', './routes/api/v1/session.ts'),
+	// Its layout keeps every refusal in the coded envelope the SDK reads.
+	layout('./routes/api/v1/layout.ts', [
+		route('api/v1/me', './routes/api/v1/me.ts'),
+		route('api/v1/projects', './routes/api/v1/projects.ts'),
+		route(
+			'api/v1/projects/:projectId/scenes',
+			'./routes/api/v1/projects.$projectId.scenes.ts'
+		),
+		route(
+			'api/v1/projects/:projectId/embed-keys',
+			'./routes/api/v1/projects.$projectId.embed-keys.ts'
+		),
+		route(
+			'api/v1/projects/:projectId/allowed-domains',
+			'./routes/api/v1/projects.$projectId.allowed-domains.ts'
+		),
+		route(
+			'api/v1/scenes/:sceneId/publication',
+			'./routes/api/v1/scenes.$sceneId.publication.ts'
+		),
+		route(
+			'api/v1/scenes/:sceneId/embed',
+			'./routes/api/v1/scenes.$sceneId.embed.ts'
+		),
+		route(
+			'api/v1/scenes/:sceneId/settings',
+			'./routes/api/v1/scenes.$sceneId.settings.ts'
+		),
+		// Public: tells the CLI which OAuth client and redirect ports to use.
+		route('api/v1/cli/client', './routes/api/v1/cli-client.ts'),
+		route('api/v1/session', './routes/api/v1/session.ts'),
+		route('api/v1/*', './routes/api/v1/not-found.ts')
+	]),
 
 	/// PAGES
 	layout('./routes/layouts/nav-layout.tsx', [

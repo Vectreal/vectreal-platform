@@ -77,7 +77,6 @@ describe('ExampleScene', () => {
 	})
 
 	it('fails the render for an id no example has, so a typo cannot ship', () => {
-		vi.spyOn(console, 'error').mockImplementation(() => {})
 		// Bare: a route stub would catch it in its own error boundary.
 		expect(() => render(<ExampleScene id="camera-shadow" />)).toThrow(
 			/camera-shadow/

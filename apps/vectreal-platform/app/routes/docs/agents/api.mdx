@@ -107,3 +107,4 @@ Each approval has a request budget. Past it, the API answers `429` with `rate_li
 | `embed_key_unusable` | The embed key asked for is revoked or expired. Pick or create another. |
 | `idempotency_key_reused` | This `Idempotency-Key` was first sent with a different request. Use a new one. |
 | `idempotency_in_progress` | The first request with this `Idempotency-Key` is still running. Retry shortly. |
+| `internal_error` | The server failed. Retry shortly; a server error releases the `Idempotency-Key`, so the same key runs again. |

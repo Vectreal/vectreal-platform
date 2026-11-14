@@ -204,6 +204,9 @@ describe('/api/v1 embed keys, allowed domains and the scene embed', () => {
 
 	beforeAll(async () => {
 		vi.stubEnv('APPLICATION_URL', ORIGIN)
+		// A configured key, as every deployed environment has; unset, the cipher
+		// falls back to its development key and says so.
+		vi.stubEnv('EMBED_TOKEN_ENCRYPTION_KEY', 'agent-embed-integration-key')
 		schema = await import('../../app/db/schema')
 		db = (await import('../../app/db/client')).getDbClient()
 		keysRoute =
