@@ -11,10 +11,6 @@ import {
 import { CameraDrawing } from './camera-drawing'
 import { whenHeroSettled } from './stage/hero-settled'
 import { StageBoundary } from './stage/stage-boundary'
-import { HOME_PAGE_COPY } from '../../constants/product-copy'
-
-const LIVE_HINT = HOME_PAGE_COPY.stage.status.live
-
 const EmbedStage = lazy(() => import('./embed-stage-client'))
 
 /** A box as fractions of the window's frame: x and w of its width, y and h of its height. */
@@ -71,15 +67,12 @@ export function placeClip({ x, y, w, h }: FrameRect) {
  */
 export const ProductStage = ({
 	visible,
-	place,
-	hint
+	place
 }: {
 	/** The window is on screen: the first time, the live stage mounts. */
 	visible: boolean
 	/** Where the camera stands now. */
 	place: FrameRect
-	/** Invite a drag: only where the stage reads as a product viewer. */
-	hint: boolean
 }) => {
 	const [wanted, setWanted] = useState(false)
 	const [live, setLive] = useState(false)
@@ -92,10 +85,13 @@ export const ProductStage = ({
 	}, [visible])
 
 	return (
-		// Hidden from assistive tech: the screenshots' text says what each view is, and the stage takes no focus, so a drag is all it offers.
+		// Hidden from assistive tech: the screenshots' text says what each view is, and the stage offers nothing to do.
 		<div
 			aria-hidden="true"
-			className={cn('absolute inset-0 transition-[clip-path]', GLIDE)}
+			className={cn(
+				'pointer-events-none absolute inset-0 transition-[clip-path]',
+				GLIDE
+			)}
 			style={{ clipPath: placeClip(place) }}
 		>
 			<div
@@ -126,18 +122,6 @@ export const ProductStage = ({
 					</Suspense>
 				</StageBoundary>
 			)}
-			<span
-				className={cn(
-					'text-muted-foreground text-label-xs pointer-events-none absolute transition-opacity duration-(--duration-base)',
-					(!live || !hint) && 'opacity-0'
-				)}
-				style={{
-					left: `calc(${place.x * 100}% + 1rem)`,
-					bottom: `calc(${(1 - place.y - place.h) * 100}% + 1rem)`
-				}}
-			>
-				{LIVE_HINT}
-			</span>
 		</div>
 	)
 }
