@@ -2,6 +2,8 @@ import foldPosterUrl from '../../../assets/home/camera-drawing-fold.webp?url'
 import sheetPosterUrl from '../../../assets/home/camera-drawing-sheet.webp?url'
 import objectUrl from '../../../assets/home/camera-object-sheet.webp?url'
 import shadowUrl from '../../../assets/home/camera-shadow.webp?url'
+import stillFoldUrl from '../../../assets/home/camera-still-fold.webp?url'
+import stillSheetUrl from '../../../assets/home/camera-still-sheet.webp?url'
 
 /**
  * The hero model's baked assets. `scripts/bake-home-hero.ts` regenerates all of
@@ -35,3 +37,14 @@ export const HERO_SHADOW_URL = shadowUrl
  * the two can be laid over each other. Baked with the posters.
  */
 export const HERO_OBJECT_URL = objectUrl
+
+/**
+ * The hero as it first shows: the camera rendered, shadow and all, a short
+ * orbit short of where it comes to rest, one per framing. It stands from the
+ * first paint, and the live stage takes over from it unseen by drawing the
+ * same frame. Baked with the posters. Sizes as baked, for the image's box.
+ */
+export const HERO_STILLS = {
+	sheet: { url: stillSheetUrl, width: 1427, height: 1070 },
+	fold: { url: stillFoldUrl, width: 1376, height: 1032 }
+} as const

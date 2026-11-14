@@ -1,12 +1,14 @@
 // @vitest-environment jsdom
 /**
  * The fold leads with the brand offer: its first action is the free-model
- * intake, and the publisher is the second.
+ * intake, and the publisher is the second. The model is there from the first
+ * paint.
  */
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { beforeAll, expect, it, vi } from 'vitest'
 
+import { HERO_STILLS } from './hero-assets'
 import { HeroSheet } from './hero-sheet'
 import { HOME_PAGE_COPY } from '../../../constants/product-copy'
 
@@ -38,6 +40,33 @@ it('sends the primary action to the free-model intake and the second to the publ
 	expect(
 		screen.getByRole('link', { name: HERO.secondaryCta }).getAttribute('href')
 	).toBe('/publisher')
+})
+
+/*
+  The model shows from the first paint as a still, each framing its own, and
+  the label names no view until the live stage has taken over.
+*/
+it('server-renders the still, one image per framing, labelled as a figure only', () => {
+	const { container } = render(
+		<MemoryRouter>
+			<HeroSheet />
+		</MemoryRouter>
+	)
+	const still = container.querySelector('picture')
+	expect(still?.querySelector('img')?.getAttribute('src')).toBe(
+		HERO_STILLS.sheet.url
+	)
+	expect(
+		still
+			?.querySelector('source[media="(max-width: 899px)"]')
+			?.getAttribute('srcset')
+	).toBe(HERO_STILLS.fold.url)
+	expect(
+		container.querySelector('[data-phase]')?.getAttribute('data-phase')
+	).toBe('still')
+	expect(
+		screen.getByText(HOME_PAGE_COPY.stage.figure, { exact: true })
+	).toBeTruthy()
 })
 
 it('marks only the free-model intake as the brand action', () => {

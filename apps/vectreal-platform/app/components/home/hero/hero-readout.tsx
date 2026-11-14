@@ -16,12 +16,14 @@ import type { ReactNode } from 'react'
 
 const COPY = HOME_PAGE_COPY.stage
 
+/** Until the stage is live the figure is a still, which names no view. */
 export function FigureLabel({ store }: { store: HeroStore }) {
 	const view = useHeroState(store, (s) => s.view)
-	const face = view === 'live' ? COPY.liveView : HERO_MODEL.view
+	const face = view === 'live' ? COPY.liveView : null
 	return (
 		<span className="text-eyebrow">
-			{COPY.figure} · {face}
+			{COPY.figure}
+			{face && ` · ${face}`}
 		</span>
 	)
 }

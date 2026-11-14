@@ -14,6 +14,9 @@
  * - `camera-shadow.webp`: the directional shadow as a density image.
  * - `camera-object-sheet.webp`: the rendered camera, shadow and all, in the
  *   sheet drawing's exact framing, so the page can lay one over the other.
+ * - `camera-still-sheet.webp` and `camera-still-fold.webp`: the hero as it
+ *   first shows, one per framing, which the live stage takes over from unseen.
+ *   Their pixel sizes go into `HERO_STILLS` by hand, for the image's box.
  *
  * Then prints each poster's ink bounds. Those go into `HERO_POSTERS` in
  * `app/components/home/hero/hero-assets.ts` by hand: the plot travels across
@@ -107,26 +110,35 @@ async function main() {
 				timeout: 120_000
 			})
 
-			const { poster, shadow, object } = await page.evaluate(() => {
+			const { poster, shadow, object, still } = await page.evaluate(() => {
 				const bake = (
 					window as unknown as {
 						__heroBake: {
 							poster: () => string
 							shadow: () => string | null
 							object: () => string
+							still: () => string
 						}
 					}
 				).__heroBake
 				return {
 					poster: bake.poster(),
 					shadow: bake.shadow(),
-					object: bake.object()
+					object: bake.object(),
+					still: bake.still()
 				}
 			})
 
 			const file = `camera-drawing-${framing.name}.webp`
 			const ink = await toPoster(fromDataUrl(poster), file)
 			console.log(`  wrote ${file}  ink: ${JSON.stringify(ink)}`)
+
+			// Shown at the frame's full size, so it keeps the bake's resolution.
+			const stillFile = `camera-still-${framing.name}.webp`
+			const { width, height } = await sharp(fromDataUrl(still))
+				.webp({ quality: 82, alphaQuality: 90 })
+				.toFile(path.join(OUTPUT_DIR, stillFile))
+			console.log(`  wrote ${stillFile}  ${width}x${height}`)
 
 			// The shadow does not depend on the framing, so one pass writes it.
 			if (i === 0) {

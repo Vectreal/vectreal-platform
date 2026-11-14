@@ -420,7 +420,7 @@ export const HOME_PAGE_COPY = {
 	},
 	stage: {
 		figure: 'Fig 01',
-		/** The label once the drawing has turned into the object. */
+		/** The label once the live stage has taken over from the still. */
 		liveView: 'Live view',
 		readouts: {
 			file: 'File',
@@ -430,8 +430,8 @@ export const HOME_PAGE_COPY = {
 		},
 		status: {
 			loading: 'Loading',
-			drawn: 'Drawn from the file',
-			rendering: 'Rendering',
+			/** The live stage could not run: the baked still stays. */
+			still: 'Still image',
 			live: 'Live. Drag to turn'
 		}
 	},
