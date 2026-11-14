@@ -232,6 +232,11 @@ export interface AnimationStateChangedInteractionEvent {
 	activeClipId: null | string
 	/** True once the program has run to its end without looping. */
 	complete: boolean
+	/**
+	 * True while a clip holds the model off its bind pose: playing, paused,
+	 * scrubbed or held at its end. False once the model is back in it.
+	 */
+	posed: boolean
 }
 
 /** Minimal event surface currently emitted by the viewer runtime. */
