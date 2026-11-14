@@ -13,6 +13,7 @@
 import { randomUUID } from 'node:crypto'
 
 import { and, eq, inArray, sql } from 'drizzle-orm'
+import { RouterContextProvider } from 'react-router'
 import {
 	afterAll,
 	beforeAll,
@@ -23,15 +24,18 @@ import {
 	vi
 } from 'vitest'
 
+import { agentActorContext } from '../../app/lib/domain/agent/agent-actor-context'
+
 import type { AgentActor } from '../../app/lib/domain/agent/agent-actor.server'
 
-const { authorizeAgentRequest } = vi.hoisted(() => ({
-	authorizeAgentRequest: vi.fn()
+// The gate is held to every route by tests/agent-api-routes.spec.ts; a
+// handler here runs on the actor the gate would have put in context.
+vi.mock('../../app/lib/domain/agent/agent-request.server', () => ({
+	agentGate: vi.fn()
 }))
 
-vi.mock('../../app/lib/domain/agent/agent-request.server', () => ({
-	authorizeAgentRequest
-}))
+const contextFor = (actor: unknown) =>
+	new RouterContextProvider(new Map([[agentActorContext, actor]]))
 
 type Schema = typeof import('../../app/db/schema')
 type Db = ReturnType<typeof import('../../app/db/client').getDbClient>
@@ -85,7 +89,6 @@ describe('/api/v1 embed keys, allowed domains and the scene embed', () => {
 	const json = (result: { text: string }) => JSON.parse(result.text)
 
 	function createKey(key: string, name = 'Shop page', project = projectId) {
-		authorizeAgentRequest.mockResolvedValue(actor)
 		return answer(
 			keysRoute.action({
 				request: new Request(
@@ -100,13 +103,12 @@ describe('/api/v1 embed keys, allowed domains and the scene embed', () => {
 					}
 				),
 				params: { projectId: project },
-				context: {}
+				context: contextFor(actor)
 			} as never)
 		)
 	}
 
 	function setDomains(key: string, domains: string[]) {
-		authorizeAgentRequest.mockResolvedValue(actor)
 		return answer(
 			domainsRoute.action({
 				request: new Request(
@@ -121,31 +123,29 @@ describe('/api/v1 embed keys, allowed domains and the scene embed', () => {
 					}
 				),
 				params: { projectId },
-				context: {}
+				context: contextFor(actor)
 			} as never)
 		)
 	}
 
 	function getDomains() {
-		authorizeAgentRequest.mockResolvedValue(actor)
 		return answer(
 			domainsRoute.loader({
 				request: new Request(
 					`${ORIGIN}/api/v1/projects/${projectId}/allowed-domains`
 				),
 				params: { projectId },
-				context: {}
+				context: contextFor(actor)
 			} as never)
 		)
 	}
 
 	function getEmbed(scene = sceneId) {
-		authorizeAgentRequest.mockResolvedValue(actor)
 		return answer(
 			embedRoute.loader({
 				request: new Request(`${ORIGIN}/api/v1/scenes/${scene}/embed`),
 				params: { sceneId: scene },
-				context: {}
+				context: contextFor(actor)
 			} as never)
 		)
 	}

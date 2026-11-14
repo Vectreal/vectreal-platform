@@ -13,25 +13,14 @@ describe('routePageChrome', () => {
 		]) {
 			expect(routePageChrome(pathname)).toEqual({
 				nav: true,
-				footer: true,
-				brandPrimary: true,
-				brandNavPrimary: true
+				footer: true
 			})
 		}
 	})
 
-	/*
-	  The hero's main action is the one orange primary in view on the home page,
-	  so the nav's "Get started" keeps the ink there and only there.
-	*/
-	it('keeps the nav primary ink on the home page, and the page primary brand', () => {
+	it('gives the home page the nav and footer like any public page', () => {
 		for (const pathname of ['/', '/home']) {
-			expect(routePageChrome(pathname)).toEqual({
-				nav: true,
-				footer: true,
-				brandPrimary: true,
-				brandNavPrimary: false
-			})
+			expect(routePageChrome(pathname)).toEqual({ nav: true, footer: true })
 		}
 	})
 
@@ -43,15 +32,11 @@ describe('routePageChrome', () => {
 	it('drops the nav on the empty publisher too', () => {
 		expect(routePageChrome('/publisher')).toEqual({
 			nav: false,
-			footer: false,
-			brandPrimary: false,
-			brandNavPrimary: false
+			footer: false
 		})
 		expect(routePageChrome('/publisher/')).toEqual({
 			nav: false,
-			footer: false,
-			brandPrimary: false,
-			brandNavPrimary: false
+			footer: false
 		})
 	})
 
@@ -63,18 +48,14 @@ describe('routePageChrome', () => {
 	it('drops the nav once there is a scene to frame', () => {
 		expect(routePageChrome('/publisher/abc123')).toEqual({
 			nav: false,
-			footer: false,
-			brandPrimary: false,
-			brandNavPrimary: false
+			footer: false
 		})
 	})
 
 	it('does not let the publisher prefix swallow unrelated paths', () => {
 		expect(routePageChrome('/publisher-guide')).toEqual({
 			nav: true,
-			footer: true,
-			brandPrimary: true,
-			brandNavPrimary: true
+			footer: true
 		})
 	})
 
@@ -86,9 +67,7 @@ describe('routePageChrome', () => {
 		for (const pathname of ['/free-model', '/agenturen']) {
 			expect(routePageChrome(pathname)).toEqual({
 				nav: true,
-				footer: true,
-				brandPrimary: true,
-				brandNavPrimary: true
+				footer: true
 			})
 		}
 	})

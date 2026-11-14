@@ -61,6 +61,14 @@ describe('refusalMessage', () => {
 		)
 	})
 
+	it('says a sample failed to download, not that a file is invalid', () => {
+		for (const code of ['url_http', 'url_unreachable']) {
+			expect(refusalMessage({ code } as never, gltf, gltfCopy)).toBe(
+				'The sample did not download. Try your own file instead.'
+			)
+		}
+	})
+
 	it('falls back to the bundle refusal, then to the format sentence', () => {
 		expect(refusalMessage(null, gltf, gltfCopy)).toBe(gltfCopy!.refusal)
 		expect(refusalMessage(null, glb, null)).toBe(

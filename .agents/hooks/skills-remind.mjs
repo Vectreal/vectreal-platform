@@ -2,7 +2,7 @@
 /**
  * UserPromptSubmit: name the skills this session has not used yet.
  *
- * CLAUDE.md carries the same table, but it is injected once at session start
+ * AGENTS.md (imported by CLAUDE.md) carries the same table, but it is injected once at session start
  * and then competes with a growing context, which is exactly when agents drift
  * off it. This restates only what is still missing, so it shrinks as skills get
  * invoked and goes silent once all three have run. An unconditional version of

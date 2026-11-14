@@ -19,15 +19,17 @@
  */
 
 import { ApiResponse } from '@shared/utils'
+import { normalizeCameraSettings } from '@vctrl/core'
 import { updateSceneSettingsInputSchema } from '@vctrl/sdk'
 
 import { withSceneSettingsDefaults } from '../../../constants/viewer-defaults'
 import { getDbClient } from '../../../db/client'
+import { agentActorFrom } from '../../../lib/domain/agent/agent-actor-context'
 import { agentApiError } from '../../../lib/domain/agent/agent-api-response'
 import { recordAgentAudit } from '../../../lib/domain/agent/agent-audit.server'
 import { withIdempotency } from '../../../lib/domain/agent/agent-idempotency.server'
 import { AGENT_OPERATION_SCOPES } from '../../../lib/domain/agent/agent-operation-scopes'
-import { authorizeAgentRequest } from '../../../lib/domain/agent/agent-request.server'
+import { agentGate } from '../../../lib/domain/agent/agent-request.server'
 import { resolveAgentScene } from '../../../lib/domain/agent/agent-resource.server'
 import { applySceneSettingsPatch } from '../../../lib/domain/scene/scene-settings-patch'
 import { runWithSceneWriteLock } from '../../../lib/domain/scene/server/scene-request-guards.server'
@@ -42,10 +44,15 @@ import type { Route } from './+types/scenes.$sceneId.settings'
 import type { SceneSettings } from '@vctrl/core'
 import type { SceneSettingsDocument } from '@vctrl/sdk'
 
-export async function loader({ request, params }: Route.LoaderArgs) {
-	const actor = await authorizeAgentRequest(request, {
-		scope: AGENT_OPERATION_SCOPES['scene:read']
+export const middleware = [
+	agentGate({
+		GET: AGENT_OPERATION_SCOPES['scene:read'],
+		PATCH: AGENT_OPERATION_SCOPES['scene:update']
 	})
+]
+
+export async function loader({ params, context }: Route.LoaderArgs) {
+	const actor = agentActorFrom(context)
 	const { sceneId } = await resolveAgentScene(
 		params.sceneId,
 		actor,
@@ -60,21 +67,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	return settingsResponse(stored.settings)
 }
 
-export async function action({ request, params }: Route.ActionArgs) {
-	// Gated before the method is read, so a caller without a token learns
-	// nothing about the route.
-	const actor = await authorizeAgentRequest(request, {
-		scope: AGENT_OPERATION_SCOPES['scene:update']
-	})
-	if (request.method !== 'PATCH') {
-		return agentApiError(
-			405,
-			'method_not_allowed',
-			'This route answers GET and PATCH.',
-			{ headers: { Allow: 'GET, PATCH' } }
-		)
-	}
-
+export async function action({ request, params, context }: Route.ActionArgs) {
+	const actor = agentActorFrom(context)
 	const { sceneId, projectId } = await resolveAgentScene(
 		params.sceneId,
 		actor,
@@ -165,9 +159,19 @@ async function asAgentRefusal(refusal: Response): Promise<Response> {
 	return agentApiError(400, 'invalid_request', error)
 }
 
-/** A scene's settings as the publisher and every viewer read them. */
+/**
+ * A scene's settings as the publisher and every viewer read them: defaults
+ * filled, and the camera repaired as the publisher's hydration repairs it, so
+ * a value an older save stored and the camera schema now refuses neither
+ * blocks a PATCH of another section nor comes back from GET.
+ */
 function asServed(settings: SceneSettings): SceneSettings {
-	return { ...withSceneSettingsDefaults(settings), hotspots: settings.hotspots }
+	const served = withSceneSettingsDefaults(settings)
+	return {
+		...served,
+		camera: normalizeCameraSettings(served.camera),
+		hotspots: settings.hotspots
+	}
 }
 
 function settingsResponse(settings: SceneSettings): Response {

@@ -133,3 +133,16 @@ describe('the Result pane', () => {
 		expect(await screen.findByText('viewer mounted')).toBeTruthy()
 	})
 })
+
+/* The window is the section's one container: Moritz's 13 Nov list, no window inside a glowing card. */
+it('stands the code window on the page, not inside a lit card', () => {
+	render(
+		<MemoryRouter>
+			<OpenSourceSection />
+		</MemoryRouter>
+	)
+	const code = screen.getByRole('region', {
+		name: 'Installing and using @vctrl/viewer'
+	})
+	expect(code.closest('.ds-lit')).toBeNull()
+})

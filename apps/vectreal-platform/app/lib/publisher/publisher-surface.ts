@@ -19,7 +19,11 @@ interface PublisherSurfaceInput {
 	 * allowed to read, and without one there is nothing to wait for.
 	 */
 	hasScene: boolean
-	/** Whether React Router is navigating within the publisher. */
+	/**
+	 * Whether a model is on its way that the loader has not been handed yet:
+	 * a navigation within the publisher, a draft being read back, a variant
+	 * downloading.
+	 */
 	isNavigating?: boolean
 }
 
@@ -41,7 +45,9 @@ export function resolvePublisherSurface({
 	isNavigating = false
 }: PublisherSurfaceInput): PublisherSurface {
 	if (status === 'ready') return 'viewer'
-	if (status === 'error') return hasScene ? 'error' : 'empty'
+	if (status === 'error' && hasScene) return 'error'
+	// Ahead of a failed upload: a model on its way replaces the stage the
+	// failure left standing.
 	if (status === 'loading' || isNavigating) return 'loading'
 
 	return hasScene ? 'loading' : 'empty'

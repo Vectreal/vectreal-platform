@@ -1,5 +1,5 @@
 import { Button } from '@shared/components/ui/button'
-import { useLoadModel } from '@vctrl/hooks/use-load-model'
+import { useLoadModel, useLoadProgress } from '@vctrl/hooks/use-load-model'
 import { useCallback, useMemo } from 'react'
 import { data, useNavigate } from 'react-router'
 
@@ -39,7 +39,10 @@ import {
 import { useSceneModel } from '../../../lib/domain/scene/client/use-scene-model'
 import { isPublishedShadowNotStored } from '../../../lib/domain/scene/ground-bake-note'
 import { sceneEnvironmentBytes } from '../../../lib/domain/scene/scene-environment-bytes'
-import { getDashboardSceneLoadErrorMessage } from '../../../lib/domain/scene/scene-load-error-messages'
+import {
+	DASHBOARD_SCENE_LOAD_ERROR_HEADING,
+	getDashboardSceneLoadErrorMessage
+} from '../../../lib/domain/scene/scene-load-error-messages'
 import { parseSceneRouteParams } from '../../../lib/domain/scene/scene-route-params'
 import { resolveSceneSizeBytes } from '../../../lib/domain/scene/scene-stored-size'
 import {
@@ -260,6 +263,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 
 	const model = useLoadModel()
 	const { file, sceneData, load } = model
+	const loadProgress = useLoadProgress(model)
 	const serverSource = useMemo<ModelSource>(
 		() => ({
 			kind: 'server',
@@ -373,7 +377,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 					{model.status === 'error' ? (
 						<DetailPanelSection
 							surface="raised"
-							title="Unable to Load Scene"
+							title={DASHBOARD_SCENE_LOAD_ERROR_HEADING}
 							/*
 							  `h2`, because this page renders no `h1`:
 							  `dashboard-layout.tsx` suppresses `DashboardHeader` on the
@@ -407,6 +411,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 						<SceneEmbedViewer
 							file={file}
 							sceneData={sceneData}
+							loadProgress={loadProgress}
 							loadingThumbnail={loadingThumbnail}
 							/*
 							  The app's own scheme, not the visitor's OS. This panel sits on

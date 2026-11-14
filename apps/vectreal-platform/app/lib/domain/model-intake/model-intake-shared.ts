@@ -332,10 +332,19 @@ export const MODEL_INTAKE_ATTACHMENT_EXTENSIONS = [
 ] as const
 
 /**
- * The largest attachment, about a 4K minute of video. Supabase's project-wide
- * upload limit applies on top, so production's must be at least this.
+ * The largest attachment, and the one owner of that number: the request card
+ * prints it, the browser and the server refuse above it, and the bucket is set
+ * to it. Supabase's project-wide "Global file size limit" (Storage > Settings,
+ * 50 MB by default on Pro) caps every bucket above whatever a bucket says, so
+ * this must not exceed it. To allow more, raise that setting first, then this.
  */
-export const MODEL_INTAKE_MAX_ATTACHMENT_BYTES = 1024 * 1024 * 1024
+export const MODEL_INTAKE_MAX_ATTACHMENT_BYTES = 50 * 1024 * 1024
+
+/** The limit as a person reads it, for the card and the refusal. */
+export const MODEL_INTAKE_MAX_ATTACHMENT_LABEL = `${MODEL_INTAKE_MAX_ATTACHMENT_BYTES / (1024 * 1024)} MB`
+
+/** What the browser and the server both say to a file above the limit. */
+export const MODEL_INTAKE_ATTACHMENT_TOO_LARGE_MESSAGE = `Files up to ${MODEL_INTAKE_MAX_ATTACHMENT_LABEL} can be attached.`
 
 /** What the file input offers. The server checks the name and size again. */
 export const MODEL_INTAKE_ATTACHMENT_ACCEPT =

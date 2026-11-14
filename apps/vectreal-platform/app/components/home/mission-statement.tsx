@@ -1,44 +1,11 @@
 import { cn } from '@shared/utils'
-import {
-	useEffect,
-	useRef,
-	useState,
-	type CSSProperties,
-	type ReactNode
-} from 'react'
 
-import { CameraDrawing, CameraObject } from './camera-drawing'
-import { inUnitOf } from './in-unit-of'
 import styles from './mission-statement.module.css'
 import { HOME_PAGE_COPY } from '../../constants/product-copy'
-import { prefersReducedMotion } from '../../lib/motion/motion-tokens'
-import { HERO_MODEL } from '../../lib/samples/sample-models'
+
+import type { CSSProperties } from 'react'
 
 const COPY = HOME_PAGE_COPY.mission
-
-const size = (bytes: number) => {
-	const { value, unit } = inUnitOf(bytes, bytes)
-	return `${value} ${unit}`
-}
-
-/*
-  Back to front, the path the statement describes: the model as it starts, the
-  same model prepared, and the result on a page. The sizes are the hero camera's
-  own, read from the sample record the spec pins to the files.
-*/
-const LAYERS: { label: string; value?: string; art: ReactNode }[] = [
-	{
-		label: COPY.layers.file,
-		value: size(HERO_MODEL.sourceBytes),
-		art: <CameraDrawing pencil />
-	},
-	{
-		label: COPY.layers.prepared,
-		value: size(HERO_MODEL.bytes),
-		art: <CameraDrawing />
-	},
-	{ label: COPY.layers.page, art: <CameraObject /> }
-]
 
 /* Each key phrase's place among the key phrases, which staggers when it lights. */
 const keyIndex = (part: number) =>
@@ -47,109 +14,46 @@ const keyIndex = (part: number) =>
 		.filter((one) => typeof one !== 'string' && 'key' in one).length
 
 /**
- * Why the company exists: one paragraph, and beside it the path it names.
- *
- * The figure is the hero's camera pulled apart, the way an exploded drawing
- * separates an assembly: the raw model, the model prepared, the product on
- * your page. The statement says what the company is for; the figure says the
- * same thing to someone who reads pictures first, so the words can be set as a
- * caption instead of carrying the section alone.
+ * Why the company exists: one paragraph, signed.
  *
  * The statement is set large and muted, and its key phrases light up one after
  * another as it scrolls through the middle of the screen, so a reader skimming
- * past still takes away what it says. That is the browser's own
- * scroll timeline, with no script: where it has none, or motion is reduced, the
- * phrases are simply lit.
- *
- * The layers arrive stacked and separate as the section comes into view. The
- * page is complete without that: rendered apart, it is only closed while it
- * waits below the fold, and never under reduced motion.
+ * past still takes away what it says. That is the section's one effect: the
+ * floor under it is a still backdrop, and nothing else moves. It is the
+ * browser's own scroll timeline, with no script: where it has none, or motion
+ * is reduced, the phrases are simply lit.
  */
-export const MissionStatement = () => {
-	const ref = useRef<HTMLDivElement>(null)
-	const [apart, setApart] = useState(true)
-
-	useEffect(() => {
-		const node = ref.current
-		if (!node) return
-		if (prefersReducedMotion()) return
-		if (node.getBoundingClientRect().top < window.innerHeight) return
-		setApart(false)
-		const observer = new IntersectionObserver(
-			([entry]) => {
-				if (!entry.isIntersecting) return
-				observer.disconnect()
-				setApart(true)
-			},
-			// Well into the viewport, so the separation is watched rather than finished off screen.
-			{ rootMargin: '100000px 0px -30% 0px' }
-		)
-		observer.observe(node)
-		return () => observer.disconnect()
-	}, [])
-
-	return (
-		<figure className="grid items-center gap-16 lg:grid-cols-[1.4fr_1fr] lg:gap-24">
-			<div
-				ref={ref}
-				data-reveal
-				data-apart={apart ? '' : undefined}
-				data-floor-light
-				className={cn(styles.stack, 'lg:order-2')}
-			>
-				<div className={styles.scene}>
-					{LAYERS.map((layer, i) => (
-						<div
-							key={layer.label}
-							className={cn(styles.layer, i === 2 && styles.front)}
-							style={{ '--i': i } as CSSProperties}
-						>
-							<div className={styles.art}>{layer.art}</div>
-							<div className={styles.label}>
-								<span className="text-eyebrow text-muted-foreground">
-									{layer.label}
-								</span>
-								{layer.value && (
-									<span className="text-h4 tabular-nums">{layer.value}</span>
-								)}
-							</div>
-						</div>
-					))}
-				</div>
-			</div>
-
-			<div>
-				<blockquote
-					className={cn('text-h2 text-muted-foreground', styles.statement)}
-					data-reveal
-				>
-					{COPY.statement.map((part, i) =>
-						typeof part === 'string' ? (
-							part
-						) : 'highlight' in part ? (
-							// The problem, in full ink from the start: it does not wait to light up like the key phrases. The brand is kept for the promise the paragraph ends on, so a screen carries one orange phrase.
-							<span key={part.highlight} className="text-foreground">
-								{part.highlight}
-							</span>
-						) : (
-							<span
-								key={part.key}
-								className={styles.key}
-								style={{ '--k': keyIndex(i) } as CSSProperties}
-							>
-								{part.key}
-							</span>
-						)
-					)}
-				</blockquote>
-				<figcaption
-					data-reveal
-					className="text-muted-foreground text-body-sm mt-8 flex items-center gap-4"
-				>
-					<span className="ds-divider h-px w-8" aria-hidden="true" />
-					{COPY.signature}
-				</figcaption>
-			</div>
-		</figure>
-	)
-}
+export const MissionStatement = () => (
+	<figure className="max-w-2xl">
+		<blockquote
+			className={cn('text-h2 text-muted-foreground', styles.statement)}
+			data-reveal
+		>
+			{COPY.statement.map((part, i) =>
+				typeof part === 'string' ? (
+					part
+				) : 'highlight' in part ? (
+					// The problem, in full ink from the start: it does not wait to light up like the key phrases. The brand is kept for the promise the paragraph ends on, so a screen carries one orange phrase.
+					<span key={part.highlight} className="text-foreground">
+						{part.highlight}
+					</span>
+				) : (
+					<span
+						key={part.key}
+						className={styles.key}
+						style={{ '--k': keyIndex(i) } as CSSProperties}
+					>
+						{part.key}
+					</span>
+				)
+			)}
+		</blockquote>
+		<figcaption
+			data-reveal
+			className="text-muted-foreground text-body-sm mt-8 flex items-center gap-4"
+		>
+			<span className="ds-divider h-px w-8" aria-hidden="true" />
+			{COPY.signature}
+		</figcaption>
+	</figure>
+)

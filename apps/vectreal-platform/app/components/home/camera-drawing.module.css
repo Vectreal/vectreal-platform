@@ -1,8 +1,5 @@
-.drawing,
-.object {
-	aspect-ratio: var(--crop-aspect);
-}
 .drawing {
+	aspect-ratio: var(--crop-aspect);
 	background: currentColor;
 	mask-image: var(--drawing);
 	mask-repeat: no-repeat;
@@ -11,16 +8,4 @@
 }
 .pencil {
 	opacity: 0.16;
-}
-.object {
-	position: relative;
-	overflow: hidden;
-}
-.object img {
-	position: absolute;
-	left: var(--crop-left);
-	top: var(--crop-top);
-	width: var(--crop-w);
-	max-width: none;
-	height: auto;
 }

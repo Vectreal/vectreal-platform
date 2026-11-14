@@ -15,6 +15,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { and, count, eq, inArray } from 'drizzle-orm'
+import { RouterContextProvider } from 'react-router'
 import {
 	afterAll,
 	beforeAll,
@@ -29,17 +30,22 @@ import {
 	defaultEnvOptions,
 	normalizeShadowOptions
 } from '../../app/constants/viewer-defaults'
+import { agentActorContext } from '../../app/lib/domain/agent/agent-actor-context'
 
 import type { AgentActor } from '../../app/lib/domain/agent/agent-actor.server'
 
-const { authorizeAgentRequest, storage } = vi.hoisted(() => ({
-	authorizeAgentRequest: vi.fn(),
+const { storage } = vi.hoisted(() => ({
 	storage: { removed: [] as string[] }
 }))
 
+// The gate is held to every route by tests/agent-api-routes.spec.ts; a
+// handler here runs on the actor the gate would have put in context.
 vi.mock('../../app/lib/domain/agent/agent-request.server', () => ({
-	authorizeAgentRequest
+	agentGate: vi.fn()
 }))
+
+const contextFor = (actor: unknown) =>
+	new RouterContextProvider(new Map([[agentActorContext, actor]]))
 vi.mock('@supabase/supabase-js', () => ({
 	createClient: () => ({
 		storage: {
@@ -99,6 +105,7 @@ describe('/api/v1/scenes/:sceneId/settings', () => {
 		role: 'owner',
 		scopes: ['projects:read', 'projects:write', 'scenes:write']
 	}
+	let actingAs: AgentActor = actor
 
 	const answer = async (work: Promise<Response>) => {
 		// The routes throw refusals; read them like the framework does.
@@ -128,7 +135,7 @@ describe('/api/v1/scenes/:sceneId/settings', () => {
 					}
 				),
 				params: { sceneId: scene },
-				context: {}
+				context: contextFor(actingAs)
 			} as never)
 		)
 
@@ -139,7 +146,7 @@ describe('/api/v1/scenes/:sceneId/settings', () => {
 					`https://vectreal.com/api/v1/scenes/${scene}/settings`
 				),
 				params: { sceneId: scene },
-				context: {}
+				context: contextFor(actingAs)
 			} as never)
 		)
 
@@ -215,7 +222,7 @@ describe('/api/v1/scenes/:sceneId/settings', () => {
 
 	beforeEach(async () => {
 		storage.removed.length = 0
-		authorizeAgentRequest.mockResolvedValue(actor)
+		actingAs = actor
 		const [project] = await db
 			.insert(schema.projects)
 			.values({ organizationId: orgId, name: `Settings ${randomUUID()}` })
@@ -236,7 +243,7 @@ describe('/api/v1/scenes/:sceneId/settings', () => {
 					}
 				),
 				params: { projectId },
-				context: {}
+				context: contextFor(actingAs)
 			} as never)
 		)
 		expect(created.status).toBe(201)
@@ -412,10 +419,7 @@ describe('/api/v1/scenes/:sceneId/settings', () => {
 	})
 
 	it('answers 404 for a scene in another organization of the same user', async () => {
-		authorizeAgentRequest.mockResolvedValue({
-			...actor,
-			organizationId: otherOrgId
-		})
+		actingAs = { ...actor, organizationId: otherOrgId }
 
 		expect((await get()).status).toBe(404)
 		expect((await patch({ controls: {} })).status).toBe(404)

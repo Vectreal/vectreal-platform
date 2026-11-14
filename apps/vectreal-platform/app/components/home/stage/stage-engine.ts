@@ -50,6 +50,8 @@ export interface StageOptions {
 	posterMode?: boolean
 	/** Dissolve the model into the page in a band at the stage's top and bottom edges. On by default. */
 	edgeFade?: boolean
+	/** Hand the object to the reader to turn once it is shown. On by default; a stage set inside a picture of something else is looked at, not handled. */
+	turnable?: boolean
 	/** Stand the model on the drafting floor, drawn in the scene, and keep the tilt to a band. The home hero only: a 2D floor behind a freely orbiting model never agreed with its shadow. */
 	floor?: boolean
 }
@@ -60,6 +62,8 @@ const TIMING = { sweep: 1400, turn: 1000 }
 /** Drawn square to the sheet, then turned high enough to see the ground its shadow lies on. */
 const ELEVATION = { az: 0.03, el: 0.05 }
 const OBJECT = { az: 0.5, el: 0.3 }
+/** Where a still of the object is baked from: a short orbit short of the object's pose, so the live stage, taking over from it, turns into place and says it can be turned. */
+const STILL = { az: OBJECT.az - 0.35, el: OBJECT.el - 0.06 }
 /*
   How far the reader may tilt the camera over the floor, as elevations in radians.
   The turn is free; the tilt stops hard at a band around the object's pose
@@ -73,6 +77,7 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 		reducedMotion,
 		posterMode = false,
 		edgeFade = true,
+		turnable = true,
 		floor: withFloor = false
 	} = options
 	const renderer = new THREE.WebGLRenderer({
@@ -513,6 +518,7 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 	let side = 0
 	const elevation = () => ({ az: side + ELEVATION.az, el: ELEVATION.el })
 	const object = () => ({ az: side + OBJECT.az, el: OBJECT.el })
+	const still = () => ({ az: side + STILL.az, el: STILL.el })
 
 	let running: { cancel: () => void } | null = null
 	function animate(
@@ -655,6 +661,49 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 		}
 	}
 
+	/* From `from` into the object's pose, unless motion is reduced: the reader's from the start, so a grab takes over from the turn. */
+	function turnInto(from: { az: number; el: number }) {
+		if (reducedMotion) {
+			pose(object())
+			controls.update()
+			frame()
+			return
+		}
+		const to = object()
+		const run = animate(TIMING.turn, (k) => {
+			const e = 1 - Math.pow(1 - k, 3)
+			pose({
+				az: from.az + (to.az - from.az) * e,
+				el: from.el + (to.el - from.el) * e
+			})
+		})
+		const takeOver = () => {
+			run.cancel()
+			controls.removeEventListener('start', takeOver)
+		}
+		controls.addEventListener('start', takeOver)
+	}
+
+	/* The drawing is done with: the object is the reader's to turn. */
+	function handOver() {
+		turned = true
+		el.dims?.setAttribute('data-gone', '')
+		el.scale?.setAttribute('data-gone', '')
+		controls.target.copy(target)
+		controls.update()
+		controls.enabled = turnable
+	}
+
+	function renderObjectPng() {
+		const reveal = uniforms.uReveal.value
+		uniforms.uReveal.value = 1.02 // past the sweep: nothing inked, nothing erased
+		bakingObject = true
+		frame()
+		bakingObject = false
+		uniforms.uReveal.value = reveal
+		return cropToFrame()
+	}
+
 	return {
 		/** Draws a GLB as its front elevation, framed on its poster when it has one. Its shadow is baked unless one is given. */
 		async show(
@@ -695,31 +744,10 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 			return new Promise((resolve) => {
 				const u = uniforms.uReveal
 				const turn = () => {
-					turned = true
-					el.dims?.setAttribute('data-gone', '')
-					el.scale?.setAttribute('data-gone', '')
 					// Yours the moment it is an object: the turn runs, but a grab takes over from it.
-					controls.target.copy(target)
-					controls.update()
-					controls.enabled = true
+					handOver()
 					resolve()
-					if (reducedMotion) {
-						pose(object())
-						controls.update()
-						frame()
-						return
-					}
-					const a = elevation()
-					const b = object()
-					const run = animate(TIMING.turn, (k) => {
-						const e = 1 - Math.pow(1 - k, 3)
-						pose({ az: a.az + (b.az - a.az) * e, el: a.el + (b.el - a.el) * e })
-					})
-					const takeOver = () => {
-						run.cancel()
-						controls.removeEventListener('start', takeOver)
-					}
-					controls.addEventListener('start', takeOver)
+					turnInto(elevation())
 				}
 				if (reducedMotion) {
 					u.value = 1.02
@@ -752,14 +780,24 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 			return cropToFrame()
 		},
 		/** Bake mode only: the rendered object in the drawing's exact framing, so the two can be laid over each other. */
-		objectPng() {
-			const reveal = uniforms.uReveal.value
+		objectPng: renderObjectPng,
+		/** Bake mode only: the rendered object from the still's pose, in the same framing: the still `settle` takes over from. */
+		stillPng() {
+			pose(still())
+			const png = renderObjectPng()
+			pose(elevation())
+			return png
+		},
+		/** Takes over from the still: the same frame first, so the swap shows nothing, then a short turn into the object's pose. No drawing, no sweep. */
+		settle() {
+			running?.cancel()
 			uniforms.uReveal.value = 1.02 // past the sweep: nothing inked, nothing erased
-			bakingObject = true
+			handOver()
+			pose(still())
+			controls.update()
 			frame()
-			bakingObject = false
-			uniforms.uReveal.value = reveal
-			return cropToFrame()
+			// Reduced motion keeps the still's pose: turning at once would jump at the swap.
+			if (!reducedMotion) turnInto(still())
 		},
 		dispose() {
 			if (disposed) return

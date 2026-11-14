@@ -53,6 +53,10 @@ export default defineConfig({
 					import.meta.dirname,
 					'src/scene-camera/index.ts'
 				),
+				'camera-schema': path.resolve(
+					import.meta.dirname,
+					'src/camera-schema/index.ts'
+				),
 				node: path.resolve(import.meta.dirname, 'src/node/index.ts')
 			},
 			name: '@vctrl/core',

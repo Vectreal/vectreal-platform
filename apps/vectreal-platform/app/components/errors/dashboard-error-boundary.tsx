@@ -2,46 +2,33 @@ import { Button } from '@shared/components/ui/button'
 import { AlertCircle, Home, RefreshCw } from 'lucide-react'
 import { isRouteErrorResponse, Link, useRouteError } from 'react-router'
 
+import {
+	PUBLIC_ERROR_COPY,
+	publicErrorKind,
+	routeErrorDetail
+} from '../../lib/errors/error-state-copy'
 import { useErrorReport } from '../../lib/observability/use-error-report'
 
 /**
  * Error boundary component for dashboard routes.
- * Displays user-friendly error messages with retry/navigation options.
  *
  * Re-exported as `ErrorBoundary` by every dashboard route, so this one call is
  * what makes those routes report rather than swallow.
+ *
+ * Its words come from the same table as the public site's, and like that
+ * boundary it never renders an uncaught exception's message or stack: those
+ * are written for whoever reads a trace, can name a module or carry a token,
+ * and `useErrorReport` already sends them where they are useful. A string a
+ * loader threw on purpose is shown, except on a 404.
  */
 export function DashboardErrorBoundary() {
 	const error = useRouteError()
 	useErrorReport(error)
 
-	let errorMessage = 'An unexpected error occurred'
-	let errorDetails: string | undefined
-	let statusCode: number | undefined
-
-	if (isRouteErrorResponse(error)) {
-		statusCode = error.status
-		errorMessage = error.statusText || errorMessage
-
-		if (error.status === 404) {
-			errorMessage = 'Page Not Found'
-			errorDetails = 'The page you are looking for does not exist.'
-		} else if (error.status === 403) {
-			errorMessage = 'Access Denied'
-			errorDetails = 'You do not have permission to access this resource.'
-		} else if (error.status === 500) {
-			errorMessage = 'Server Error'
-			errorDetails = 'Something went wrong on our end. Please try again later.'
-		}
-
-		if (error.data && typeof error.data === 'string') {
-			errorDetails = error.data
-		}
-	} else if (error instanceof Error) {
-		errorMessage = error.message
-		errorDetails = error.stack
-		console.error('Dashboard error:', error)
-	}
+	const kind = publicErrorKind(error)
+	const { heading, description } = PUBLIC_ERROR_COPY[kind]
+	const detail = kind === 'not_found' ? undefined : routeErrorDetail(error)
+	const statusCode = isRouteErrorResponse(error) ? error.status : undefined
 
 	const handleReload = () => {
 		window.location.reload()
@@ -62,22 +49,22 @@ export function DashboardErrorBoundary() {
 							Error {statusCode}
 						</p>
 					)}
-					<h1 className="text-2xl font-medium">{errorMessage}</h1>
-					{errorDetails && (
-						<p className="text-muted-foreground text-sm">{errorDetails}</p>
-					)}
+					<h1 className="text-2xl font-medium">{heading}</h1>
+					<p className="text-muted-foreground text-sm">
+						{detail ?? description}
+					</p>
 				</div>
 
 				{/* Action Buttons */}
 				<div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
 					<Button onClick={handleReload} variant="default">
 						<RefreshCw className="mr-2 h-4 w-4" />
-						Try Again
+						Try again
 					</Button>
 					<Link to="/dashboard" viewTransition>
 						<Button variant="outline" className="w-full sm:w-auto">
 							<Home className="mr-2 h-4 w-4" />
-							Go to Dashboard
+							Go to dashboard
 						</Button>
 					</Link>
 				</div>

@@ -1,6 +1,6 @@
 /**
- * Fails the build when a public route's first-load JavaScript grows past its
- * budget, or when three.js or the newsroom articles reach it statically.
+ * Checks each public route's first-load JavaScript against its budget, and
+ * fails the build when three.js or the newsroom articles reach it statically.
  *
  * Run by `build-ci`, right after the build, so CI enforces it on every PR.
  *
@@ -18,11 +18,18 @@
  * followed: they load later, on a condition, which is how the 3D on these pages
  * stays off the first load.
  *
- * The budgets sit a little above the sizes measured on 18 Oct 2026, so an
- * ordinary change passes and a new dependency or a leaked module does not.
- * Raising one is a decision: say why in the PR.
+ * A budget is soft. Going over it passes the build with a warning on the PR
+ * and a line in the job summary: re-evaluate the change, or the budget. Only
+ * a route past its hard ceiling, 50% over the budget, fails. The margin is
+ * wide on purpose: the forbidden-module check below already catches the leaks
+ * that matter, and a tight hard stop is where changes start contorting code
+ * to squeeze under a number. A forbidden module on a first load, or a
+ * budgeted route that no longer exists, always fails.
+ *
+ * The budgets sit a little above the sizes measured on 18 Oct 2026. Raising
+ * one is a decision with Moritz's OK: say why in the PR.
  */
-import { readdirSync, readFileSync } from 'node:fs'
+import { appendFileSync, readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { gzipSync } from 'node:zlib'
@@ -60,6 +67,9 @@ const BUDGETS_KB: Record<string, number> = {
  */
 const EMBED_ROUTE = 'routes/embed-page/embed-scene'
 const EMBED_BUDGET_KB = 845
+
+/** How far past its budget a route may go before the build fails. */
+const HARD_CEILING = 1.5
 
 /*
   Which chunk is a route's module comes from React Router's own manifest, not
@@ -110,6 +120,7 @@ function main() {
 	const files = readdirSync(ASSETS).filter((file) => file.endsWith('.js'))
 	const { entry, routes } = routeManifest()
 	const failures: string[] = []
+	const overBudget: string[] = []
 
 	for (const [route, budget] of Object.entries({
 		...BUDGETS_KB,
@@ -142,16 +153,45 @@ function main() {
 		console.log(
 			`${route.padEnd(34)} ${kb.padStart(6)} KB gz of ${budget}, ${closure.size} chunks`
 		)
-		if (bytes > budget * 1024)
-			failures.push(`${route}: ${kb} KB gz is over its ${budget} KB budget`)
+		// Compared unrounded, like the budget: rounding the ceiling first could
+		// put it up to half a KB under the ceiling.
+		const ceiling = budget * HARD_CEILING
+		if (bytes > ceiling * 1024)
+			failures.push(
+				`${route}: ${kb} KB gz is past its ${ceiling.toFixed(1)} KB hard ceiling (budget ${budget} KB)`
+			)
+		else if (bytes > budget * 1024)
+			overBudget.push(`${route}: ${kb} KB gz is over its ${budget} KB budget`)
 		for (const [what, file] of found)
 			failures.push(`${route}: ${what} on its first load, via ${file}`)
 	}
 
+	if (overBudget.length) warnOverBudget(overBudget)
 	if (failures.length) {
 		console.error(`\n${failures.join('\n')}`)
 		process.exit(1)
 	}
+}
+
+/*
+  A warning annotation lands on the PR's checks; the summary line stays on the
+  run page. Outside GitHub Actions the console line is all there is.
+*/
+function warnOverBudget(lines: string[]) {
+	console.warn(`\n${lines.join('\n')}`)
+	if (process.env['GITHUB_ACTIONS'])
+		for (const line of lines)
+			console.log(
+				`::warning title=Route JS over budget::${line}. Re-evaluate the change or the budget.`
+			)
+	const summary = process.env['GITHUB_STEP_SUMMARY']
+	if (summary)
+		appendFileSync(
+			summary,
+			lines
+				.map((line) => `- Route JS over budget, re-evaluate: ${line}\n`)
+				.join('')
+		)
 }
 
 main()
