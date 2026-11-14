@@ -114,6 +114,8 @@ vi.mock('../../../../publishing/scene-publish-state-control', () => ({
 
 const PUBLISHED = new Uint8Array([0x67, 0x6c, 0x54, 0x46, 2, 0, 0, 0])
 
+const saveSceneSettings = vi.fn()
+
 function renderPanel(
 	derivedFrom: Optimizations,
 	prepare?: (store: ReturnType<typeof createStore>) => void
@@ -126,7 +128,7 @@ function renderPanel(
 			<PublishOptions
 				sceneId="scene-1"
 				publishState={{ sceneId: 'scene-1', status: 'draft' } as never}
-				saveSceneSettings={vi.fn()}
+				saveSceneSettings={saveSceneSettings}
 			/>
 		</Provider>
 	)
@@ -776,6 +778,63 @@ describe('the publish panel', () => {
 		})
 	})
 
+	// A finish publish baked used to ship and then be gone on reopen.
+	it('saves the finish it baked before it publishes', async () => {
+		mocks.runPublishExportInWorker.mockResolvedValue({
+			buffer: PUBLISHED.slice().buffer,
+			geometryCodec: 'none',
+			occlusion: { baked: ['body'], skipped: [] }
+		})
+		renderPanel(balancedPreset, (store) =>
+			store.set(lightingAtom, { occlusion: { mode: 'baked' } })
+		)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() => expect(mocks.publishSceneFromGlb).toHaveBeenCalled())
+		const [bake] = mocks.runPublishExportInWorker.mock.invocationCallOrder
+		expect(saveSceneSettings).toHaveBeenCalledOnce()
+		expect(saveSceneSettings.mock.invocationCallOrder[0]).toBeGreaterThan(bake)
+	})
+
+	it('waits for a bake still drawing, rather than baking beside it', async () => {
+		const lighting = { occlusion: { mode: 'baked' as const } }
+		const source = {
+			document: mocks.getDocument(),
+			passRevision: 0,
+			bakes: JSON.stringify(bakesKey(lighting))
+		}
+		const store = renderPanel(balancedPreset, (store) => {
+			store.set(lightingAtom, lighting)
+			store.set(bakePreviewAtom, { status: 'baking', source, shown: true })
+		})
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+		await act(async () => {})
+		expect(mocks.publishSceneFromGlb).not.toHaveBeenCalled()
+		// The panel shows the publish while it waits, not a blank.
+		expect(store.get(savePanelAtom)).toMatchObject({
+			status: 'preparing',
+			publish: expect.anything()
+		})
+
+		act(() =>
+			store.set(bakePreviewAtom, {
+				status: 'ready',
+				source,
+				shown: true,
+				model: {} as never,
+				reports: { occlusion: { baked: ['body'], skipped: [] } },
+				file: PUBLISHED.slice().buffer
+			})
+		)
+		await waitFor(() => expect(mocks.publishSceneFromGlb).toHaveBeenCalled())
+		// The encode alone: the finish drawn in the Lighting tool shipped.
+		expect(mocks.runPublishExportInWorker).toHaveBeenCalledOnce()
+		expect(mocks.runPublishExportInWorker.mock.calls[0][0]).toMatchObject({
+			glb: PUBLISHED,
+			occlusion: false
+		})
+	})
+
 	// The lost finish: GPU-compressed textures switched after the bake.
 	it('encodes a restored finish with the codecs switched since, without baking', async () => {
 		const finish = PUBLISHED.slice().buffer
@@ -793,7 +852,7 @@ describe('the publish panel', () => {
 				model: {} as never,
 				reports: { occlusion: { baked: ['body'], skipped: [] } },
 				file: finish,
-				restored: true
+				stored: true
 			})
 		})
 		fireEvent.click(textureSwitch())

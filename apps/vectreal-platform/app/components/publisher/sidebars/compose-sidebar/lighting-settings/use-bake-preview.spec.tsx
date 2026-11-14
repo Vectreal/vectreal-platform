@@ -17,6 +17,7 @@ import {
 	studioFinishToSave,
 	useBakePreview,
 	useCurrentPreview,
+	useFinishForSave,
 	usePublishExport,
 	useRestoreSavedFinish,
 	useShowPublishedFinish,
@@ -849,7 +850,102 @@ describe('the finish a save keeps', () => {
 				shown: true,
 				reports: { occlusion: report },
 				file,
-				restored: true
+				stored: true
+			})
+		).toBeUndefined()
+	})
+})
+
+describe('the finish as part of a save', () => {
+	const lighting = { occlusion: { mode: 'baked' as const } }
+	const setupSave = () => {
+		const store = createStore()
+		store.set(lightingAtom, lighting)
+		const wrapper = ({ children }: { children: ReactNode }) => (
+			<Provider store={store}>{children}</Provider>
+		)
+		const hook = renderHook(
+			() => ({ save: useFinishForSave(), preview: useBakePreview() }),
+			{ wrapper }
+		)
+		return { store, hook }
+	}
+
+	it('is an unsaved change once drawn, and none once a save stored it', async () => {
+		const { hook } = setupSave()
+		expect(hook.result.current.save.hasUnsavedFinish).toBe(false)
+
+		await act(() => hook.result.current.preview.bake())
+		expect(hook.result.current.save.hasUnsavedFinish).toBe(true)
+
+		let sent: unknown
+		await act(async () => {
+			sent = await hook.result.current.save.captureStudioFinish(lighting)
+		})
+		expect(sent).toMatchObject({ bytes: expect.any(ArrayBuffer) })
+		act(() => hook.result.current.save.markFinishSaved())
+
+		expect(hook.result.current.save.hasUnsavedFinish).toBe(false)
+		expect(
+			await hook.result.current.save.captureStudioFinish(lighting)
+		).toBeUndefined()
+	})
+
+	// A save clicked while the finish drew went through without it.
+	it('waits for a bake still drawing, and saves what it drew', async () => {
+		let finish: (value: unknown) => void = () => {}
+		mocks.runPublishExportInWorker.mockImplementation(
+			() =>
+				new Promise((resolve) => {
+					finish = resolve
+				})
+		)
+		const { hook } = setupSave()
+		act(() => void hook.result.current.preview.bake())
+		await waitFor(() =>
+			expect(hook.result.current.preview.preview?.status).toBe('baking')
+		)
+		expect(hook.result.current.save.hasUnsavedFinish).toBe(true)
+
+		let sent: unknown = 'pending'
+		const capture = hook.result.current.save
+			.captureStudioFinish(lighting)
+			.then((value) => {
+				sent = value
+			})
+		await act(async () => {})
+		expect(sent).toBe('pending')
+
+		await act(async () =>
+			finish({ buffer: new ArrayBuffer(8), occlusion: report })
+		)
+		await act(() => capture)
+		expect(sent).toMatchObject({ bytes: expect.any(ArrayBuffer) })
+	})
+
+	it('stays stored when the preview was shown or hidden during the save', async () => {
+		const { store, hook } = setupSave()
+		await act(() => hook.result.current.preview.bake())
+		await act(async () => {
+			await hook.result.current.save.captureStudioFinish(lighting)
+		})
+		act(() =>
+			store.set(bakePreviewAtom, (current) =>
+				current ? { ...current, shown: !current.shown } : current
+			)
+		)
+		act(() => hook.result.current.save.markFinishSaved())
+
+		expect(hook.result.current.save.hasUnsavedFinish).toBe(false)
+	})
+
+	it('saves no finish drawn for other lighting than the save writes', async () => {
+		const { hook } = setupSave()
+		await act(() => hook.result.current.preview.bake())
+
+		expect(
+			await hook.result.current.save.captureStudioFinish({
+				occlusion: { mode: 'off' }
 			})
 		).toBeUndefined()
 	})
@@ -867,7 +963,7 @@ describe('the finish publish encodes rather than bakes again', () => {
 				shown: true,
 				reports: { occlusion: report },
 				file,
-				restored: true
+				stored: true
 			})
 		).toEqual({ bytes: file, reports: { occlusion: report } })
 	})
@@ -879,7 +975,7 @@ describe('the finish publish encodes rather than bakes again', () => {
 				source,
 				shown: true,
 				reports: { occlusion: report },
-				restored: true
+				stored: true
 			})
 		).toBeUndefined()
 	})
@@ -936,7 +1032,7 @@ describe('restoring the finish saved with the scene', () => {
 		await waitFor(() =>
 			expect(store.get(bakePreviewAtom)).toMatchObject({
 				status: 'ready',
-				restored: true,
+				stored: true,
 				reports: { occlusion: report }
 			})
 		)
@@ -983,7 +1079,7 @@ describe('restoring the finish saved with the scene', () => {
 		const store = restore(bakesKey(lighting), undefined, undefined, false)
 
 		await waitFor(() =>
-			expect(store.get(bakePreviewAtom)).toMatchObject({ restored: true })
+			expect(store.get(bakePreviewAtom)).toMatchObject({ stored: true })
 		)
 		expect(store.get(bakePreviewAtom)?.file).toBeUndefined()
 		vi.unstubAllGlobals()
@@ -1004,7 +1100,7 @@ describe('restoring the finish saved with the scene', () => {
 		await waitFor(() =>
 			expect(store.get(bakePreviewAtom)).toMatchObject({
 				status: 'ready',
-				restored: true,
+				stored: true,
 				reports: { occlusion: older }
 			})
 		)
@@ -1059,7 +1155,7 @@ describe('restoring the finish saved with the scene', () => {
 
 		const store = restore(bakesKey(lighting))
 		await waitFor(() =>
-			expect(store.get(bakePreviewAtom)).toMatchObject({ restored: true })
+			expect(store.get(bakePreviewAtom)).toMatchObject({ stored: true })
 		)
 		await act(async () => store.set(bakePreviewAtom, null))
 

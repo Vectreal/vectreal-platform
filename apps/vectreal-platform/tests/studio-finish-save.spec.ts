@@ -17,7 +17,9 @@ const finish: StudioFinishToSave = {
 }
 
 async function save(
-	captureStudioFinish: (() => StudioFinishToSave | undefined) | undefined,
+	captureStudioFinish:
+		| ((lighting: unknown) => Promise<StudioFinishToSave | undefined>)
+		| undefined,
 	existingAssets: Record<string, { assetId: string; contentHash: string }> = {}
 ) {
 	const uploaded: string[] = []
@@ -65,7 +67,7 @@ describe('a saved studio finish', () => {
 	afterEach(() => vi.unstubAllGlobals())
 
 	it('uploads the finish the preview drew and links it with its reports', async () => {
-		const { uploaded, studioFinish } = await save(() => finish)
+		const { uploaded, studioFinish } = await save(async () => finish)
 
 		expect(uploaded).toEqual([STUDIO_FINISH_FILENAME])
 		expect(studioFinish).toEqual({
@@ -82,7 +84,7 @@ describe('a saved studio finish', () => {
 			.map((byte) => byte.toString(16).padStart(2, '0'))
 			.join('')
 
-		const { uploaded, studioFinish } = await save(() => finish, {
+		const { uploaded, studioFinish } = await save(async () => finish, {
 			[STUDIO_FINISH_FILENAME]: { assetId: 'finish-old', contentHash: hash }
 		})
 
@@ -115,7 +117,7 @@ describe('a saved studio finish', () => {
 				assets: new Map()
 			}),
 			captureSceneThumbnail: async () => null,
-			captureStudioFinish: () => {
+			captureStudioFinish: async () => {
 				reads.push('capture')
 				return undefined
 			}
@@ -124,8 +126,41 @@ describe('a saved studio finish', () => {
 		expect(reads[0]).toBe('capture')
 	})
 
+	// A pass started while a save waits on a bake must not reach the upload
+	// with the settings and report captured before it.
+	it('asks for the finish drawn for the lighting it saves, once the model is exported', async () => {
+		stubSceneApi(async () =>
+			ok({ sceneId: 's1', projectId: 'p1', existingAssets: {} })
+		)
+		const lighting = { occlusion: { mode: 'baked' as const } }
+		const captureStudioFinish = vi.fn(async () => undefined)
+		const prepareGltfDocumentForUpload = vi.fn(async () => ({
+			data: { asset: { version: '2.0' } },
+			assets: new Map()
+		}))
+		await executeSceneSaveOrchestrator({
+			userId: 'u1',
+			currentSceneId: 's1',
+			currentSettings: { lighting },
+			sceneMetaState: { name: 'Chair' } as never,
+			lastSavedSceneMeta: { name: 'Chair' } as never,
+			lastSavedSettings: {} as never,
+			optimizationSettings: {},
+			optimizationReport: null,
+			createRequestId: () => 'req-1',
+			prepareGltfDocumentForUpload,
+			captureSceneThumbnail: async () => null,
+			captureStudioFinish
+		}).catch(() => {})
+
+		expect(captureStudioFinish).toHaveBeenCalledWith(lighting)
+		expect(
+			prepareGltfDocumentForUpload.mock.invocationCallOrder[0]
+		).toBeLessThan(captureStudioFinish.mock.invocationCallOrder[0])
+	})
+
 	it('leaves the stored finish alone when there is none to send', async () => {
-		expect((await save(() => undefined)).studioFinish).toBe('omitted')
+		expect((await save(async () => undefined)).studioFinish).toBe('omitted')
 		expect((await save(undefined)).studioFinish).toBe('omitted')
 	})
 })
