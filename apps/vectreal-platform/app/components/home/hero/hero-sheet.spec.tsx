@@ -68,3 +68,15 @@ it('server-renders the still, one image per framing, labelled as a figure only',
 		screen.getByText(HOME_PAGE_COPY.stage.figure, { exact: true })
 	).toBeTruthy()
 })
+
+it('marks only the free-model intake as the brand action', () => {
+	const { container } = render(
+		<MemoryRouter>
+			<HeroSheet />
+		</MemoryRouter>
+	)
+	const brand = [...container.querySelectorAll('[data-variant="brand"]')]
+	expect(brand.map((action) => action.getAttribute('href'))).toEqual([
+		'/free-model'
+	])
+})

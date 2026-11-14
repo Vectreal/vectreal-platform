@@ -32,6 +32,7 @@ import {
 	isUnpublishedNewsPath
 } from '../app/lib/news/news-manifest.server'
 import { resolvePublishedAt } from '../app/lib/news/news-schedule'
+import { redactUrlSecrets } from '../app/lib/posthog/redact-url-secrets'
 // @ts-expect-error -- plain JavaScript, run by Node directly in production.
 import { createServerApp } from '../server-app.mjs'
 
@@ -233,7 +234,8 @@ describe('the server gate, in front of the prerendered files', () => {
 				appHandled.push(req.url)
 				res.status(404).set('Cache-Control', 'no-store').send('app')
 			},
-			isUnpublishedNewsPath
+			isUnpublishedNewsPath,
+			redactUrlSecrets
 		})
 		server = await new Promise<Server>((resolve) => {
 			const listening: Server = app.listen(0, () => resolve(listening))

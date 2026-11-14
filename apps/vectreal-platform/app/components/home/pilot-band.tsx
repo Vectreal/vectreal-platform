@@ -7,12 +7,11 @@ import { HOME_PAGE_COPY } from '../../constants/product-copy'
 const COPY = HOME_PAGE_COPY.pilot
 
 /**
- * The free-model offer, after the mission statement: what we do for a brand
- * that has photos of its products and no 3D files, which is most of them.
- *
- * The offer and its call to action on one side, the three steps on the other
- * as ruled rows, numbered because they happen in that order. On a phone they
- * stack, the steps under the button.
+ * How the free-model offer works, after the mission statement. The hero has
+ * already made the offer, so the band does not make it again: its heading and
+ * the way in on one side, the three steps on the other as ruled rows,
+ * numbered because they happen in that order. On a phone they stack, the
+ * steps under the button.
  */
 export const PilotBand = () => (
 	<div className="flex flex-col gap-12">
@@ -21,16 +20,7 @@ export const PilotBand = () => (
 				<h2 id="pilot-heading" className="text-headline" data-reveal>
 					{COPY.heading}
 				</h2>
-				<p
-					className="text-muted-foreground text-body-lg mt-8 max-w-xl"
-					data-reveal
-				>
-					{COPY.lead}
-				</p>
-				<div
-					className="mt-10 flex flex-col gap-6 sm:flex-row sm:flex-wrap sm:items-center"
-					data-reveal
-				>
+				<div className="mt-10" data-reveal>
 					<Button
 						asChild
 						size="lg"
@@ -42,7 +32,6 @@ export const PilotBand = () => (
 							<ArrowRight aria-hidden="true" />
 						</Link>
 					</Button>
-					<p className="text-muted-foreground text-body-sm">{COPY.afterCta}</p>
 				</div>
 			</div>
 

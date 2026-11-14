@@ -115,7 +115,12 @@ export function HeroSheet() {
 						{HERO.lead}
 					</p>
 					<div className="mt-8 flex flex-col gap-4 sm:flex-row">
-						<Button asChild size="lg" className="tap-target relative">
+						<Button
+							variant="brand"
+							asChild
+							size="lg"
+							className="tap-target relative"
+						>
 							<Link to="/free-model">
 								{HERO.primaryCta}
 								<ArrowRight aria-hidden="true" />

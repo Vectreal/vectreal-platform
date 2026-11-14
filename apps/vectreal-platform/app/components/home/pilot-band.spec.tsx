@@ -26,6 +26,14 @@ it('leads to the free-model intake', () => {
 	).toBe('/free-model')
 })
 
+it('marks only that link as the brand action', () => {
+	const { container } = renderBand()
+	const brand = [...container.querySelectorAll('[data-variant="brand"]')]
+	expect(brand.map((action) => action.getAttribute('href'))).toEqual([
+		'/free-model'
+	])
+})
+
 it('lists the steps in order, each named by its heading', () => {
 	renderBand()
 	const steps = within(
