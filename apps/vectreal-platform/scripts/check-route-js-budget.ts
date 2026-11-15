@@ -18,16 +18,17 @@
  * followed: they load later, on a condition, which is how the 3D on these pages
  * stays off the first load.
  *
- * A budget is soft. Going over it passes the build with a warning on the PR
- * and a line in the job summary: re-evaluate the change, or the budget. Only
- * a route past its hard ceiling, 50% over the budget, fails. The margin is
- * wide on purpose: the forbidden-module check below already catches the leaks
- * that matter, and a tight hard stop is where changes start contorting code
- * to squeeze under a number. A forbidden module on a first load, or a
- * budgeted route that no longer exists, always fails.
+ * A budget is a limit. A route over its budget fails the build; a route within
+ * 3% of it passes with a warning on the PR and a line in the job summary, so
+ * the change that eats the last of the headroom is seen before the one that
+ * breaks the build. A forbidden module on a first load, or a budgeted route
+ * that no longer exists, fails too.
  *
- * The budgets sit a little above the sizes measured on 18 Oct 2026. Raising
- * one is a decision with Moritz's OK: say why in the PR.
+ * A route that is over gets smaller. The number does not move to make a
+ * build pass: raising one is a decision with Moritz's OK, with the reason in
+ * the PR.
+ *
+ * The budgets sit a little above the sizes measured on 18 Oct 2026.
  */
 import { appendFileSync, readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
@@ -68,8 +69,11 @@ const BUDGETS_KB: Record<string, number> = {
 const EMBED_ROUTE = 'routes/embed-page/embed-scene'
 const EMBED_BUDGET_KB = 845
 
-/** How far past its budget a route may go before the build fails. */
-const HARD_CEILING = 1.5
+/**
+ * The share of its budget at which a route starts to warn: 3% is about 12 KB on
+ * a 400 KB route, one component's worth, so the warning arrives a PR early.
+ */
+const WARN_AT = 0.97
 
 /*
   Which chunk is a route's module comes from React Router's own manifest, not
@@ -120,7 +124,7 @@ function main() {
 	const files = readdirSync(ASSETS).filter((file) => file.endsWith('.js'))
 	const { entry, routes } = routeManifest()
 	const failures: string[] = []
-	const overBudget: string[] = []
+	const nearBudget: string[] = []
 
 	for (const [route, budget] of Object.entries({
 		...BUDGETS_KB,
@@ -153,20 +157,17 @@ function main() {
 		console.log(
 			`${route.padEnd(34)} ${kb.padStart(6)} KB gz of ${budget}, ${closure.size} chunks`
 		)
-		// Compared unrounded, like the budget: rounding the ceiling first could
-		// put it up to half a KB under the ceiling.
-		const ceiling = budget * HARD_CEILING
-		if (bytes > ceiling * 1024)
-			failures.push(
-				`${route}: ${kb} KB gz is past its ${ceiling.toFixed(1)} KB hard ceiling (budget ${budget} KB)`
+		if (bytes > budget * 1024)
+			failures.push(`${route}: ${kb} KB gz is over its ${budget} KB budget`)
+		else if (bytes > budget * WARN_AT * 1024)
+			nearBudget.push(
+				`${route}: ${kb} KB gz is within ${Math.round((1 - WARN_AT) * 100)}% of its ${budget} KB budget`
 			)
-		else if (bytes > budget * 1024)
-			overBudget.push(`${route}: ${kb} KB gz is over its ${budget} KB budget`)
 		for (const [what, file] of found)
 			failures.push(`${route}: ${what} on its first load, via ${file}`)
 	}
 
-	if (overBudget.length) warnOverBudget(overBudget)
+	if (nearBudget.length) warnNearBudget(nearBudget)
 	if (failures.length) {
 		console.error(`\n${failures.join('\n')}`)
 		process.exit(1)
@@ -177,20 +178,18 @@ function main() {
   A warning annotation lands on the PR's checks; the summary line stays on the
   run page. Outside GitHub Actions the console line is all there is.
 */
-function warnOverBudget(lines: string[]) {
+function warnNearBudget(lines: string[]) {
 	console.warn(`\n${lines.join('\n')}`)
 	if (process.env['GITHUB_ACTIONS'])
 		for (const line of lines)
 			console.log(
-				`::warning title=Route JS over budget::${line}. Re-evaluate the change or the budget.`
+				`::warning title=Route JS near its budget::${line}. The next growth fails the build.`
 			)
 	const summary = process.env['GITHUB_STEP_SUMMARY']
 	if (summary)
 		appendFileSync(
 			summary,
-			lines
-				.map((line) => `- Route JS over budget, re-evaluate: ${line}\n`)
-				.join('')
+			lines.map((line) => `- Route JS near its budget: ${line}\n`).join('')
 		)
 }
 
