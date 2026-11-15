@@ -87,6 +87,12 @@ export interface AnimationPlaybackStatus {
 	activeClipId: null | string
 	/** Whether model geometry is currently being driven. */
 	active: boolean
+	/**
+	 * Whether a clip holds the model off its bind pose: playing, paused,
+	 * scrubbed or clamped at its end. Three restores the bind pose once no
+	 * action drives a binding, so this is whether any action is still held.
+	 */
+	posed: boolean
 }
 
 interface SceneAnimationProps {
@@ -116,7 +122,10 @@ function shouldClamp(clip: PlaybackClip): boolean {
 	return clip.loop === 'once' || typeof clip.repetitions === 'number'
 }
 
-function readStatus(state: PlaybackState): AnimationPlaybackStatus {
+function readStatus(
+	state: PlaybackState,
+	posed = false
+): AnimationPlaybackStatus {
 	return {
 		playing: state.isPlaying,
 		complete: state.isComplete,
@@ -125,7 +134,8 @@ function readStatus(state: PlaybackState): AnimationPlaybackStatus {
 			(state.mode === 'sequence'
 				? (state.clips[state.activeIndex]?.clipId ?? null)
 				: null),
-		active: isProgramActive(state)
+		active: isProgramActive(state),
+		posed
 	}
 }
 
@@ -137,7 +147,8 @@ function isSameStatus(
 		a.playing === b.playing &&
 		a.complete === b.complete &&
 		a.activeClipId === b.activeClipId &&
-		a.active === b.active
+		a.active === b.active &&
+		a.posed === b.posed
 	)
 }
 
@@ -285,7 +296,7 @@ const SceneAnimation = (props: SceneAnimationProps) => {
 				applyEffect(effect)
 			}
 
-			const status = readStatus(state)
+			const status = readStatus(state, actionsRef.current.size > 0)
 			if (isSameStatus(status, statusRef.current)) return
 
 			statusRef.current = status

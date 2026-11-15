@@ -156,12 +156,14 @@ const PublisherPage = () => {
 	// a sequence can run out, and the runtime resets when animation is off.
 	const [animationStatus, setAnimationStatus] = useState({
 		playing: false,
-		complete: false
+		complete: false,
+		posed: false
 	})
 
 	// The same rule the viewer mounts its animation runtime by
 	// (`useAnimationRuntime`): without it nothing can move the model off its
-	// bind pose, so an applied bake can stay on screen in every tool.
+	// bind pose. With it, the bake stays on screen while the viewer reports
+	// the model unposed.
 	const canAnimate =
 		(file?.animations?.length ?? 0) > 0 &&
 		(Boolean(animation?.enabled) ||
@@ -169,7 +171,8 @@ const PublisherPage = () => {
 	const shownBake = useShownBake({
 		isLightingOpen: openComposeTool === 'lighting',
 		canAnimate,
-		isAnimating: animationStatus.playing
+		isAnimating: animationStatus.playing,
+		isPosed: animationStatus.posed
 	})
 	usePlanStudioFinish()
 
@@ -186,7 +189,8 @@ const PublisherPage = () => {
 			if (event.type === 'animation_state_changed') {
 				setAnimationStatus({
 					playing: event.playing,
-					complete: event.complete
+					complete: event.complete,
+					posed: event.posed
 				})
 			}
 			// The viewer's own account of its map, failed or recovered.
@@ -260,7 +264,7 @@ const PublisherPage = () => {
 					  Holding to compare an optimization wins over a bake preview: it
 					  is the more deliberate, shorter act.
 					*/
-					displayedModel={comparedModel?.model ?? shownBake}
+					displayedModel={comparedModel?.model ?? shownBake.model}
 					onViewChange={setViewDirection}
 					animations={file?.animations}
 					animationOptions={animation}
@@ -368,6 +372,11 @@ const PublisherPage = () => {
 					}
 					onRestart={() =>
 						commandExecutor.current?.execute({ type: 'restart_animation' })
+					}
+					note={
+						!isPreviewMode && !comparedModel && shownBake.heldByPose
+							? 'The studio finish shows while the model is in its rest pose.'
+							: undefined
 					}
 				/>
 				{/*

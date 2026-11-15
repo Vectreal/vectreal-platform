@@ -15,7 +15,8 @@ const IDLE_STATUS: AnimationPlaybackStatus = {
 	playing: false,
 	complete: false,
 	activeClipId: null,
-	active: false
+	active: false,
+	posed: false
 }
 
 interface UseAnimationRuntimeOptions {
@@ -88,7 +89,8 @@ export function useAnimationRuntime({
 		if (
 			announced.playing === status.playing &&
 			announced.complete === status.complete &&
-			announced.activeClipId === status.activeClipId
+			announced.activeClipId === status.activeClipId &&
+			announced.posed === status.posed
 		)
 			return
 		announcedStatus.current = status
@@ -96,7 +98,8 @@ export function useAnimationRuntime({
 			type: 'animation_state_changed',
 			playing: status.playing,
 			activeClipId: status.activeClipId,
-			complete: status.complete
+			complete: status.complete,
+			posed: status.posed
 		})
 	}, [status])
 

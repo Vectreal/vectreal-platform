@@ -472,6 +472,15 @@ export interface ShownBakeContext {
 	canAnimate: boolean
 	/** Whether a clip is playing right now. */
 	isAnimating: boolean
+	/** Whether a clip holds the model off its bind pose, as the viewer reports it. */
+	isPosed: boolean
+}
+
+export interface ShownBake {
+	/** The baked copy the viewer draws in place of the model, if any. */
+	model: Object3D | undefined
+	/** Whether a finish the author shows is held back because the model is posed. */
+	heldByPose: boolean
 }
 
 /**
@@ -480,28 +489,32 @@ export interface ShownBakeContext {
  * preview's lifetime.
  *
  * The viewer never animates the copy it draws in place of the model, so the
- * copy only matches the model while the model rests in its bind pose. A model
- * nothing can pose keeps the copy in every tool. One the runtime can pose,
- * by playing, pausing mid-clip, scrubbing or holding a clip's closing pose,
- * keeps it only inside the Lighting tool, where the author asked to look at
- * the bake, and never while a clip plays.
+ * copy only matches the model while the model rests in its bind pose, which
+ * keeps it in every tool. While a clip poses the model (playing, paused
+ * mid-clip, scrubbed or held at its end) the copy is held back, except inside
+ * the Lighting tool while nothing plays, where the author asked to look at
+ * the bake.
  */
 export function useShownBake({
 	isLightingOpen,
 	canAnimate,
-	isAnimating
-}: ShownBakeContext): Object3D | undefined {
+	isAnimating,
+	isPosed
+}: ShownBakeContext): ShownBake {
 	const preview = useCurrentPreview()
 	usePreviewLifetime(preview)
-	const matchesModel = !canAnimate || (isLightingOpen && !isAnimating)
-	return matchesModel &&
+	const shows =
 		preview?.status === 'ready' &&
 		// A bake that changed nothing has no switch to turn it off, and its copy
 		// would only freeze an animated model in its rest pose.
 		bakedAnything(preview) &&
 		preview.shown
-		? preview.model
-		: undefined
+	const matchesModel =
+		!canAnimate || !isPosed || (isLightingOpen && !isAnimating)
+	return {
+		model: shows && matchesModel ? preview.model : undefined,
+		heldByPose: shows && !matchesModel
+	}
 }
 
 /**
