@@ -1,4 +1,8 @@
-import { isSceneCamera, repairCameraEntry } from '../camera-schema/camera-rules'
+import {
+	isCameraTransition,
+	isSceneCamera,
+	repairCameraEntry
+} from '../camera-schema/camera-rules'
 
 import type { CameraRepair } from '../camera-schema/camera-rules'
 import type {
@@ -18,8 +22,10 @@ export { isSceneCamera }
 /** Where a repair is reported when the caller names nowhere else. */
 const warnOfRepairs = (repairs: CameraRepair[]) => {
 	console.warn(
-		`[vectreal] Dropped stored camera values that the viewer cannot use: ${repairs
-			.map(({ cameraIndex, field }) => `cameras[${cameraIndex}].${field}`)
+		`[vectreal] Repaired stored camera values that the viewer cannot use: ${repairs
+			.map(({ cameraIndex, field }) =>
+				cameraIndex === undefined ? field : `cameras[${cameraIndex}].${field}`
+			)
 			.join(', ')}`
 	)
 }
@@ -58,9 +64,11 @@ export const DEFAULT_SCENE_TRANSITION: Readonly<
  * 3. Fills missing camera ids/names
  * 4. Keeps `initial` flag aligned with the active camera
  * 5. Drops each stored value the viewer cannot use (`repairCameraEntry`:
- *    an fov outside (0, 180) or a malformed `framingAspect`),
- *    and reports what it dropped to `onRepair`, a console warning by default.
- *    A read repairs rather than refuses, so a published scene keeps opening.
+ *    an fov outside (0, 180), a malformed `framingAspect` or legacy
+ *    `transition`, or a `sceneTransition` the viewer cannot play), reporting
+ *    each repair to `onRepair`, a console warning by default.
+ *    A read repairs rather than refuses, so a published scene keeps opening
+ *    and its next save passes the write schema.
  *
  * The semantic is: the first scene camera is ALWAYS the default unless explicitly
  * reordered by the user (moving a camera to the front via the pin action).
@@ -90,17 +98,23 @@ export function normalizeCameraSettings(
 			name: entry.name || `Camera ${index + 1}`
 		}
 	})
+	// Saves stored a falsy one as sent before the write schema refused it.
+	const { sceneTransition, ...rest } = camera
+	const keepsSceneTransition =
+		sceneTransition === undefined || isCameraTransition(sceneTransition)
+	if (!keepsSceneTransition) repairs.push({ field: 'sceneTransition' })
 	if (repairs.length > 0) onRepair(repairs)
+	const repaired = keepsSceneTransition ? camera : rest
 
 	// Find the first scene camera (non-hotspot)
 	const firstSceneCameraId = normalizedCameras.find(isSceneCamera)?.cameraId
 
 	if (!firstSceneCameraId) {
-		return { ...camera, cameras: normalizedCameras }
+		return { ...repaired, cameras: normalizedCameras }
 	}
 
 	return {
-		...camera,
+		...repaired,
 		// Always set activeCameraId to the first scene camera (implicit default)
 		activeCameraId: firstSceneCameraId,
 		cameras: normalizedCameras.map((entry) => ({

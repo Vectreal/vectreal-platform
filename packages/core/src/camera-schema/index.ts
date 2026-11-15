@@ -16,10 +16,10 @@ import { z } from 'zod'
 import {
 	CAMERA_FOV_MAX,
 	CAMERA_FOV_MIN,
-	CAMERA_VECTOR_FIELDS,
-	isSceneCamera
+	CAMERA_TRANSITION_EASINGS,
+	CAMERA_TRANSITION_TYPES,
+	CAMERA_VECTOR_FIELDS
 } from './camera-rules'
-import { isFramingAspect } from '../scene-camera/viewport-framing'
 
 export * from './camera-rules'
 
@@ -71,7 +71,7 @@ const objectAvoidanceSchema = z.looseObject(
 export const cameraTransitionSchema = z
 	.looseObject(
 		{
-			type: z.enum(['linear', 'object_avoidance', 'none'], {
+			type: z.enum(CAMERA_TRANSITION_TYPES, {
 				error: 'must be one of linear, object_avoidance, none'
 			}),
 			duration: z
@@ -79,7 +79,7 @@ export const cameraTransitionSchema = z
 				.min(0, { error: NON_NEGATIVE })
 				.optional(),
 			easing: z
-				.enum(['linear', 'ease_in', 'ease_out', 'ease_in_out'], {
+				.enum(CAMERA_TRANSITION_EASINGS, {
 					error: 'must be one of linear, ease_in, ease_out, ease_in_out'
 				})
 				.optional()
@@ -107,47 +107,47 @@ export const cameraTransitionSchema = z
 		}
 	})
 
-/**
- * The fields of one camera that have a rule. A field without one (a three.js
- * prop such as `near`) is carried as stored.
- */
-const CAMERA_FIELD_SCHEMAS = {
-	cameraId: z.string({ error: 'must be a string' }),
-	name: z.string({ error: 'must be a string' }),
-	kind: cameraKindSchema,
-	initial: z.boolean({ error: 'must be a boolean' }),
-	fov: cameraFovSchema,
-	framingAspect: z.custom<number>(isFramingAspect, {
-		message: 'must be a positive finite number'
-	}),
-	transition: cameraTransitionSchema,
-	...Object.fromEntries(
-		CAMERA_VECTOR_FIELDS.map((field) => [field, cameraVectorSchema])
-	)
-} as Record<string, z.ZodType>
+const vector = cameraVectorSchema.optional()
 
+/**
+ * One camera. Every field with a rule is held to it; a field without one (a
+ * three.js prop such as `near`) is carried as stored.
+ */
 export const cameraEntrySchema = z.looseObject(
-	Object.fromEntries(
-		Object.entries(CAMERA_FIELD_SCHEMAS).map(([field, schema]) => [
-			field,
-			schema.optional()
-		])
-	),
+	{
+		cameraId: z.string({ error: 'must be a string' }).optional(),
+		name: z.string({ error: 'must be a string' }).optional(),
+		kind: cameraKindSchema.optional(),
+		initial: z.boolean({ error: 'must be a boolean' }).optional(),
+		fov: cameraFovSchema.optional(),
+		// `isFramingAspect` as a write rule, spelled out so it has a JSON Schema
+		// (an MCP tool's input is one).
+		framingAspect: z
+			.number({ error: 'must be a positive finite number' })
+			.gt(0, { error: 'must be a positive finite number' })
+			.optional(),
+		transition: cameraTransitionSchema.optional(),
+		position: vector,
+		target: vector,
+		rotation: vector,
+		/** The legacy name for `target`. */
+		lookAt: vector
+	} satisfies Record<(typeof CAMERA_VECTOR_FIELDS)[number], unknown> &
+		Record<string, z.ZodType>,
 	{ error: 'must be an object' }
 )
 
 /**
- * Camera settings as a write must send them: at least one camera, at least one
- * of them a scene camera to open on, every field that has a rule within it.
+ * Camera settings as a write must send them: at least one camera, every field
+ * that has a rule within it. A list of hotspot cameras only is allowed: the
+ * publisher builds one when a hotspot is added to a scene with no camera, and
+ * the scene then opens on the first camera.
  */
 export const cameraSettingsSchema = z.looseObject({
 	activeCameraId: z.string({ error: 'must be a string' }).optional(),
 	cameras: z
 		.array(cameraEntrySchema, { error: 'must be a non-empty array' })
-		.min(1, { error: 'must be a non-empty array' })
-		.refine((cameras) => cameras.some(isSceneCamera), {
-			message: 'must contain at least one scene camera'
-		}),
+		.min(1, { error: 'must be a non-empty array' }),
 	sceneTransition: cameraTransitionSchema.optional(),
 	/** The viewer hides its switcher only for a literal `false`. */
 	showControls: z.boolean({ error: 'must be a boolean' }).optional()

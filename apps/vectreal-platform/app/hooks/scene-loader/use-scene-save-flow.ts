@@ -49,7 +49,8 @@ export const useSceneSaveFlow = ({
 		lastSavedSceneId,
 		setLastSavedSceneId,
 		suppressDirtyDetection,
-		hasUnsavedOriginalChoice
+		hasUnsavedOriginalChoice,
+		hasUnsavedFinish
 	} = scenePersistence
 	const {
 		optimizationSettings,
@@ -69,6 +70,7 @@ export const useSceneSaveFlow = ({
 		captureSceneThumbnail,
 		captureShadowBake,
 		captureStudioFinish,
+		markFinishSaved,
 		resolveSource,
 		recordSavedSource
 	} = actions
@@ -178,6 +180,7 @@ export const useSceneSaveFlow = ({
 					})
 					// What it kept describes the scene it saved. Another scene opened
 					// meanwhile has its own original, which this must not overwrite.
+					if (result.studioFinishSaved) markFinishSaved()
 					if (currentSceneIdRef.current === savedSceneId) {
 						recordSavedSource(result.keptOriginal)
 						// Uploaded artwork now has its address: the editor holds that
@@ -223,6 +226,7 @@ export const useSceneSaveFlow = ({
 			capturedThumbnailFrame,
 			captureShadowBake,
 			captureStudioFinish,
+			markFinishSaved,
 			createRequestId,
 			currentSceneId,
 			currentSettings,
@@ -433,7 +437,8 @@ export const useSceneSaveFlow = ({
 
 	const hasChanges = useMemo(
 		() =>
-			(!suppressDirtyDetection && hasUnsavedOriginalChoice) ||
+			(!suppressDirtyDetection &&
+				(hasUnsavedOriginalChoice || hasUnsavedFinish)) ||
 			hasUnsavedSceneChanges({
 				suppressDirtyDetection,
 				currentSettings,
@@ -448,6 +453,7 @@ export const useSceneSaveFlow = ({
 		[
 			suppressDirtyDetection,
 			hasUnsavedOriginalChoice,
+			hasUnsavedFinish,
 			currentSettings,
 			effectiveLastSavedSettings,
 			sceneMetaState,

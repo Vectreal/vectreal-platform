@@ -37,9 +37,70 @@ export const CAMERA_VECTOR_FIELDS = [
 	'lookAt'
 ] as const
 
-/** One stored value `repairCameraEntry` dropped, for whoever logs it. */
+export const CAMERA_TRANSITION_TYPES = [
+	'linear',
+	'object_avoidance',
+	'none'
+] as const
+export const CAMERA_TRANSITION_EASINGS = [
+	'linear',
+	'ease_in',
+	'ease_out',
+	'ease_in_out'
+] as const
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+	typeof value === 'object' && value !== null && !Array.isArray(value)
+
+const isFiniteNumber = (value: unknown): value is number =>
+	typeof value === 'number' && Number.isFinite(value)
+
+const isOptional = (value: unknown, rule: (value: unknown) => boolean) =>
+	value === undefined || rule(value)
+
+/**
+ * Whether `value` is a transition the viewer can play: `cameraTransitionSchema`
+ * as a predicate, for readers that carry no zod. `camera-schema.spec.ts` holds
+ * the two to the same answers.
+ */
+export function isCameraTransition(value: unknown): boolean {
+	if (!isRecord(value)) return false
+	if (
+		!(CAMERA_TRANSITION_TYPES as readonly unknown[]).includes(value['type'])
+	) {
+		return false
+	}
+	if (!isOptional(value['duration'], (d) => isFiniteNumber(d) && d >= 0)) {
+		return false
+	}
+	if (
+		!isOptional(value['easing'], (e) =>
+			(CAMERA_TRANSITION_EASINGS as readonly unknown[]).includes(e)
+		)
+	) {
+		return false
+	}
+	// Only the type that uses them reads its avoidance settings.
+	if (
+		value['type'] !== 'object_avoidance' ||
+		value['objectAvoidance'] === undefined
+	) {
+		return true
+	}
+	const avoidance = value['objectAvoidance']
+	return (
+		isRecord(avoidance) &&
+		isOptional(avoidance['clearance'], isFiniteNumber) &&
+		isOptional(avoidance['arcHeight'], isFiniteNumber) &&
+		isOptional(avoidance['tension'], isFiniteNumber) &&
+		isOptional(avoidance['samples'], (n) => isFiniteNumber(n) && n >= 2)
+	)
+}
+
+/** One stored value a read repaired, for whoever logs it. */
 export interface CameraRepair {
-	cameraIndex: number
+	/** Absent for a field of the settings rather than of one camera. */
+	cameraIndex?: number
 	field: string
 }
 
@@ -53,7 +114,12 @@ export interface CameraRepair {
  */
 const READ_RULES: Record<string, (value: unknown) => boolean> = {
 	fov: isCameraFov,
-	framingAspect: isFramingAspect
+	framingAspect: isFramingAspect,
+	// The legacy per-camera transition: nothing plays it since
+	// `sceneTransition` replaced it, and no save checked it before the write
+	// schema, so a stored one can fail that schema. Dropping it costs the
+	// viewer nothing and lets the scene's next save through.
+	transition: isCameraTransition
 }
 
 /**

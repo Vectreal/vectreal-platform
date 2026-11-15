@@ -12,9 +12,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
 	drawingLabel,
+	reusableFinish,
 	type ShownBakeContext,
 	studioFinishToSave,
 	useBakePreview,
+	useCurrentPreview,
+	useFinishForSave,
 	usePublishExport,
 	useRestoreSavedFinish,
 	useShowPublishedFinish,
@@ -135,7 +138,7 @@ afterEach(() => {
 })
 
 describe('the bake preview', () => {
-	it('runs the export publishing would, and keeps its file beside the result shown', async () => {
+	it('runs the bake publishing would, and keeps its file beside the result shown', async () => {
 		const { hook } = setup()
 
 		await act(() => hook.result.current.preview.bake())
@@ -143,13 +146,13 @@ describe('the bake preview', () => {
 		const [request] = mocks.runPublishExportInWorker.mock.calls[0]
 		expect(request).toEqual({
 			glb: expect.any(Uint8Array),
-			...hook.result.current.publishExport.request
+			...hook.result.current.publishExport.finishRequest
 		})
 		expect(request).toMatchObject({ occlusion: true })
 		expect(hook.result.current.preview.preview).toMatchObject({
 			status: 'ready',
 			reports: { occlusion: report },
-			outcome: { buffer: expect.any(ArrayBuffer), occlusion: report }
+			file: expect.any(ArrayBuffer)
 		})
 		expect(hook.result.current.shown).toBeInstanceOf(Group)
 	})
@@ -216,7 +219,7 @@ describe('the bake preview', () => {
 		expect(hook.result.current.shown).toBeInstanceOf(Group)
 	})
 
-	it('encodes the textures for the GPU when publishing would', async () => {
+	it('bakes without any codec, which publish applies to the finish afterwards', async () => {
 		const { store, hook } = setup()
 		act(() =>
 			store.set(presentationAtom, (prev) => ({
@@ -227,24 +230,32 @@ describe('the bake preview', () => {
 
 		await act(() => hook.result.current.preview.bake())
 
-		expect(mocks.runPublishExportInWorker.mock.calls[0][0]).toMatchObject({
-			ktx2: true
+		const [request] = mocks.runPublishExportInWorker.mock.calls[0]
+		expect(request).toMatchObject({ ktx2: false, dracoWorthApplying: false })
+		expect(request.draco).toBeUndefined()
+		expect(hook.result.current.publishExport.request).toMatchObject({
+			ktx2: true,
+			occlusion: false,
+			lights: false
 		})
 	})
 
-	it('goes stale once publishing would encode the textures differently', async () => {
+	// Publish > GPU-compressed textures dropped a finish that took minutes.
+	it('stays current when publishing would encode the textures differently', async () => {
 		const { store, hook } = setup()
 		await act(() => hook.result.current.preview.bake())
-		expect(hook.result.current.preview.preview).not.toBeNull()
+		const baked = hook.result.current.preview.preview
+		expect(baked).not.toBeNull()
 
-		act(() =>
-			store.set(presentationAtom, (prev) => ({
-				...prev,
-				compressTexturesForGpu: !hook.result.current.publishExport.request.ktx2
-			}))
-		)
-
-		expect(hook.result.current.preview.preview).toBeNull()
+		for (const compressTexturesForGpu of [true, false]) {
+			act(() =>
+				store.set(presentationAtom, (prev) => ({
+					...prev,
+					compressTexturesForGpu
+				}))
+			)
+			expect(hook.result.current.preview.preview).toBe(baked)
+		}
 	})
 
 	it('drops a light bake once a baked light moves', async () => {
@@ -591,7 +602,7 @@ describe('the bake preview', () => {
 			recovered: 'lower-detail'
 		})
 		expect(store.get(lightingAtom)).toBe(lighting)
-		expect(hook.result.current.publishExport.request).toMatchObject({
+		expect(hook.result.current.publishExport.finishRequest).toMatchObject({
 			occlusion: true
 		})
 		expect(hook.result.current.shown).toBeInstanceOf(Group)
@@ -757,7 +768,7 @@ describe('showing what a publish exported', () => {
 		expect(store.get(bakePreviewAtom)).toMatchObject({
 			status: 'ready',
 			shown: false,
-			outcome
+			file: outcome.buffer
 		})
 	})
 	it('shows a publish whose every bake failed as a failed preview, with why', async () => {
@@ -797,7 +808,7 @@ describe('showing what a publish exported', () => {
 
 describe('the finish a save keeps', () => {
 	const source = { document: {}, passRevision: 0, bakes: 'k' }
-	const outcome = { buffer: new ArrayBuffer(8), occlusion: report }
+	const file = new ArrayBuffer(8)
 
 	it('is the current preview’s file and reports, when every bake worked', () => {
 		expect(
@@ -806,9 +817,9 @@ describe('the finish a save keeps', () => {
 				source,
 				shown: true,
 				reports: { occlusion: report },
-				outcome: outcome as never
+				file
 			})
-		).toEqual({ bytes: outcome.buffer, reports: { occlusion: report } })
+		).toEqual({ bytes: file, reports: { occlusion: report } })
 	})
 
 	it('is none when the bakes drew nothing, which leaves nothing to show', () => {
@@ -822,7 +833,7 @@ describe('the finish a save keeps', () => {
 				source,
 				shown: true,
 				reports: { occlusion: nothing as never },
-				outcome: { ...outcome, occlusion: nothing } as never
+				file
 			})
 		).toBeUndefined()
 	})
@@ -838,7 +849,148 @@ describe('the finish a save keeps', () => {
 				source,
 				shown: true,
 				reports: { occlusion: report },
-				restored: true
+				file,
+				stored: true
+			})
+		).toBeUndefined()
+	})
+})
+
+describe('the finish as part of a save', () => {
+	const lighting = { occlusion: { mode: 'baked' as const } }
+	const setupSave = () => {
+		const store = createStore()
+		store.set(lightingAtom, lighting)
+		const wrapper = ({ children }: { children: ReactNode }) => (
+			<Provider store={store}>{children}</Provider>
+		)
+		const hook = renderHook(
+			() => ({ save: useFinishForSave(), preview: useBakePreview() }),
+			{ wrapper }
+		)
+		return { store, hook }
+	}
+
+	it('is an unsaved change once drawn, and none once a save stored it', async () => {
+		const { hook } = setupSave()
+		expect(hook.result.current.save.hasUnsavedFinish).toBe(false)
+
+		await act(() => hook.result.current.preview.bake())
+		expect(hook.result.current.save.hasUnsavedFinish).toBe(true)
+
+		let sent: unknown
+		await act(async () => {
+			sent = await hook.result.current.save.captureStudioFinish(lighting)
+		})
+		expect(sent).toMatchObject({ bytes: expect.any(ArrayBuffer) })
+		act(() => hook.result.current.save.markFinishSaved())
+
+		expect(hook.result.current.save.hasUnsavedFinish).toBe(false)
+		expect(
+			await hook.result.current.save.captureStudioFinish(lighting)
+		).toBeUndefined()
+	})
+
+	// A save clicked while the finish drew went through without it.
+	it('waits for a bake still drawing, and saves what it drew', async () => {
+		let finish: (value: unknown) => void = () => {}
+		mocks.runPublishExportInWorker.mockImplementation(
+			() =>
+				new Promise((resolve) => {
+					finish = resolve
+				})
+		)
+		const { hook } = setupSave()
+		act(() => void hook.result.current.preview.bake())
+		await waitFor(() =>
+			expect(hook.result.current.preview.preview?.status).toBe('baking')
+		)
+		expect(hook.result.current.save.hasUnsavedFinish).toBe(true)
+
+		let sent: unknown = 'pending'
+		const capture = hook.result.current.save
+			.captureStudioFinish(lighting)
+			.then((value) => {
+				sent = value
+			})
+		await act(async () => {})
+		expect(sent).toBe('pending')
+
+		await act(async () =>
+			finish({ buffer: new ArrayBuffer(8), occlusion: report })
+		)
+		await act(() => capture)
+		expect(sent).toMatchObject({ bytes: expect.any(ArrayBuffer) })
+	})
+
+	it('stays stored when the preview was shown or hidden during the save', async () => {
+		const { store, hook } = setupSave()
+		await act(() => hook.result.current.preview.bake())
+		await act(async () => {
+			await hook.result.current.save.captureStudioFinish(lighting)
+		})
+		act(() =>
+			store.set(bakePreviewAtom, (current) =>
+				current ? { ...current, shown: !current.shown } : current
+			)
+		)
+		act(() => hook.result.current.save.markFinishSaved())
+
+		expect(hook.result.current.save.hasUnsavedFinish).toBe(false)
+	})
+
+	it('saves no finish drawn for other lighting than the save writes', async () => {
+		const { hook } = setupSave()
+		await act(() => hook.result.current.preview.bake())
+
+		expect(
+			await hook.result.current.save.captureStudioFinish({
+				occlusion: { mode: 'off' }
+			})
+		).toBeUndefined()
+	})
+})
+
+describe('the finish publish encodes rather than bakes again', () => {
+	const source = { document: {}, passRevision: 0, bakes: 'k' }
+	const file = new ArrayBuffer(8)
+
+	it('is a restored finish saved before any codec', () => {
+		expect(
+			reusableFinish({
+				status: 'ready',
+				source,
+				shown: true,
+				reports: { occlusion: report },
+				file,
+				stored: true
+			})
+		).toEqual({ bytes: file, reports: { occlusion: report } })
+	})
+
+	it('is none for a restored finish saved as a published file, which has none', () => {
+		expect(
+			reusableFinish({
+				status: 'ready',
+				source,
+				shown: true,
+				reports: { occlusion: report },
+				stored: true
+			})
+		).toBeUndefined()
+	})
+
+	it('is none when a bake in it failed, which baking again may fix', () => {
+		expect(
+			reusableFinish({
+				status: 'ready',
+				source,
+				shown: true,
+				reports: {
+					occlusion: report,
+					lights: { failed: 'unexpected', detail: 'x' }
+				},
+				file
 			})
 		).toBeUndefined()
 	})
@@ -849,7 +1001,8 @@ describe('restoring the finish saved with the scene', () => {
 	const restore = (
 		bakes: string | null,
 		prepare: (store: ReturnType<typeof createStore>) => void = () => {},
-		reports: { occlusion: BakePassOutcome } = { occlusion: report }
+		reports: { occlusion: BakePassOutcome } = { occlusion: report },
+		unencoded = true
 	) => {
 		const store = createStore()
 		store.set(lightingAtom, lighting)
@@ -862,7 +1015,8 @@ describe('restoring the finish saved with the scene', () => {
 				useRestoreSavedFinish({
 					url: '/api/scenes/s1/assets/finish',
 					reports,
-					bakes
+					bakes,
+					unencoded
 				}),
 			{ wrapper }
 		)
@@ -878,11 +1032,56 @@ describe('restoring the finish saved with the scene', () => {
 		await waitFor(() =>
 			expect(store.get(bakePreviewAtom)).toMatchObject({
 				status: 'ready',
-				restored: true,
+				stored: true,
 				reports: { occlusion: report }
 			})
 		)
 		expect(fetchSpy).toHaveBeenCalledWith('/api/scenes/s1/assets/finish')
+		// Its file, which publish encodes rather than baking again.
+		expect(reusableFinish(store.get(bakePreviewAtom))).toMatchObject({
+			bytes: expect.any(ArrayBuffer)
+		})
+		vi.unstubAllGlobals()
+	})
+
+	// As the server finds it: what it baked is right whatever its codecs.
+	it('keeps a finish saved as a published file through a codec switch', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () => new Response(new ArrayBuffer(8)))
+		)
+		const store = restore(bakesKey(lighting), undefined, undefined, false)
+		const shown = renderHook(() => useCurrentPreview(), {
+			wrapper: ({ children }: { children: ReactNode }) => (
+				<Provider store={store}>{children}</Provider>
+			)
+		})
+		await waitFor(() => expect(shown.result.current).not.toBeNull())
+		const restored = shown.result.current
+
+		act(() =>
+			store.set(presentationAtom, (prev) => ({
+				...prev,
+				compressTexturesForGpu: !prev.compressTexturesForGpu
+			}))
+		)
+
+		expect(shown.result.current).toBe(restored)
+		vi.unstubAllGlobals()
+	})
+
+	it('leaves publish to bake again for a finish saved as a published file', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () => new Response(new ArrayBuffer(8)))
+		)
+
+		const store = restore(bakesKey(lighting), undefined, undefined, false)
+
+		await waitFor(() =>
+			expect(store.get(bakePreviewAtom)).toMatchObject({ stored: true })
+		)
+		expect(store.get(bakePreviewAtom)?.file).toBeUndefined()
 		vi.unstubAllGlobals()
 	})
 
@@ -901,7 +1100,7 @@ describe('restoring the finish saved with the scene', () => {
 		await waitFor(() =>
 			expect(store.get(bakePreviewAtom)).toMatchObject({
 				status: 'ready',
-				restored: true,
+				stored: true,
 				reports: { occlusion: older }
 			})
 		)
@@ -956,7 +1155,7 @@ describe('restoring the finish saved with the scene', () => {
 
 		const store = restore(bakesKey(lighting))
 		await waitFor(() =>
-			expect(store.get(bakePreviewAtom)).toMatchObject({ restored: true })
+			expect(store.get(bakePreviewAtom)).toMatchObject({ stored: true })
 		)
 		await act(async () => store.set(bakePreviewAtom, null))
 

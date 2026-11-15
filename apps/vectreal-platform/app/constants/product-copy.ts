@@ -484,13 +484,7 @@ export const HOME_PAGE_COPY = {
 			{ key: 'we build it in public' },
 			'.'
 		],
-		signature: 'Moritz Becker, founder',
-		/** The figure beside the statement: one model, pulled apart into the path it takes. Back to front. */
-		layers: {
-			file: 'The raw model',
-			prepared: 'Prepared for the web',
-			page: 'On your product page'
-		}
+		signature: 'Moritz Becker, founder'
 	},
 	/**
 	  How the free-model offer works, in steps. It claims nothing the

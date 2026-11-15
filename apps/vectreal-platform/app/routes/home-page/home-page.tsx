@@ -40,7 +40,7 @@ const HomePage = () => (
 			<Band
 				aria-label="Mission"
 				inverted
-				backdrop={<DraftingBackdrop focusX={0.72} horizon={0.56} />}
+				backdrop={<DraftingBackdrop focusX={0.72} horizon={0.56} still />}
 			>
 				<MissionStatement />
 			</Band>

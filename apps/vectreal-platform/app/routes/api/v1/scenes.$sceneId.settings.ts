@@ -19,6 +19,7 @@
  */
 
 import { ApiResponse } from '@shared/utils'
+import { normalizeCameraSettings } from '@vctrl/core'
 import { updateSceneSettingsInputSchema } from '@vctrl/sdk'
 
 import { withSceneSettingsDefaults } from '../../../constants/viewer-defaults'
@@ -158,9 +159,19 @@ async function asAgentRefusal(refusal: Response): Promise<Response> {
 	return agentApiError(400, 'invalid_request', error)
 }
 
-/** A scene's settings as the publisher and every viewer read them. */
+/**
+ * A scene's settings as the publisher and every viewer read them: defaults
+ * filled, and the camera repaired as the publisher's hydration repairs it, so
+ * a value an older save stored and the camera schema now refuses neither
+ * blocks a PATCH of another section nor comes back from GET.
+ */
 function asServed(settings: SceneSettings): SceneSettings {
-	return { ...withSceneSettingsDefaults(settings), hotspots: settings.hotspots }
+	const served = withSceneSettingsDefaults(settings)
+	return {
+		...served,
+		camera: normalizeCameraSettings(served.camera),
+		hotspots: settings.hotspots
+	}
 }
 
 function settingsResponse(settings: SceneSettings): Response {

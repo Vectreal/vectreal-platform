@@ -200,6 +200,98 @@ describe('VectrealEmbed load progress', () => {
 	})
 })
 
+describe('VectrealEmbed ready() and a load that fails or takes long', () => {
+	afterEach(() => vi.useRealTimers())
+
+	function loadFailed(from: HTMLIFrameElement, code: string) {
+		window.dispatchEvent(
+			new MessageEvent('message', {
+				origin: ORIGIN,
+				source: from.contentWindow,
+				data: {
+					source: HOSTED_PREVIEW_VIEWER_SOURCE,
+					type: 'load_failed',
+					sceneId: 'scene-a',
+					code,
+					recoverable: true
+				}
+			})
+		)
+	}
+	const progress = (from: HTMLIFrameElement) =>
+		viewerEvent(from, {
+			type: 'load_progress',
+			progress: { phase: 'fetching', bytes: { loaded: 1, total: null } }
+		})
+
+	it('passes the failure on, and rejects a waiting ready() with its code at once', async () => {
+		const own = iframe('scene-a')
+		const embed = new VectrealEmbed(own, { readyTimeout: 60_000 })
+		const onFailed = vi.fn()
+		embed.on('load_failed', onFailed)
+		const ready = embed.ready()
+
+		loadFailed(own, 'url_http')
+
+		expect(onFailed).toHaveBeenCalledWith({
+			code: 'url_http',
+			recoverable: true
+		})
+		await expect(ready).rejects.toThrow(/could not be loaded \(url_http\)/)
+		embed.destroy()
+	})
+
+	it('rejects a ready() asked after the failure, and waits again once a retry loads', async () => {
+		vi.useFakeTimers()
+		const own = iframe('scene-a')
+		const embed = new VectrealEmbed(own, { readyTimeout: 50 })
+
+		loadFailed(own, 'url_unreachable')
+		await expect(embed.ready()).rejects.toThrow(/url_unreachable/)
+
+		progress(own)
+		const ready = embed.ready()
+		pong(own, 'scene-a')
+		viewerReady(own)
+		await expect(ready).resolves.toMatchObject({ sceneId: 'scene-a' })
+		embed.destroy()
+	})
+
+	it('counts the timeout from the last progress, not from the start', async () => {
+		vi.useFakeTimers()
+		const own = iframe('scene-a')
+		const embed = new VectrealEmbed(own, { readyTimeout: 50 })
+		const ready = embed.ready()
+		let rejected = false
+		ready.catch(() => (rejected = true))
+
+		for (let elapsed = 0; elapsed < 200; elapsed += 40) {
+			await vi.advanceTimersByTimeAsync(40)
+			progress(own)
+		}
+		expect(rejected).toBe(false)
+
+		pong(own, 'scene-a')
+		viewerReady(own)
+		await expect(ready).resolves.toMatchObject({ sceneId: 'scene-a' })
+		embed.destroy()
+	})
+
+	it('still gives up after the timeout of silence', async () => {
+		vi.useFakeTimers()
+		const own = iframe('scene-a')
+		const embed = new VectrealEmbed(own, { readyTimeout: 50 })
+		const ready = embed.ready()
+		const settled = expect(ready).rejects.toThrow(/did not become ready/)
+
+		progress(own)
+		await vi.advanceTimersByTimeAsync(51)
+
+		await settled
+		embed.destroy()
+	})
+})
+
 describe('VectrealEmbed environment fallback', () => {
 	it('passes on which map loaded', () => {
 		const own = iframe('scene-a')

@@ -61,6 +61,8 @@ export type SceneSettingsRecord = typeof sceneSettings.$inferSelect
 export type SaveStudioFinish = {
 	assetId: string
 	reports: SavedStudioFinish['reports']
+	/** Set by every publisher since codecs left the finish; see `SavedStudioFinish`. */
+	unencoded?: true
 }
 
 export type SceneSettingsWithAssets = {
@@ -319,6 +321,11 @@ export interface SavedFinishRef {
 	reports: SavedStudioFinish['reports']
 	/** The bakes it was saved for, as `bakesKey` writes them. */
 	bakes: string | null
+	/**
+	 * Whether its file is the bake before any codec, which publish encodes
+	 * rather than baking again. False for a finish saved as a published file.
+	 */
+	unencoded: boolean
 }
 
 // ============================================================================

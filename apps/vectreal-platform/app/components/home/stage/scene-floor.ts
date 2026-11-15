@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 
 import { warmPrograms } from './warm-programs'
+import { DRAFTING_LINE } from '../../layout-components/drafting-line'
 
 /** The swell's drift, in noise units a second: the drafting terrain's idle rate. */
 const DRIFT = 0.03
@@ -8,6 +9,8 @@ const DRIFT = 0.03
 const FRAME_MS = 50
 /** How long the floor takes to spread out from under the model when it first appears. */
 const GROW_MS = 3600
+/** The grid's cell, as a fraction of the model's radius: measured against the page backdrop's net, so the two read as one floor at the same size on screen. */
+const CELL = 1 / 6
 
 /** Uniforms the floor reads from the stage, so a theme or layout change reaches both. */
 interface SharedUniforms {
@@ -22,9 +25,10 @@ interface SharedUniforms {
  *
  * It shares the model's camera, so it turns with the model and the shadow lies
  * on it in the same perspective; a 2D floor behind a freely orbiting model never
- * agreed with its shadow. Lines in world space, one step a third of the model's
- * radius, fading out radially so the floor never ends on an edge, and warming
- * to the brand under the object, where the key light would pool.
+ * agreed with its shadow. Lines in world space, in the page's drafting line
+ * (`DRAFTING_LINE`) and at its net's size on screen, fading out radially so
+ * the floor never ends on an edge, with a wash of the brand under the object,
+ * where the key light would pool.
  *
  * It draws on a canvas of its own, under the stage's. The stage then composites
  * over it as it always has, untouched by it, and the swell's slow drift redraws
@@ -53,6 +57,16 @@ export function createSceneFloor(
 		...shared,
 		uCenter: { value: new THREE.Vector2() },
 		uStep: { value: 1 },
+		uCell: { value: 1 },
+		/** The line's width in device pixels, at least one; a thinner hairline covers that one pixel in part. */
+		uLinePx: { value: 1 },
+		uLineCover: { value: 1 },
+		uLineAlpha: {
+			value: new THREE.Vector2(
+				DRAFTING_LINE.alpha.light,
+				DRAFTING_LINE.alpha.dark
+			)
+		},
 		uReach: { value: 1 },
 		uTime: { value: 0 },
 		/** How far the floor has spread from under the model, 0 to 1. Whole from the start under reduced motion. */
@@ -93,32 +107,37 @@ void main() {
 }`,
 		fragmentShader: `
 uniform vec3 uInk, uAccent;
-uniform vec2 uCenter, uFade, uRes;
-uniform float uStep, uReach, uGrow;
+uniform vec2 uCenter, uFade, uRes, uLineAlpha;
+uniform float uCell, uReach, uGrow, uLinePx, uLineCover;
 varying vec2 vW;
 varying float vH;
 void main() {
-  vec2 g = vW / uStep;
-  vec2 w = fwidth(g);
-  vec2 l = 1.0 - smoothstep(vec2(0.0), w * 1.2, abs(fract(g - 0.5) - 0.5));
-  float line = max(l.x, l.y);
+  /* The distance to the nearest line in device pixels, and the line's coverage of this one. */
+  vec2 g = vW / uCell;
+  vec2 px = abs(fract(g - 0.5) - 0.5) / fwidth(g);
+  vec2 l = clamp(uLinePx * 0.5 + 0.5 - px, 0.0, 1.0);
+  float line = max(l.x, l.y) * uLineCover;
   float d = length(vW - uCenter) / uReach;
   float fade = 1.0 - smoothstep(0.45, 1.0, d);
   float pool = exp(-d * d * 40.0);
-  /* A crest takes a little of the brand, as the terrain's do. */
+  /* A crest takes a little of the brand, as the backdrop's do. */
   float crest = smoothstep(0.12, 0.26, vH) * 0.4;
-  vec3 color = mix(uInk, uAccent, max(pool * 0.85, crest));
+  /* The page's ink strength: light ink means a dark ground. */
+  float darkGround = step(0.5, dot(uInk, vec3(0.2126, 0.7152, 0.0722)));
   /* Full bleed: the floor runs under the copy too, held low there so the type reads, and off every edge but the horizon. The pool stays out of the copy entirely. */
   float toCopy = uFade.y > uFade.x ? smoothstep(uFade.y - 0.1 * uRes.x, uFade.y + 0.3 * uRes.x, gl_FragCoord.x) : 1.0;
   float toFoot = smoothstep(0.0, 0.1 * uRes.y, gl_FragCoord.y);
   float toTop = 1.0 - smoothstep(0.7 * uRes.y, uRes.y, gl_FragCoord.y);
   fade *= mix(0.12, 1.0, toCopy) * toFoot * toTop;
   pool *= toFoot * toCopy;
-  float a = line * fade * (0.22 + 0.4 * pool) + pool * 0.14;
+  float lineA = line * fade * mix(uLineAlpha.x, uLineAlpha.y, darkGround);
+  float washA = pool * 0.14;
   /* It appears by spreading out from under the model, a soft-edged ring on the ground, rather than all at once. */
   float front = uGrow * 1.15;
-  a *= 1.0 - smoothstep(front - 0.18, front, d);
-  gl_FragColor = vec4(color * a, a);
+  float grown = 1.0 - smoothstep(front - 0.18, front, d);
+  lineA *= grown;
+  washA *= grown * (1.0 - lineA);
+  gl_FragColor = vec4(mix(uInk, uAccent, crest) * lineA + uAccent * washA, lineA + washA);
 }`
 	})
 	const plane = new THREE.Mesh(geometry, material)
@@ -171,6 +190,9 @@ void main() {
 		warm: () => warmPrograms(renderer, scene, view),
 		/** Matches the stage canvas, pixel for pixel, so the shared screen-space uniforms mean the same here. */
 		resize(width: number, height: number, pixelRatio: number) {
+			const linePx = DRAFTING_LINE.width * pixelRatio
+			uniforms.uLinePx.value = Math.max(linePx, 1)
+			uniforms.uLineCover.value = Math.min(linePx, 1)
 			renderer.setPixelRatio(pixelRatio)
 			renderer.setSize(width, height)
 		},
@@ -180,6 +202,7 @@ void main() {
 			plane.position.set(center.x, 0, center.z)
 			uniforms.uCenter.value.set(center.x, center.z)
 			uniforms.uStep.value = radius / 3
+			uniforms.uCell.value = radius * CELL
 			uniforms.uReach.value = radius * 22
 		},
 		dispose() {

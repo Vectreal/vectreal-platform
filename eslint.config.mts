@@ -493,6 +493,23 @@ export default defineConfig(tseslint.configs.recommended, [
 		}
 	},
 	{
+		// @vctrl/sdk validates a scene's camera with @vctrl/core's camera rules,
+		// imported from the zod-only `@vctrl/core/camera-schema` subpath and
+		// bundled into the SDK's build (packages/sdk/vite.config.ts). Declaring
+		// core would install three, gltf-transform and draco for every consumer
+		// of a package whose only dependency is zod.
+		files: ['packages/sdk/package.json'],
+		rules: {
+			'@nx/dependency-checks': [
+				'error',
+				{
+					...dependencyCheckOptions,
+					ignoredDependencies: ['@vctrl/core']
+				}
+			]
+		}
+	},
+	{
 		// @vctrl/embed imports only types from @vctrl/viewer, and its build ships
 		// the file declaring them inside the package (packages/embed/vite.config.ts),
 		// pointing the emitted declarations at that copy. A consumer of the SDK needs

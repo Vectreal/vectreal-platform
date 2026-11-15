@@ -183,7 +183,8 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 		savedFinish = finish && {
 			url: `/api/scenes/${sceneId}/assets/${finish.asset.id}`,
 			reports: finish.reports,
-			bakes: finish.bakes
+			bakes: finish.bakes,
+			unencoded: finish.unencoded
 		}
 	} else if (!sceneId && user?.id) {
 		// New scene - read project/folder context from URL search params

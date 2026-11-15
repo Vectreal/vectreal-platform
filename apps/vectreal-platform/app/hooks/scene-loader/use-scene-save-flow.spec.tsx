@@ -31,14 +31,16 @@ const {
 	dispatchSaveProgress,
 	resolveSource,
 	recordSavedSource,
-	captureStudioFinish
+	captureStudioFinish,
+	markFinishSaved
 } = vi.hoisted(() => ({
 	mockSetAtom: vi.fn(),
 	mockExecuteSceneSaveOrchestrator: vi.fn(),
 	dispatchSaveProgress: vi.fn(),
 	resolveSource: vi.fn(),
 	recordSavedSource: vi.fn(),
-	captureStudioFinish: vi.fn()
+	captureStudioFinish: vi.fn(),
+	markFinishSaved: vi.fn()
 }))
 
 vi.mock('jotai/react', async () => {
@@ -107,13 +109,15 @@ interface SceneSaveFlowHarnessProps {
 	initialCurrentSettings: SceneSettings
 	initialLastSavedSettings: SceneSettings | null
 	hasUnsavedOriginalChoice?: boolean
+	hasUnsavedFinish?: boolean
 }
 
 function SceneSaveFlowHarness({
 	apiRef,
 	initialCurrentSettings,
 	initialLastSavedSettings,
-	hasUnsavedOriginalChoice = false
+	hasUnsavedOriginalChoice = false,
+	hasUnsavedFinish = false
 }: SceneSaveFlowHarnessProps) {
 	const [currentSettings, setCurrentSettings] = useState(initialCurrentSettings)
 	const [sceneMetaState, setSceneMetaState] = useState(sceneMeta)
@@ -157,6 +161,7 @@ function SceneSaveFlowHarness({
 		captureSceneThumbnail: vi.fn().mockResolvedValue(null),
 		captureShadowBake: vi.fn().mockResolvedValue(null),
 		captureStudioFinish,
+		markFinishSaved,
 		resolveSource,
 		recordSavedSource
 	}))
@@ -176,7 +181,8 @@ function SceneSaveFlowHarness({
 		lastSavedSceneId,
 		setLastSavedSceneId,
 		suppressDirtyDetection: false,
-		hasUnsavedOriginalChoice
+		hasUnsavedOriginalChoice,
+		hasUnsavedFinish
 	}
 
 	const { saveSceneSettings } = useSceneSaveFlow({
@@ -585,6 +591,42 @@ describe('useSceneSaveFlow', () => {
 		await waitFor(() =>
 			expect(changed.apiRef.current?.getHasUnsavedChanges()).toBe(true)
 		)
+	})
+
+	// A finish takes minutes to draw: one the save state ignored stayed
+	// unsaved under a Save that read "Saved".
+	it('counts a studio finish drawn since the last save as an unsaved change', async () => {
+		const settings = createSettings(1)
+		const apiRef: { current: HarnessApi | null } = { current: null }
+		renderHarnessWith({
+			apiRef,
+			initialCurrentSettings: settings,
+			initialLastSavedSettings: settings,
+			hasUnsavedFinish: true
+		})
+
+		await waitFor(() =>
+			expect(apiRef.current?.getHasUnsavedChanges()).toBe(true)
+		)
+	})
+
+	it('records the finish as stored once a save committed it, and only then', async () => {
+		for (const studioFinishSaved of [true, false]) {
+			markFinishSaved.mockClear()
+			mockExecuteSceneSaveOrchestrator.mockResolvedValue({
+				sceneId: 'scene-1',
+				keptOriginal: null,
+				hotspotArtworkRewrites: [],
+				studioFinishSaved
+			})
+			const apiRef = renderHarness()
+
+			await act(async () => {
+				await apiRef.current?.saveSceneSettings()
+			})
+
+			expect(markFinishSaved).toHaveBeenCalledTimes(studioFinishSaved ? 1 : 0)
+		}
 	})
 
 	it('counts a pass since the last save as unsaved until it is saved', async () => {

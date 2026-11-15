@@ -152,7 +152,8 @@ const SceneEmbedPage = ({
 		interactions: sceneData?.interactions,
 		cameras: sceneData?.camera?.cameras,
 		hotspots: sceneData?.hotspots,
-		initialCommands
+		initialCommands,
+		loadError
 	})
 
 	// `useHostedPreviewBridge` returns a fresh object each render, and the viewer

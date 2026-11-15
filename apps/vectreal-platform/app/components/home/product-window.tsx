@@ -302,12 +302,8 @@ export const ProductWindow = () => {
 									)}
 								</div>
 							))}
-							<div className="pointer-events-none absolute inset-0 z-2 *:pointer-events-auto">
-								<ProductStage
-									visible={!offscreen}
-									place={stagePlace}
-									hint={view === 'embed'}
-								/>
+							<div className="absolute inset-0 z-2">
+								<ProductStage visible={!offscreen} place={stagePlace} />
 							</div>
 						</div>
 					</div>

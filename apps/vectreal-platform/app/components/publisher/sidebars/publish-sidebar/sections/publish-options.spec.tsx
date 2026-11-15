@@ -22,6 +22,7 @@ import {
 	originalPreset
 } from '../../../../../constants/optimizations'
 import { STUDIO_FINISH_FAILURES } from '../../../../../lib/domain/scene/client/studio-finish-reasons'
+import { bakesKey } from '../../../../../lib/domain/scene/studio-finish'
 import {
 	bakePreviewAtom,
 	sceneMetaAtom,
@@ -113,6 +114,8 @@ vi.mock('../../../../publishing/scene-publish-state-control', () => ({
 
 const PUBLISHED = new Uint8Array([0x67, 0x6c, 0x54, 0x46, 2, 0, 0, 0])
 
+const saveSceneSettings = vi.fn()
+
 function renderPanel(
 	derivedFrom: Optimizations,
 	prepare?: (store: ReturnType<typeof createStore>) => void
@@ -125,7 +128,7 @@ function renderPanel(
 			<PublishOptions
 				sceneId="scene-1"
 				publishState={{ sceneId: 'scene-1', status: 'draft' } as never}
-				saveSceneSettings={vi.fn()}
+				saveSceneSettings={saveSceneSettings}
 			/>
 		</Provider>
 	)
@@ -650,14 +653,19 @@ describe('the publish panel', () => {
 			)
 		}
 		await waitFor(() =>
-			expect(mocks.runPublishExportInWorker).toHaveBeenCalledTimes(3)
+			expect(mocks.publishSceneFromGlb).toHaveBeenCalledTimes(3)
 		)
 
+		// One bake, for the scene set to baked; every publish encodes once.
+		const requests = mocks.runPublishExportInWorker.mock.calls.map(
+			([request]) => request
+		)
+		expect(requests.filter((request) => request.occlusion)).toEqual([
+			expect.objectContaining({ ktx2: false, dracoWorthApplying: false })
+		])
 		expect(
-			mocks.runPublishExportInWorker.mock.calls.map(
-				([request]) => request.occlusion
-			)
-		).toEqual([false, false, true])
+			requests.filter((request) => !request.occlusion && !request.lights)
+		).toHaveLength(3)
 	})
 
 	it('names a material the bake skipped, and still publishes', async () => {
@@ -736,7 +744,7 @@ describe('the publish panel', () => {
 		])
 	})
 
-	it('shows the finish it published, and ships that file again without exporting', async () => {
+	it('shows the finish it baked, and publishes again by encoding it without baking', async () => {
 		const scene = {}
 		mocks.loadToThreeJS.mockResolvedValue({ scene })
 		mocks.runPublishExportInWorker.mockResolvedValue({
@@ -761,10 +769,104 @@ describe('the publish panel', () => {
 		await waitFor(() =>
 			expect(mocks.publishSceneFromGlb).toHaveBeenCalledTimes(2)
 		)
-		expect(mocks.runPublishExportInWorker).toHaveBeenCalledOnce()
-		expect(mocks.publishSceneFromGlb.mock.calls[1][0].glbData).toEqual(
-			PUBLISHED
+		// Bake and encode, then the encode alone, of the finish's own file.
+		expect(mocks.runPublishExportInWorker).toHaveBeenCalledTimes(3)
+		expect(mocks.runPublishExportInWorker.mock.calls[2][0]).toMatchObject({
+			glb: PUBLISHED,
+			occlusion: false,
+			lights: false
+		})
+	})
+
+	// A finish publish baked used to ship and then be gone on reopen.
+	it('saves the finish it baked before it publishes', async () => {
+		mocks.runPublishExportInWorker.mockResolvedValue({
+			buffer: PUBLISHED.slice().buffer,
+			geometryCodec: 'none',
+			occlusion: { baked: ['body'], skipped: [] }
+		})
+		renderPanel(balancedPreset, (store) =>
+			store.set(lightingAtom, { occlusion: { mode: 'baked' } })
 		)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() => expect(mocks.publishSceneFromGlb).toHaveBeenCalled())
+		const [bake] = mocks.runPublishExportInWorker.mock.invocationCallOrder
+		expect(saveSceneSettings).toHaveBeenCalledOnce()
+		expect(saveSceneSettings.mock.invocationCallOrder[0]).toBeGreaterThan(bake)
+	})
+
+	it('waits for a bake still drawing, rather than baking beside it', async () => {
+		const lighting = { occlusion: { mode: 'baked' as const } }
+		const source = {
+			document: mocks.getDocument(),
+			passRevision: 0,
+			bakes: JSON.stringify(bakesKey(lighting))
+		}
+		const store = renderPanel(balancedPreset, (store) => {
+			store.set(lightingAtom, lighting)
+			store.set(bakePreviewAtom, { status: 'baking', source, shown: true })
+		})
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+		await act(async () => {})
+		expect(mocks.publishSceneFromGlb).not.toHaveBeenCalled()
+		// The panel shows the publish while it waits, not a blank.
+		expect(store.get(savePanelAtom)).toMatchObject({
+			status: 'preparing',
+			publish: expect.anything()
+		})
+
+		act(() =>
+			store.set(bakePreviewAtom, {
+				status: 'ready',
+				source,
+				shown: true,
+				model: {} as never,
+				reports: { occlusion: { baked: ['body'], skipped: [] } },
+				file: PUBLISHED.slice().buffer
+			})
+		)
+		await waitFor(() => expect(mocks.publishSceneFromGlb).toHaveBeenCalled())
+		// The encode alone: the finish drawn in the Lighting tool shipped.
+		expect(mocks.runPublishExportInWorker).toHaveBeenCalledOnce()
+		expect(mocks.runPublishExportInWorker.mock.calls[0][0]).toMatchObject({
+			glb: PUBLISHED,
+			occlusion: false
+		})
+	})
+
+	// The lost finish: GPU-compressed textures switched after the bake.
+	it('encodes a restored finish with the codecs switched since, without baking', async () => {
+		const finish = PUBLISHED.slice().buffer
+		const lighting = { occlusion: { mode: 'baked' as const } }
+		renderPanel(balancedPreset, (store) => {
+			store.set(lightingAtom, lighting)
+			store.set(bakePreviewAtom, {
+				status: 'ready',
+				source: {
+					document: mocks.getDocument(),
+					passRevision: 0,
+					bakes: JSON.stringify(bakesKey(lighting))
+				},
+				shown: true,
+				model: {} as never,
+				reports: { occlusion: { baked: ['body'], skipped: [] } },
+				file: finish,
+				stored: true
+			})
+		})
+		fireEvent.click(textureSwitch())
+
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+		await waitFor(() => expect(mocks.publishSceneFromGlb).toHaveBeenCalled())
+
+		expect(mocks.runPublishExportInWorker).toHaveBeenCalledOnce()
+		expect(mocks.runPublishExportInWorker.mock.calls[0][0]).toMatchObject({
+			glb: PUBLISHED,
+			ktx2: false,
+			occlusion: false,
+			lights: false
+		})
 	})
 
 	it('bakes again rather than ship a finish one of whose bakes failed', async () => {
@@ -799,7 +901,8 @@ describe('the publish panel', () => {
 		await waitFor(() =>
 			expect(mocks.publishSceneFromGlb).toHaveBeenCalledTimes(2)
 		)
-		expect(mocks.runPublishExportInWorker).toHaveBeenCalledTimes(2)
+		// Bake and encode, twice: the finish with a failed bake is not reused.
+		expect(mocks.runPublishExportInWorker).toHaveBeenCalledTimes(4)
 		// The failed light bake is a warning on a publish that shipped.
 		await waitFor(() =>
 			expect(store.get(savePanelAtom)?.status).toBe('published')

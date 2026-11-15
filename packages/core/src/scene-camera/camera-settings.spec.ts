@@ -94,21 +94,68 @@ describe('normalizeCameraSettings repairs what a stored camera cannot use', () =
 		expect(onRepair).not.toHaveBeenCalled()
 	})
 
-	it('carries the fields the viewer already reads every value of', () => {
-		const stored = {
-			cameraId: 7,
-			kind: 'drone',
-			transition: { type: 'teleport' }
-		}
+	it('carries the fields it has no read rule for', () => {
+		const stored = { cameraId: 7, near: 0.5 }
 		const { camera, onRepair } = normalizeOne(stored)
 		expect(camera).toMatchObject(stored)
 		expect(onRepair).not.toHaveBeenCalled()
 	})
 
-	it('repairs a list with no scene camera too', () => {
-		const { camera, onRepair } = normalizeOne({ kind: 'hotspot', fov: 0 })
-		expect(camera).not.toHaveProperty('fov')
-		expect(onRepair).toHaveBeenCalledOnce()
+	it.each([
+		{ type: 'teleport' },
+		{ type: 'linear', duration: -1 },
+		{ type: 'object_avoidance', objectAvoidance: { samples: 1 } }
+	])('drops a legacy transition the write schema refuses: %o', (transition) => {
+		const { camera, onRepair } = normalizeOne({ transition })
+		expect(camera).not.toHaveProperty('transition')
+		expect(onRepair).toHaveBeenCalledWith([
+			{ cameraIndex: 0, field: 'transition' }
+		])
+	})
+
+	it('keeps a transition the write schema accepts', () => {
+		const transition = { type: 'linear', duration: 800, easing: 'ease_out' }
+		const { camera, onRepair } = normalizeOne({ transition })
+		expect(camera?.['transition']).toEqual(transition)
+		expect(onRepair).not.toHaveBeenCalled()
+	})
+
+	it('carries a list with no scene camera as stored', () => {
+		// The publisher builds one when a hotspot is added to a scene with no
+		// camera; the hotspot's camera is aimed and owned through its kind.
+		const onRepair = vi.fn()
+		const stored = [
+			{ cameraId: 'pin-a', name: 'A', kind: 'hotspot' as const },
+			{ cameraId: 'pin-b', name: 'B', kind: 'hotspot' as const }
+		]
+		const normalized = normalizeCameraSettings(
+			{ cameras: stored },
+			{ onRepair }
+		)
+		expect(normalized?.cameras).toEqual(stored)
+		expect(onRepair).not.toHaveBeenCalled()
+	})
+
+	it.each([null, false, 0, '', { type: 'smooth' }])(
+		'drops a sceneTransition of %o, so switches fly the default',
+		(sceneTransition) => {
+			const onRepair = vi.fn()
+			const normalized = normalizeCameraSettings(
+				{ cameras: [{ cameraId: 'a', name: 'A' }], sceneTransition } as never,
+				{ onRepair }
+			)
+			expect(normalized).not.toHaveProperty('sceneTransition')
+			expect(onRepair).toHaveBeenCalledWith([{ field: 'sceneTransition' }])
+		}
+	)
+
+	it('keeps a sceneTransition the viewer can play', () => {
+		const sceneTransition = { type: 'none' as const }
+		const normalized = normalizeCameraSettings({
+			cameras: [{ cameraId: 'a', name: 'A' }],
+			sceneTransition
+		})
+		expect(normalized?.sceneTransition).toEqual(sceneTransition)
 	})
 
 	it('warns once per read by default, naming every value it dropped', () => {

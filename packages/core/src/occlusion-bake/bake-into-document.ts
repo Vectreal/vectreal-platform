@@ -1,11 +1,13 @@
+import { dropUnusedWebpExtension } from '../webp-extension'
 import { bakeOcclusion, encodeOcclusionPng } from './bake-occlusion'
+import { packOcclusionIntoMetallicRoughness } from './pack-occlusion'
 import {
 	planOcclusionBake,
 	type BakeUvLayout,
 	type OcclusionBakePlan,
 	type OcclusionBakeSkipReason
 } from './plan'
-import { writeOcclusionBake } from './write-occlusion'
+import { writeOcclusionBake, type BakedOcclusionImage } from './write-occlusion'
 
 import type { OcclusionBakeOptions } from './options'
 import type { UvBake } from './uv-trace'
@@ -38,17 +40,22 @@ export async function bakeOcclusionIntoDocument(
 			? await bakeOcclusion(plan, renderer(), options, onProgress)
 			: []
 	const encode = encodeOnce(encodeOcclusionPng)
-	writeOcclusionBake(
-		document,
-		await Promise.all(
-			baked.map(async (bake) => ({
-				material: bake.material,
-				image: await encode(bake),
-				mimeType: 'image/png' as const,
-				texCoord: bake.texCoord
-			}))
-		)
-	)
+	const images = await Promise.all(baked.map(encode))
+	const separate: BakedOcclusionImage[] = []
+	// One at a time: each holds a decoded metallic-roughness image.
+	for (const [i, bake] of baked.entries()) {
+		const image = images[i]
+		if (await packOcclusionIntoMetallicRoughness(bake, image)) continue
+		separate.push({
+			material: bake.material,
+			image,
+			mimeType: 'image/png',
+			texCoord: bake.texCoord
+		})
+	}
+	writeOcclusionBake(document, separate)
+	// A packed WebP texture is a PNG now.
+	dropUnusedWebpExtension(document)
 
 	return bakeReport(document, baked, plan.skipped)
 }

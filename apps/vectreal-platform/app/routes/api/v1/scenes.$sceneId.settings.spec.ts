@@ -425,6 +425,34 @@ describe('PATCH /api/v1/scenes/:sceneId/settings', () => {
 		expect(mocks.recordAgentAudit).not.toHaveBeenCalled()
 	})
 
+	it('repairs a stored camera an older save wrote, rather than refusing the PATCH', async () => {
+		// Stored by saves before the camera schema: a legacy per-camera
+		// transition nothing plays, and a falsy scene transition.
+		mocks.readSceneSettingsWithin.mockResolvedValue({
+			...stored,
+			settings: {
+				...storedSettings,
+				camera: {
+					cameras: [
+						{ cameraId: 'a', name: 'A', transition: { type: 'teleport' } }
+					],
+					sceneTransition: null
+				}
+			}
+		})
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+		try {
+			const response = await act(patch({ controls: { autoRotate: true } }))
+
+			expect(response.status).toBe(200)
+			const camera = savedSettings().camera
+			expect(camera?.cameras?.[0]).not.toHaveProperty('transition')
+			expect(camera).not.toHaveProperty('sceneTransition')
+		} finally {
+			warn.mockRestore()
+		}
+	})
+
 	describe('cameras and hotspots', () => {
 		const MARKER = '5d1c9a7e-3b2f-4e6a-8c4d-7f9e0a1b2c3d'
 		const hero = {
