@@ -1,6 +1,6 @@
 import { useId, type ReactNode } from 'react'
 
-import { PageHero } from './layout-components'
+import PageHero from './layout-components/page-hero'
 
 /**
  * The one way an error looks, on every public and embed surface.

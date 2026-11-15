@@ -22,7 +22,15 @@ import {
 	meshopt
 } from '@gltf-transform/functions'
 import JSZip from 'jszip'
-import { Material, Mesh, MeshPhysicalMaterial, Object3D } from 'three'
+import {
+	Material,
+	Mesh,
+	MeshPhysicalMaterial,
+	MeshStandardMaterial,
+	Object3D,
+	Source,
+	Texture
+} from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 
 import {
@@ -146,6 +154,123 @@ function withTransmissionAsOpacity(object: Object3D): {
 	return {
 		object: copy,
 		transmissiveMaterials: [...replacements.keys()].map(({ name }) => name)
+	}
+}
+
+/**
+ * Marks every texture of `object` whose alpha the USDZ never reads to be
+ * written as JPEG, in place on its meshes, which must be a copy.
+ *
+ * three.js's `USDZExporter` writes a texture as JPEG when its
+ * `userData.mimeType` says so and as PNG otherwise, so the WebP a published
+ * model carries came out as PNG: a 1024 px normal map alone was 2.4 MB. The
+ * USDZ spec and AR Quick Look take JPEG in every slot. Alpha is the one thing
+ * JPEG cannot hold, and the exporter reads it only from a base color map whose
+ * material is transparent or cut out, and from an alpha map, so an image used
+ * there keeps PNG wherever else it is used: the exporter writes each image
+ * once, so its textures must agree on the format.
+ *
+ * Textures and materials are replaced by marked copies, so the scene on screen,
+ * and any GLB exported from it later, keep their own formats.
+ */
+/**
+ * A copy of `image` with every pixel fully opaque, or undefined when it is not
+ * an image a canvas draws (or there is no canvas, outside a browser).
+ *
+ * A canvas holds color premultiplied by alpha and writes JPEG onto black, so a
+ * texel of an opaque material whose image has stray alpha below 1, which
+ * exports from modeling tools often carry, would come out darker than as PNG.
+ * Reading the pixels back divides the alpha out, as writing PNG does.
+ */
+function opaqueImage(image: unknown): OffscreenCanvas | undefined {
+	if (
+		typeof OffscreenCanvas === 'undefined' ||
+		!(
+			(typeof ImageBitmap !== 'undefined' && image instanceof ImageBitmap) ||
+			(typeof HTMLImageElement !== 'undefined' &&
+				image instanceof HTMLImageElement) ||
+			(typeof HTMLCanvasElement !== 'undefined' &&
+				image instanceof HTMLCanvasElement) ||
+			image instanceof OffscreenCanvas
+		)
+	) {
+		return undefined
+	}
+	// At the size the exporter scales it to, so a large image is never held whole.
+	const scale = Math.min(
+		1,
+		USDZ_MAX_TEXTURE_SIZE / Math.max(image.width, image.height)
+	)
+	const canvas = new OffscreenCanvas(image.width * scale, image.height * scale)
+	const { width, height } = canvas
+	const context = canvas.getContext('2d')
+	if (!context) return undefined
+	context.drawImage(image, 0, 0, width, height)
+	const pixels = context.getImageData(0, 0, width, height)
+	for (let i = 3; i < pixels.data.length; i += 4) pixels.data[i] = 255
+	context.putImageData(pixels, 0, 0)
+	return canvas
+}
+
+function withJpegTextures(object: Object3D): void {
+	const meshes: Mesh[] = []
+	object.traverse((child) => {
+		if ((child as Mesh).isMesh) meshes.push(child as Mesh)
+	})
+	const materialsOf = (mesh: Mesh) =>
+		Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+	const texturesOf = (material: Material) =>
+		Object.entries(material).filter(
+			(entry): entry is [string, Texture] => (entry[1] as Texture)?.isTexture
+		)
+
+	const alphaImages = new Set<unknown>()
+	for (const material of meshes.flatMap(materialsOf)) {
+		const standard = material as MeshStandardMaterial
+		if (standard.map && (standard.transparent || standard.alphaTest > 0)) {
+			alphaImages.add(standard.map.source)
+		}
+		if (standard.alphaMap) alphaImages.add(standard.alphaMap.source)
+	}
+
+	const opaqueSources = new Map<Texture['source'], Texture['source']>()
+	const jpegTextures = new Map<Texture, Texture>()
+	const jpeg = (texture: Texture) => {
+		let copy = jpegTextures.get(texture)
+		if (!copy) {
+			copy = texture.clone()
+			copy.userData['mimeType'] = 'image/jpeg'
+			let opaque = opaqueSources.get(texture.source)
+			if (!opaque) {
+				const image = opaqueImage(texture.image)
+				opaque = image ? new Source(image) : texture.source
+				opaqueSources.set(texture.source, opaque)
+			}
+			copy.source = opaque
+			jpegTextures.set(texture, copy)
+		}
+		return copy
+	}
+	const replacements = new Map<Material, Material>()
+	const replace = (material: Material): Material => {
+		let replacement = replacements.get(material)
+		if (!replacement) {
+			const marked = texturesOf(material).filter(
+				([, texture]) => !alphaImages.has(texture.source)
+			)
+			replacement = marked.length > 0 ? material.clone() : material
+			for (const [key, texture] of marked) {
+				;(replacement as unknown as Record<string, Texture>)[key] =
+					jpeg(texture)
+			}
+			replacements.set(material, replacement)
+		}
+		return replacement
+	}
+	for (const mesh of meshes) {
+		mesh.material = Array.isArray(mesh.material)
+			? mesh.material.map(replace)
+			: replace(mesh.material)
 	}
 }
 
@@ -520,6 +645,7 @@ export class ModelExporter {
 			const exporter = new USDZExporter()
 			const { object: exportable, transmissiveMaterials } =
 				withTransmissionAsOpacity(object)
+			withJpegTextures(exportable)
 
 			this.emitProgress('Serializing Three.js scene', 40)
 			const result = await exporter.parseAsync(exportable, {
