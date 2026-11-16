@@ -104,14 +104,25 @@ export interface UvTrace {
 /** Texels the bake is spread past each UV island, so mipmaps do not blend in the empty texture. */
 const GUTTER = 8
 /**
- * How many times a material's own size the map of a layout made for the bake
- * is, a side: it holds every part on the layout, so 2048 at the default 512,
- * and halves with it when a bake recovers at lower detail.
+ * The most a layout's map grows past one material's map, a side: 2048 at the
+ * default 512. It halves with the material's map when a bake recovers at
+ * lower detail.
  */
-export const LAYOUT_SIZE_SCALE = 4
+const MAX_LAYOUT_SIZE_SCALE = 4
+
+/**
+ * The side of a layout's map: as many texels as its materials would have had
+ * on their own UVs, one material's map each, rounded up to a power of two
+ * and capped at `MAX_LAYOUT_SIZE_SCALE`. A layout that holds one material
+ * gets one material's map, not a map sixteen times that size.
+ */
+export function layoutMapSize(size: number, materials: number): number {
+	const scale = 2 ** Math.ceil(Math.log2(Math.sqrt(Math.max(materials, 1))))
+	return size * Math.min(scale, MAX_LAYOUT_SIZE_SCALE)
+}
 
 /** What one map holds: a material on its own UVs, or every one on a layout. */
-interface Sheet {
+export interface Sheet {
 	materials: Material[]
 	primitives: ScenePrimitive[]
 	texCoord: number
@@ -119,7 +130,10 @@ interface Sheet {
 }
 
 /** One map per material on its own UVs, one per layout made for the bake. */
-function sheetsOf(targets: OcclusionBakeTarget[], size: number): Sheet[] {
+export function sheetsOf(
+	targets: OcclusionBakeTarget[],
+	size: number
+): Sheet[] {
 	const sheets: Sheet[] = []
 	const layouts = new Map<number, Sheet>()
 	for (const { material, primitives, texCoord = 0 } of targets) {
@@ -129,17 +143,16 @@ function sheetsOf(targets: OcclusionBakeTarget[], size: number): Sheet[] {
 		}
 		let sheet = layouts.get(texCoord)
 		if (!sheet) {
-			sheet = {
-				materials: [],
-				primitives: [],
-				texCoord,
-				size: size * LAYOUT_SIZE_SCALE
-			}
+			sheet = { materials: [], primitives: [], texCoord, size }
 			layouts.set(texCoord, sheet)
 			sheets.push(sheet)
 		}
 		sheet.materials.push(material)
 		sheet.primitives.push(...primitives)
+	}
+	// Sized once all its materials are known.
+	for (const sheet of layouts.values()) {
+		sheet.size = layoutMapSize(size, sheet.materials.length)
 	}
 	return sheets
 }
