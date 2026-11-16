@@ -27,7 +27,7 @@
 		"jotai": "^2.20.3",
 		"ktx2-encoder": "catalog:",
 		"lucide-react": "^1.66.0",
-		"postgres": "^3.4.9",
+		"postgres": "^4.0.0",
 		"qrcode": "^1.5.4",
 		"react": "catalog:",
 		"react-dom": "catalog:",
