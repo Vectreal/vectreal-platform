@@ -7,6 +7,7 @@ import { Band, PageHero, SheetFrame } from '../../components/layout-components'
 import { routeErrorMeta } from '../../components/not-found'
 import {
 	FeatureCompareGrid,
+	MadeForYouSection,
 	PricingCardsSection
 } from '../../components/pricing'
 import { PRICING_PAGE_COPY } from '../../constants/product-copy'
@@ -66,13 +67,19 @@ export default function PricingPage() {
 
 			{/*
 			  The head runs edge to edge above the sheet frame, as the home hero
-			  does; below it each section is a band. The plans are one band, their
+			  does; below it each section is a band. Models made for a brand come
+			  first: a reader from a letter or the home page came for that price,
+			  and the plans are the software. The plans are one band, their
 			  row ruled into the frame as its last line. Enterprise is a band of its
 			  own rather than a fourth card: it has no price, no checkout and a
 			  different next step. The comparison table answers a different
 			  question again, so it is a third.
 			*/}
 			<SheetFrame>
+				<Band aria-labelledby="made-for-you-heading">
+					<MadeForYouSection />
+				</Band>
+
 				<Band flush>
 					<PricingCardsSection
 						period={period}
