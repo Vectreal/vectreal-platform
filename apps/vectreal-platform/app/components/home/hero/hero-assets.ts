@@ -21,7 +21,7 @@ import stillSheetUrl from '../../../assets/home/camera-still-sheet.webp?url'
 export const HERO_POSTERS = {
 	sheet: {
 		url: sheetPosterUrl,
-		ink: { l: 0.1675, r: 0.8416, t: 0.2243, b: 0.7121 }
+		ink: { l: 0.1678, r: 0.842, t: 0.2238, b: 0.7107 }
 	},
 	fold: {
 		url: foldPosterUrl,
@@ -38,6 +38,6 @@ export const HERO_SHADOW_URL = shadowUrl
  * same frame. Baked with the posters. Sizes as baked, for the image's box.
  */
 export const HERO_STILLS = {
-	sheet: { url: stillSheetUrl, width: 1427, height: 1070 },
+	sheet: { url: stillSheetUrl, width: 1424, height: 1068 },
 	fold: { url: stillFoldUrl, width: 1376, height: 1032 }
 } as const

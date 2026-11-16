@@ -190,7 +190,7 @@ export const HERO_MODEL = {
 	url: cameraStudioUrl,
 	fileName: 'camera-studio.glb',
 	/** What the page downloads. Pinned by the spec. */
-	bytes: 3_647_804,
+	bytes: 1_774_072,
 	/** The same model before the Balanced preset: the camera sample. Pinned by the spec. */
 	sourceBytes: 18_758_168,
 	/** Which face the line drawing shows. */
