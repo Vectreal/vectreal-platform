@@ -2,6 +2,7 @@ import { useEffect, useRef, type RefObject } from 'react'
 import { TextureLoader } from 'three'
 
 import { HERO_SHADOW_URL } from './hero/hero-assets'
+import { HERO_RESOLVED_LIGHTING } from './hero/hero-lighting'
 import { createStageEngine, type StageEngine } from './stage/stage-engine'
 import { HERO_MODEL } from '../../lib/samples/sample-models'
 
@@ -51,7 +52,12 @@ export default function EmbedStageClient({
 		if (!stage || !frame || !canvas) return
 		const engine = createStageEngine(
 			{ stage, frame, canvas },
-			{ reducedMotion: true, edgeFade: false, turnable: false }
+			{
+				reducedMotion: true,
+				edgeFade: false,
+				turnable: false,
+				lighting: HERO_RESOLVED_LIGHTING
+			}
 		)
 		engineRef.current = engine
 		const abort = new AbortController()

@@ -1,4 +1,4 @@
-import { HERO_MODEL } from './sample-models'
+import { BALANCED_CAMERA } from './sample-models'
 import cameraHeroPreviewUrl from '../../assets/models/camera-hero-preview.webp?url'
 import cameraTelephotoPreviewUrl from '../../assets/models/camera-telephoto-preview.webp?url'
 import cameraWidePreviewUrl from '../../assets/models/camera-wide-preview.webp?url'
@@ -40,12 +40,8 @@ export interface ExampleScene {
 	settings: SceneSettings
 }
 
-/** The Balanced camera the home page draws: 0.9 MB rather than the 18 MB source. */
-const CAMERA_MODEL: ExampleScene['model'] = {
-	url: HERO_MODEL.url,
-	fileName: HERO_MODEL.fileName,
-	bytes: HERO_MODEL.bytes
-}
+/** The Balanced camera: 0.9 MB rather than the 18 MB source. */
+const CAMERA_MODEL: ExampleScene['model'] = BALANCED_CAMERA
 
 /*
   The stage every example stands on. The studio map lights the model

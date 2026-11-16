@@ -39,7 +39,9 @@ export const SHADOW = {
 export function createShadowBaker(
 	renderer: THREE.WebGLRenderer,
 	scene: THREE.Scene,
-	passCam: THREE.OrthographicCamera
+	passCam: THREE.OrthographicCamera,
+	/** Toward the light the shadow falls from, at `SHADOW.key`'s length, which the jitter is sized against. */
+	key: THREE.Vector3 = SHADOW.key
 ) {
 	// Every full-screen pass draws the same quad, so it is built once and owned here.
 	const quadGeometry = new THREE.PlaneGeometry(2, 2)
@@ -156,7 +158,7 @@ export function createShadowBaker(
 			if (i < nKey) {
 				const r = Math.sqrt((i + 0.5) / nKey) * SHADOW.jitter
 				const a = i * golden
-				dir = SHADOW.key
+				dir = key
 					.clone()
 					.add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r))
 					.normalize()

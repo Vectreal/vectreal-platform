@@ -1,5 +1,6 @@
 import cameraPreviewUrl from '../../assets/models/camera-preview.webp?url'
 import cameraSourceUrl from '../../assets/models/camera-source.glb?url'
+import cameraStudioUrl from '../../assets/models/camera-studio.glb?url'
 import cameraUrl from '../../assets/models/camera.glb?url'
 import rocketPreviewUrl from '../../assets/models/rocket-preview.webp?url'
 import rocketUrl from '../../assets/models/rocket-v3.glb?url'
@@ -156,12 +157,10 @@ export function sampleModelSource(
 }
 
 /**
- * The model the home page draws: Poly Haven's Camera_01, CC0.
- *
- * The optimized file, which is what the hero downloads. Its source is the
- * camera in `SAMPLE_MODELS`: that one is untouched, so the converter and the
- * publisher have something to show on it, and this one would show almost
- * nothing.
+ * The camera sample after the publisher's Balanced preset: Poly Haven's
+ * Camera_01, CC0. Its source is the camera in `SAMPLE_MODELS`: that one is
+ * untouched, so the converter and the publisher have something to show on
+ * it, and this one would show almost nothing.
  *
  * WHAT WAS DONE TO IT. The 4k source was packed into one GLB with the strap
  * removed, and the maker's engravings (brand, model and serial number) painted
@@ -170,15 +169,28 @@ export function sampleModelSource(
  * It was then run through the publisher's Balanced preset (1024px WebP at 80,
  * Draco) on 2026-09-24, which produced this file.
  *
+ * `sample-models.spec.ts` pins its size to the file.
+ */
+export const BALANCED_CAMERA = {
+	url: cameraUrl,
+	fileName: 'camera.glb',
+	bytes: 946_600
+} as const
+
+/**
+ * The model the home page draws: `BALANCED_CAMERA` as publishing ships it
+ * with the studio finish the hero is lit by (`HERO_LIGHTING`), baked by
+ * `scripts/bake-home-hero.ts` through the publisher's own publish export.
+ *
  * `sample-models.spec.ts` reads every figure here back from the files,
  * `sourceBytes` included, so the hero's before and after cannot drift from what
  * the sample and the served file weigh.
  */
 export const HERO_MODEL = {
-	url: cameraUrl,
-	fileName: 'camera.glb',
+	url: cameraStudioUrl,
+	fileName: 'camera-studio.glb',
 	/** What the page downloads. Pinned by the spec. */
-	bytes: 946_600,
+	bytes: 3_647_804,
 	/** The same model before the Balanced preset: the camera sample. Pinned by the spec. */
 	sourceBytes: 18_758_168,
 	/** Which face the line drawing shows. */

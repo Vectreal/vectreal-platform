@@ -3,17 +3,20 @@
  *
  * Run via: pnpm nx run vectreal-platform:bake-home-hero
  *
- * Needs the dev server (`pnpm nx dev vectreal-platform`): it opens the home
- * page with `?hero-bake`, where the stage draws the hero model's elevation
- * whole and unfaded and bakes its shadow live, and reads both back.
+ * Needs the dev server (`pnpm nx dev vectreal-platform`). First it bakes the
+ * hero's model: the camera sample's Balanced file through the Publisher's own
+ * publish export, with the studio finish `HERO_LIGHTING` asks for, so the
+ * hero shows what publishing that model ships. Then it opens the home page
+ * with `?hero-bake`, where the stage draws that model's elevation whole and
+ * unfaded and bakes its shadow live, and reads both back.
  *
- * Writes, into `app/assets/home/`:
+ * Writes `app/assets/models/camera-studio.glb`, the hero's model with the
+ * studio finish baked in. Its size goes into `HERO_MODEL.bytes` by hand;
+ * `sample-models.spec.ts` pins it. And, into `app/assets/home/`:
  * - `camera-drawing-sheet.webp` and `camera-drawing-fold.webp`: the elevation
  *   as line coverage in the alpha channel, one per framing, because the wide
  *   sheet and the folded card frame the model differently.
  * - `camera-shadow.webp`: the directional shadow as a density image.
- * - `camera-object-sheet.webp`: the rendered camera, shadow and all, in the
- *   sheet drawing's exact framing, so the page can lay one over the other.
  * - `camera-still-sheet.webp` and `camera-still-fold.webp`: the hero as it
  *   first shows, one per framing, which the live stage takes over from unseen.
  *   Their pixel sizes go into `HERO_STILLS` by hand, for the image's box.
@@ -22,14 +25,16 @@
  * `app/components/home/hero/hero-assets.ts` by hand: the plot travels across
  * them, so they must match the file.
  */
+import { stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { chromium } from '@playwright/test'
+import { chromium, type Browser } from '@playwright/test'
 import sharp from 'sharp'
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url))
 const OUTPUT_DIR = path.resolve(scriptDir, '../app/assets/home')
+const MODELS_DIR = path.resolve(scriptDir, '../app/assets/models')
 const BASE_URL = process.env.BAKE_BASE_URL ?? 'http://localhost:4200'
 
 // The wide sheet, and the folded card below 900px. The frame's size follows from the layout.
@@ -89,6 +94,63 @@ async function toPoster(png: Buffer, file: string) {
 	}
 }
 
+/**
+ * The hero's model, made in the page by the modules the Publisher publishes
+ * with: the same worker, the same bakes, the same encoders.
+ */
+async function bakeModel(browser: Browser) {
+	const page = await browser.newPage()
+	try {
+		// A static file, so no dev client is there to reload the page mid-bake.
+		await page.goto(`${BASE_URL}/robots.txt`)
+		const base64 = await page.evaluate(
+			async ({ source, modules }) => {
+				const [
+					{ runPublishExportInWorker },
+					{ publishBakes },
+					{ HERO_LIGHTING }
+				] = await Promise.all(
+					modules.map((path) => import(/* @vite-ignore */ path))
+				)
+				const glb = new Uint8Array(await (await fetch(source)).arrayBuffer())
+				const out = await runPublishExportInWorker(
+					{
+						glb,
+						draco: {},
+						dracoWorthApplying: true,
+						ktx2: false,
+						...publishBakes(HERO_LIGHTING)
+					},
+					() => {}
+				)
+				for (const report of [out.occlusion, out.lights])
+					if (!report || !('baked' in report) || report.skipped.length > 0)
+						throw new Error(
+							`Studio finish incomplete: ${JSON.stringify(report)}`
+						)
+				const bytes = new Uint8Array(out.buffer)
+				let binary = ''
+				for (let i = 0; i < bytes.length; i += 0x8000)
+					binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+				return btoa(binary)
+			},
+			{
+				source: '/app/assets/models/camera.glb',
+				modules: [
+					'/app/lib/domain/scene/client/publish-export.ts',
+					'/app/lib/domain/scene/studio-finish.ts',
+					'/app/components/home/hero/hero-lighting.ts'
+				]
+			}
+		)
+		const file = path.join(MODELS_DIR, 'camera-studio.glb')
+		await writeFile(file, Buffer.from(base64, 'base64'))
+		console.log(`  wrote camera-studio.glb  ${(await stat(file)).size} bytes`)
+	} finally {
+		await page.close()
+	}
+}
+
 async function main() {
 	const { hostname } = new URL(BASE_URL)
 	if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
@@ -99,6 +161,8 @@ async function main() {
 
 	const browser = await chromium.launch({ args: ['--use-gl=angle'] })
 	try {
+		// First: the stills below draw this file.
+		await bakeModel(browser)
 		for (const [i, framing] of FRAMINGS.entries()) {
 			const context = await browser.newContext({
 				viewport: framing.viewport,
@@ -110,13 +174,12 @@ async function main() {
 				timeout: 120_000
 			})
 
-			const { poster, shadow, object, still } = await page.evaluate(() => {
+			const { poster, shadow, still } = await page.evaluate(() => {
 				const bake = (
 					window as unknown as {
 						__heroBake: {
 							poster: () => string
 							shadow: () => string | null
-							object: () => string
 							still: () => string
 						}
 					}
@@ -124,7 +187,6 @@ async function main() {
 				return {
 					poster: bake.poster(),
 					shadow: bake.shadow(),
-					object: bake.object(),
 					still: bake.still()
 				}
 			})
@@ -147,12 +209,6 @@ async function main() {
 					.webp({ quality: 90 })
 					.toFile(path.join(OUTPUT_DIR, 'camera-shadow.webp'))
 				console.log('  wrote camera-shadow.webp')
-				// Only the sheet framing: the page lays it over that drawing alone, at most a few hundred pixels wide.
-				await sharp(fromDataUrl(object))
-					.resize({ width: 1200 })
-					.webp({ quality: 82, alphaQuality: 90 })
-					.toFile(path.join(OUTPUT_DIR, 'camera-object-sheet.webp'))
-				console.log('  wrote camera-object-sheet.webp')
 			}
 			await context.close()
 		}
@@ -160,7 +216,7 @@ async function main() {
 		await browser.close()
 	}
 	console.log(
-		'\nCopy the ink bounds above into HERO_POSTERS in app/components/home/hero/hero-assets.ts.'
+		"\nCopy the ink bounds above into HERO_POSTERS in app/components/home/hero/hero-assets.ts,\nand the model's size into HERO_MODEL.bytes in app/lib/samples/sample-models.ts."
 	)
 }
 
