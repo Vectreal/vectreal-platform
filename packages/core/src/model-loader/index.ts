@@ -20,6 +20,8 @@ export {
 */
 export { referencedUris } from './referenced-assets'
 export { isMissingAssetsError, missingAssetsError } from './missing-assets'
+// For a page that draws a published file with three's own loader.
+export { registerBakedLightmap } from './baked-lightmap-plugin'
 /*
   A model at a URL, as the files a drop would produce. Here, beside
   `referencedUris`, because it follows a glTF's references by that rule, and

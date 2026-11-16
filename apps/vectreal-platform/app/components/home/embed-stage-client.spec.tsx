@@ -9,6 +9,7 @@ import { createRef } from 'react'
 import { expect, it, vi } from 'vitest'
 
 import EmbedStageClient from './embed-stage-client'
+import { HERO_RESOLVED_LIGHTING } from './hero/hero-lighting'
 import { createStageEngine } from './stage/stage-engine'
 
 vi.mock('./stage/stage-engine', () => ({
@@ -35,6 +36,10 @@ it('builds a stage the reader cannot turn', () => {
 	)
 	expect(vi.mocked(createStageEngine)).toHaveBeenCalledWith(
 		expect.anything(),
-		expect.objectContaining({ turnable: false })
+		expect.objectContaining({
+			turnable: false,
+			// The hero's camera, lit as the hero is, so its baked maps draw here too.
+			lighting: HERO_RESOLVED_LIGHTING
+		})
 	)
 })

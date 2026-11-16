@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 import {
+	BALANCED_CAMERA,
 	HERO_MODEL,
 	HERO_SOURCE_SAMPLE_ID,
 	PASS_SAMPLES,
@@ -91,6 +92,13 @@ describe('sample models', () => {
 			)
 			expect(HERO_MODEL.bytes).toBeLessThan(HERO_MODEL.sourceBytes)
 		})
+	})
+
+	/* The Publisher's camera example and the home page's snippet open it. */
+	it('declares the Balanced camera at the size it actually is', () => {
+		expect(statSync(join(MODELS_DIR, BALANCED_CAMERA.fileName)).size).toBe(
+			BALANCED_CAMERA.bytes
+		)
 	})
 })
 

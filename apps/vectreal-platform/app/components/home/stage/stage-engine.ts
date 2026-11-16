@@ -1,8 +1,19 @@
+import {
+	applyBakedLights,
+	drawnLightsSignature,
+	ENVIRONMENT_IRRADIANCE,
+	lightDirection,
+	litLights,
+	registerBakedLightmap,
+	resolveEnvironmentFiles,
+	type ResolvedLighting
+} from '@vctrl/core'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { UltraHDRLoader } from 'three/examples/jsm/loaders/UltraHDRLoader.js'
 
 import { createSceneFloor } from './scene-floor'
 import {
@@ -54,6 +65,13 @@ export interface StageOptions {
 	turnable?: boolean
 	/** Stand the model on the drafting floor, drawn in the scene, and keep the tilt to a band. The home hero only: a 2D floor behind a freely orbiting model never agreed with its shadow. */
 	floor?: boolean
+	/**
+	 * Light the model as a published scene with this lighting is lit: its
+	 * map, its lights, the light maps baked into the file for them, and the
+	 * viewer's tone mapping. Without it, a room lights the model and one key
+	 * shades it.
+	 */
+	lighting?: ResolvedLighting
 }
 
 /** The sequence's timings, in milliseconds: from poster to a camera in the reader's hands in about three seconds, not six. */
@@ -78,7 +96,8 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 		posterMode = false,
 		edgeFade = true,
 		turnable = true,
-		floor: withFloor = false
+		floor: withFloor = false,
+		lighting
 	} = options
 	const renderer = new THREE.WebGLRenderer({
 		canvas: el.canvas,
@@ -87,16 +106,50 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 		preserveDrawingBuffer: posterMode
 	})
 	renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-	renderer.toneMapping = THREE.AgXToneMapping
-	renderer.toneMappingExposure = 1.05
+	// As the viewer draws a published scene, when the stage stands in for one.
+	renderer.toneMapping = lighting
+		? THREE.NeutralToneMapping
+		: THREE.AgXToneMapping
+	renderer.toneMappingExposure = lighting ? 1 : 1.05
 	renderer.setClearColor(0x000000, 0)
 	renderer.shadowMap.enabled = true
 	renderer.shadowMap.type = THREE.PCFShadowMap // the jittered samples supply the softness
 
 	const scene = new THREE.Scene()
-	const key = new THREE.DirectionalLight(0xffffff, 1.6)
-	key.position.copy(SHADOW.key)
-	scene.add(key)
+	/*
+	  A published scene's lights deliver their intensity times the light its
+	  map gives an up-facing surface; the gain map decodes on the GPU, so that
+	  is the figure measured from its HDR, as the viewer takes it. They shade
+	  only: with the light maps drawn, what they add is their highlights.
+	*/
+	let lightUnit = lighting
+		? ENVIRONMENT_IRRADIANCE[lighting.environment.map] *
+			lighting.environment.intensity
+		: 0
+	const lights = lighting ? litLights(lighting) : []
+	const suns = lights.map((light) => {
+		const sun = new THREE.DirectionalLight(light.color)
+		sun.position.set(...lightDirection(light, lighting!.environment.rotation))
+		scene.add(sun)
+		return sun
+	})
+	const setLightUnit = (unit: number) => {
+		lightUnit = unit
+		suns.forEach((sun, i) => (sun.intensity = lights[i].intensity * unit))
+	}
+	setLightUnit(lightUnit)
+	if (!lighting) {
+		const key = new THREE.DirectionalLight(0xffffff, 1.6)
+		key.position.copy(SHADOW.key)
+		scene.add(key)
+	}
+	// The ground shadow falls from the key, at the reach the stage's own key has.
+	const keyLight = lights.find((light) => light.role === 'key') ?? lights[0]
+	const shadowKey = keyLight
+		? new THREE.Vector3(
+				...lightDirection(keyLight, lighting!.environment.rotation)
+			).setLength(SHADOW.key.length())
+		: SHADOW.key
 
 	// A long lens flattens perspective, so the elevation reads square to the sheet.
 	const camera = new THREE.PerspectiveCamera(20, 4 / 3, 0.01, 100)
@@ -145,7 +198,7 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 		densityPng,
 		warm: warmShadowPasses,
 		dispose: disposeShadowBaker
-	} = createShadowBaker(renderer, scene, passCam)
+	} = createShadowBaker(renderer, scene, passCam, shadowKey)
 
 	const normalMat = new THREE.MeshNormalMaterial()
 	let rtN: THREE.WebGLRenderTarget | null = null
@@ -570,6 +623,7 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 	const draco = new DRACOLoader()
 	draco.setDecoderPath('/draco/')
 	loader.setDRACOLoader(draco)
+	registerBakedLightmap(loader)
 
 	const stopObservingTheme = observeTheme(readTheme)
 	readTheme()
@@ -583,6 +637,21 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 	  materials are compiled against that environment, so they wait for it.
 	*/
 	async function prepareEnvironment() {
+		if (!lighting) return prepareRoom()
+		try {
+			await prepareMap(lighting.environment)
+		} catch {
+			/*
+			  As the viewer does when a map will not load: a room lights the
+			  scene, and the lights are measured against a uniform sky of
+			  radiance 1, so the model still shows rather than the still standing
+			  for good.
+			*/
+			setLightUnit(Math.PI * lighting.environment.intensity)
+			await prepareRoom()
+		}
+	}
+	async function prepareRoom() {
 		const room = new RoomEnvironment()
 		await warmPrograms(renderer, room, camera, {
 			offscreen: true,
@@ -595,6 +664,30 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 			pmrem.dispose()
 		}
 		room.dispose()
+	}
+	/* A published scene's map, as the viewer loads it: the hosted file its lighting names. */
+	async function prepareMap(map: ResolvedLighting['environment']) {
+		const texture = await new UltraHDRLoader().loadAsync(
+			resolveEnvironmentFiles({
+				preset: map.map,
+				environmentResolution: map.resolution,
+				environmentQuality: map.quality
+			}) as string
+		)
+		texture.mapping = THREE.EquirectangularReflectionMapping
+		if (!disposed) {
+			const pmrem = new THREE.PMREMGenerator(renderer)
+			environment = pmrem.fromEquirectangular(texture)
+			scene.environment = environment.texture
+			scene.environmentIntensity = map.intensity
+			scene.environmentRotation.set(
+				0,
+				THREE.MathUtils.degToRad(map.rotation),
+				0
+			)
+			pmrem.dispose()
+		}
+		texture.dispose()
 	}
 	let environment: THREE.WebGLRenderTarget | null = null
 	const prepared = Promise.all([
@@ -716,6 +809,9 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 			// Parsed before anything on the stage changes, so a file that will not parse leaves the stage as it was.
 			const gltf = await loader.parseAsync(buffer, '')
 			if (!disposed) await prepared
+			// After the environment, which sets how bright a light is; before the programs are built, since drawing the maps changes them.
+			if (lighting)
+				applyBakedLights(gltf.scene, drawnLightsSignature(lighting), lightUnit)
 			if (!disposed) await warmModel(gltf.scene)
 			// Torn down while it parsed or compiled: placing it now would build render targets on a renderer that is gone.
 			if (disposed) {
@@ -779,8 +875,6 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 			frame()
 			return cropToFrame()
 		},
-		/** Bake mode only: the rendered object in the drawing's exact framing, so the two can be laid over each other. */
-		objectPng: renderObjectPng,
 		/** Bake mode only: the rendered object from the still's pose, in the same framing: the still `settle` takes over from. */
 		stillPng() {
 			pose(still())
