@@ -44,7 +44,7 @@
 		"resend": "^6.37.0",
 		"@react-email/components": "^1.0.12",
 		"idb": "^8.0.4",
-		"@hookform/resolvers": "^5.9.2",
+		"@hookform/resolvers": "^7.0.1",
 		"react-hook-form": "^7.91.0",
 		"zod": "catalog:",
 		"sharp": "^0.35.5",
