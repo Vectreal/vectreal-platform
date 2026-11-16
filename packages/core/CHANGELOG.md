@@ -1,5 +1,37 @@
 # Changelog
 
+## [3.5.0](https://github.com/Vectreal/vectreal-platform/compare/core-v3.4.0...core-v3.5.0) (2026-11-16)
+
+
+### Features
+
+* **home:** the hero draws the camera as the publisher ships it with the Soft studio finish ([#1421](https://github.com/Vectreal/vectreal-platform/issues/1421)) ([3870cee](https://github.com/Vectreal/vectreal-platform/commit/3870cee9a4c264ef632d94c40b37bd358be443ae))
+* **hooks:** the model loader says where a load is: phase, bytes and files ([#1376](https://github.com/Vectreal/vectreal-platform/issues/1376)) ([02e539e](https://github.com/Vectreal/vectreal-platform/commit/02e539eadc6f2c6d19fd0c55fddd69f9a828b409))
+* load environment maps compressed as gain map JPEGs ([#1315](https://github.com/Vectreal/vectreal-platform/issues/1315)) ([619e7c6](https://github.com/Vectreal/vectreal-platform/commit/619e7c650c20813d4826b286c215db8be256e3b7))
+* **platform:** every model the publisher and converter open goes through the loader ([#1389](https://github.com/Vectreal/vectreal-platform/issues/1389)) ([907c17a](https://github.com/Vectreal/vectreal-platform/commit/907c17a6b27a5a51439946159675d02cf003978d))
+* **viewer:** accessible name, keyboard orbit and zoom, still auto-rotate under reduced motion ([#1290](https://github.com/Vectreal/vectreal-platform/issues/1290)) ([0683046](https://github.com/Vectreal/vectreal-platform/commit/06830460e14d29766378ce571f9a7f1c152f426f))
+* **viewer:** double-click or double-tap to focus ([#1292](https://github.com/Vectreal/vectreal-platform/issues/1292)) ([a5935a7](https://github.com/Vectreal/vectreal-platform/commit/a5935a7b89b325debd1645dd2d8e864b72b8fe3b))
+* **viewer:** first-time interaction hint and How to move in the info popover ([#1309](https://github.com/Vectreal/vectreal-platform/issues/1309)) ([c6d36f7](https://github.com/Vectreal/vectreal-platform/commit/c6d36f7be4ec989cf08c468b3f4f7f1d81c37a7b))
+* **viewer:** no bare stage when a scene scrolls back into view, and Unload when off-screen as a publish setting ([#1347](https://github.com/Vectreal/vectreal-platform/issues/1347)) ([0df7936](https://github.com/Vectreal/vectreal-platform/commit/0df7936b7a65ea25a1bcb9eff04401174f067851))
+* **viewer:** one typed message catalog for the viewer's words, each language loaded only when shown ([#1348](https://github.com/Vectreal/vectreal-platform/issues/1348)) ([55eed3a](https://github.com/Vectreal/vectreal-platform/commit/55eed3a5151742cddfe56ac1524f017ec4846a9b))
+* **viewer:** optional full screen button for published scenes ([#1291](https://github.com/Vectreal/vectreal-platform/issues/1291)) ([4795e89](https://github.com/Vectreal/vectreal-platform/commit/4795e8939d570f9f2087362481e5781b22c34f0c))
+* **viewer:** tap to activate, chosen per scene in Publish &gt; Viewer ([#1344](https://github.com/Vectreal/vectreal-platform/issues/1344)) ([0c1e1f5](https://github.com/Vectreal/vectreal-platform/commit/0c1e1f5e7b4ae18e35d2177526454522c2c23add))
+* **viewer:** the viewer shows and reports where a load is ([#1388](https://github.com/Vectreal/vectreal-platform/issues/1388)) ([e8a6127](https://github.com/Vectreal/vectreal-platform/commit/e8a6127bbaacb99e9a571a242acdc6f454055acd))
+
+
+### Bug Fixes
+
+* **api:** hold camera writes to the core camera schema, and repair stored cameras on every read a client sends back ([#1392](https://github.com/Vectreal/vectreal-platform/issues/1392)) ([a418311](https://github.com/Vectreal/vectreal-platform/commit/a418311ee4e0dd439c80a7667066ed3558c356bb))
+* **core:** a UV set laid out for the studio-finish bake gets a map sized by the materials it holds ([#1423](https://github.com/Vectreal/vectreal-platform/issues/1423)) ([3fe09e6](https://github.com/Vectreal/vectreal-platform/commit/3fe09e6ef970c192c8bbfed824fb33da6e335d87))
+* **core:** an STL with zero facet normals converts lit from the front, not the side ([#1354](https://github.com/Vectreal/vectreal-platform/issues/1354)) ([afe7a7a](https://github.com/Vectreal/vectreal-platform/commit/afe7a7ac2338a874fd3e71784bef3a1abd3958f4))
+* **core:** own the camera rules in one zod schema, and repair stored cameras that fail it ([#1387](https://github.com/Vectreal/vectreal-platform/issues/1387)) ([b9972fb](https://github.com/Vectreal/vectreal-platform/commit/b9972fb4981219032b1465c7cb191bcedd413083))
+
+
+### Performance Improvements
+
+* **core:** pack baked occlusion into the metallic-roughness texture when it is safe ([#1406](https://github.com/Vectreal/vectreal-platform/issues/1406)) ([a458ac3](https://github.com/Vectreal/vectreal-platform/commit/a458ac38b4abb5a31081a776dc1da0835fe9bda1))
+* **core:** write USDZ textures as JPEG unless their alpha is read ([#1403](https://github.com/Vectreal/vectreal-platform/issues/1403)) ([e5add7b](https://github.com/Vectreal/vectreal-platform/commit/e5add7bc055ea65c80b7e47d8700546eb51738a3))
+
 ## [3.4.0](https://github.com/Vectreal/vectreal-platform/compare/core-v3.3.0...core-v3.4.0) (2026-11-04)
 
 
