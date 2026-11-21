@@ -175,7 +175,7 @@
 		"typescript-eslint": "8.72.1",
 		"unified": "^11.0.5",
 		"unist-util-visit": "^5.2.0",
-		"verdaccio": "^6.11.1",
+		"verdaccio": "^7.0.2",
 		"vite": "catalog:",
 		"vite-plugin-devtools-json": "^1.1.2",
 		"vite-plugin-dts": "catalog:",
