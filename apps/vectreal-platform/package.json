@@ -21,7 +21,7 @@
 		"@vctrl/viewer": "workspace:*",
 		"drizzle-kit": "^0.31.11",
 		"drizzle-orm": "^0.45.4",
-		"framer-motion": "^13.0.0",
+		"framer-motion": "^14.9.0",
 		"heic-decode": "^2.1.0",
 		"isbot": "^5.2.2",
 		"jotai": "^2.20.3",
