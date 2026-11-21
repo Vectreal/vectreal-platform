@@ -132,8 +132,8 @@
 		"@typescript-eslint/eslint-plugin": "8.72.1",
 		"@typescript-eslint/parser": "8.72.1",
 		"@vitejs/plugin-react": "catalog:",
-		"@vitest/coverage-v8": "4.1.11",
-		"@vitest/ui": "4.1.11",
+		"@vitest/coverage-v8": "5.0.5",
+		"@vitest/ui": "5.0.5",
 		"babel-plugin-react-compiler": "1.0.0",
 		"chromatic": "^18.13.9",
 		"drizzle-kit": "^0.31.11",
@@ -179,7 +179,7 @@
 		"vite": "catalog:",
 		"vite-plugin-devtools-json": "^1.1.2",
 		"vite-plugin-dts": "catalog:",
-		"vitest": "4.1.11",
+		"vitest": "5.0.5",
 		"vitest-fail-on-console": "0.10.1"
 	},
 	"nx": {
