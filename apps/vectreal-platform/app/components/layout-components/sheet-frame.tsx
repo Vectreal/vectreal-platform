@@ -10,8 +10,15 @@ import type { ComponentProps, ReactNode } from 'react'
  * rule above every band. A page head or hero runs edge to edge above it; the
  * sections below it are `Band`s.
  */
-export const SheetFrame = ({ children }: { children: ReactNode }) => (
-	<div className={styles.sheet}>
+export const SheetFrame = ({
+	children,
+	spacious = false
+}: {
+	children: ReactNode
+	/** More room around each band, for a page whose sections are tall: the home page. */
+	spacious?: boolean
+}) => (
+	<div className={styles.sheet} data-spacious={spacious ? '' : undefined}>
 		<div aria-hidden="true" className={styles.rules} />
 		{children}
 	</div>

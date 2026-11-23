@@ -53,8 +53,22 @@
 		padding-block: 128px;
 	}
 }
+/*
+  A sheet whose sections are tall enough that 64 and 128 read as cramped
+  between them (the home page): each band takes the next step up, 128px, and
+  the wide marketing step, 192px, from 64rem.
+*/
+.sheet[data-spacious] .cell {
+	padding-block: 128px;
+}
+@media (min-width: 64rem) {
+	.sheet[data-spacious] .cell {
+		padding-block: 192px;
+	}
+}
 /* A band whose last row is ruled into the frame ends on the sheet's rule, not in padding. */
-.cell[data-flush] {
+.cell[data-flush],
+.sheet[data-spacious] .cell[data-flush] {
 	padding-bottom: 0;
 }
 

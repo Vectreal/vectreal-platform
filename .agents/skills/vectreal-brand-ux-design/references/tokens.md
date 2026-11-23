@@ -77,6 +77,10 @@ reads them for its gutter; `--space-*` is a real Tailwind namespace but it backs
 would mint a second child-margin scale beside the derived one. Ten other rungs
 were deleted for having no reader at all.
 
+The home page's bands take those two steps (`SheetFrame spacious`): 128px of
+padding each side of a band's rule, and 192px from `lg`. Other marketing pages
+keep 64px, and 128px from `lg`.
+
 Page padding uses the same steps: the marketing routes close on `pb-32`, and
 `PageHero` opens on `pt-32 pb-16` - more space above to clear the fixed nav than
 below, where the hero joins the page it introduces.
