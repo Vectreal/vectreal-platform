@@ -94,9 +94,11 @@ nothing.
 
 ## Verify in a browser, not in your head
 
-Design changes close with a screenshot, not a claim. Use the preview tools:
+Design changes close with a look in the browser, not a claim. Use the preview tools:
 `preview_start` with `{name: "vectreal-platform"}`, then `read_page`,
-`resize_window` for responsive and both themes, and `computer` for a screenshot.
+`resize_window` for responsive and both themes, and `computer` to see it. Those
+screenshots are your own check: do not save, host or attach them for review.
+Moritz reviews on staging or locally, so the PR names the path and the steps.
 The quality bar for marketing UI is high, and the only way to know a gradient, a
 hover step or a snap point survived is to look at it.
 

@@ -61,7 +61,7 @@ outcome:
    `CI failing: <check>`), or why there is no PR.
 2. Then at most ten lines: what changed, what was verified and how, what was
    filed rather than fixed, and anything the lead must decide.
-3. Anything longer (plans, measurements, screenshots, hand-over notes) goes in a
+3. Anything longer (plans, measurements, hand-over notes) goes in a
    file in the shared notes folder the brief names, and the report links it.
 
 ## Questions
