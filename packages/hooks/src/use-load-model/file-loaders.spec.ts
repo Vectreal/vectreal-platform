@@ -316,10 +316,19 @@ describe('a selection that is not one model is refused, and says why', () => {
 	})
 
 	it('says what an unreadable selection was', async () => {
-		const error = await loadError([file('front.jpg'), file('back.heic')])
+		const nested = file('Chair.blend')
+		Object.defineProperty(nested, 'webkitRelativePath', {
+			value: 'chair/textures/Chair.blend'
+		})
+		const photos = await loadError([file('front.jpg'), file('back.heic')])
+		const blender = await loadError([nested])
 
-		expect(error.code).toBe('unsupported_format')
-		expect(error.context?.selection).toEqual({ kind: 'photos' })
+		expect(photos.code).toBe('unsupported_format')
+		expect(photos.context?.selection).toEqual({ kind: 'photos' })
+		expect(blender.context?.selection).toEqual({
+			kind: 'blender',
+			fileName: 'Chair.blend'
+		})
 	})
 
 	it('refuses a USDZ on its own, in front of the loader', async () => {

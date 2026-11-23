@@ -156,7 +156,9 @@ export const loadModelFromFiles = async (
 			source: 'local-upload',
 			context: {
 				fileNames: files.map((file) => file.name),
-				selection: readUnreadableSelection(files.map((file) => file.name))
+				selection: readUnreadableSelection(
+					files.map((file) => file.webkitRelativePath || file.name)
+				)
 			}
 		})
 	}

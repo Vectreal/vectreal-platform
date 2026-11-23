@@ -23,23 +23,43 @@ const PHOTO = /\.(jpe?g|png|heic|heif|webp)$/i
 /* `.blend1`, `.blend2`: the backups Blender writes beside the scene. */
 const BLENDER = /\.blend\d*$/i
 const ARCHIVE = /\.zip$/i
+/*
+  What an operating system leaves in a folder nobody put there: a folder of
+  photos picked on a Mac carries a `.DS_Store`, and one from Windows a
+  `Thumbs.db`. Counted, they turned the commonest photo drop into an unknown.
+*/
+const SYSTEM_FILE = /^(\..*|thumbs\.db|desktop\.ini)$/i
+/*
+  A model's texture folder, which holds pictures that are not photos of a
+  product: someone who dropped a glTF's `textures/` without the `.gltf` needs
+  the model file, not the photo offer.
+*/
+const TEXTURE_FOLDER = /(^|\/)(textures?|maps|tex|materials?)\//i
 
 /**
- * Reads a selection the loader found no model in. A Blender file or an archive
- * names the selection whatever else came with it, since the textures beside a
- * `.blend` are not what the visitor meant to bring; photos only when every
- * file is one.
+ * Reads a selection the loader found no model in, by each file's path within
+ * the selection (its name when it came without one). A Blender file names the
+ * selection first, then an archive, whatever else came with them, since the
+ * textures beside a `.blend` are not what the visitor meant to bring. Photos
+ * only when every file is one and none sits in a texture folder.
  */
 export function readUnreadableSelection(
-	fileNames: readonly string[]
+	paths: readonly string[]
 ): UnreadableSelection | null {
-	const blender = fileNames.find((name) => BLENDER.test(name))
+	const named = paths
+		.map((path) => path.replace(/\\/g, '/'))
+		.filter((path) => !SYSTEM_FILE.test(baseName(path)))
+
+	const blender = named.find((path) => BLENDER.test(path))
 	if (blender) return { kind: 'blender', fileName: baseName(blender) }
 
-	const archive = fileNames.find((name) => ARCHIVE.test(name))
+	const archive = named.find((path) => ARCHIVE.test(path))
 	if (archive) return { kind: 'archive', fileName: baseName(archive) }
 
-	if (fileNames.length > 0 && fileNames.every((name) => PHOTO.test(name))) {
+	if (
+		named.length > 0 &&
+		named.every((path) => PHOTO.test(path) && !TEXTURE_FOLDER.test(path))
+	) {
 		return { kind: 'photos' }
 	}
 
@@ -55,5 +75,5 @@ export function unreadableSelectionOf(
 }
 
 function baseName(path: string): string {
-	return path.slice(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1)
+	return path.slice(path.lastIndexOf('/') + 1)
 }

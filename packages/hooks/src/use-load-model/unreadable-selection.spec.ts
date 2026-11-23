@@ -15,6 +15,25 @@ describe('readUnreadableSelection', () => {
 		expect(readUnreadableSelection(names)).toEqual({ kind: 'photos' })
 	})
 
+	it('ignores what the operating system leaves in a folder', () => {
+		expect(
+			readUnreadableSelection([
+				'shoot/.DS_Store',
+				'shoot/front.jpg',
+				'shoot/Thumbs.db'
+			])
+		).toEqual({ kind: 'photos' })
+	})
+
+	it("does not read a model's texture folder as photos", () => {
+		expect(
+			readUnreadableSelection([
+				'chair/textures/wood.png',
+				'chair/textures/n.png'
+			])
+		).toBeNull()
+	})
+
 	it('does not read photos beside anything else as photos', () => {
 		expect(readUnreadableSelection(['front.jpg', 'notes.txt'])).toBeNull()
 	})
@@ -29,6 +48,17 @@ describe('readUnreadableSelection', () => {
 		expect(readUnreadableSelection(['chair.blend1'])).toEqual({
 			kind: 'blender',
 			fileName: 'chair.blend1'
+		})
+	})
+
+	it('names a Blender file before an archive, and an archive before photos', () => {
+		expect(readUnreadableSelection(['a.zip', 'b.blend'])).toEqual({
+			kind: 'blender',
+			fileName: 'b.blend'
+		})
+		expect(readUnreadableSelection(['front.jpg', 'a.zip'])).toEqual({
+			kind: 'archive',
+			fileName: 'a.zip'
 		})
 	})
 
