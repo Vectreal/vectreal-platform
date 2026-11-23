@@ -216,9 +216,15 @@ function PlanCell({
 									</Badge>
 								)}
 							</div>
-							{price.billedLabel && (
+							{/*
+							  A plan sold monthly only keeps its monthly price on the
+							  yearly toggle, and says so, so the missing saving reads
+							  as how the plan is sold rather than as a mistake.
+							*/}
+							{(price.billedLabel ||
+								(period === 'annual' && price.period === 'monthly')) && (
 								<p className="text-muted-foreground text-label-xs mt-1">
-									{price.billedLabel}
+									{price.billedLabel ?? 'billed monthly'}
 								</p>
 							)}
 						</div>

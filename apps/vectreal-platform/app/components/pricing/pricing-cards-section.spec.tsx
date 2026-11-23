@@ -157,6 +157,18 @@ it.each([LIVE_EUR, null])(
 	}
 )
 
+it.each([LIVE_EUR, null])(
+	'labels a plan sold monthly only as billed monthly on the yearly toggle (%o)',
+	(prices) => {
+		/*
+		  Business has no yearly price. Without a label, its unchanged price and
+		  missing saving on the yearly toggle read as a mistake.
+		*/
+		expect(pricesShown('annual', prices).text).toContain('billed monthly')
+		expect(pricesShown('monthly', prices).text).not.toContain('billed monthly')
+	}
+)
+
 it('prices Free in the currency Stripe priced the plans in', () => {
 	const usd = JSON.parse(
 		JSON.stringify(LIVE_EUR).replaceAll('"eur"', '"usd"')
