@@ -13,31 +13,13 @@ on:
   merge_group:
     branches:
       - 'main'
+  # No paths filter here either. A push run checks only what is affected since
+  # the previous push, so a commit the filter skipped was never checked by any
+  # run, and the production deploy can skip its own gate only when every main
+  # commit has a green run (cd-platform-production.yaml).
   push:
     branches:
       - 'main'
-    paths:
-      - 'apps/vectreal-platform/**'
-      - 'apps/img-to-3d-runtime/**'
-      - 'packages/core/**'
-      - 'packages/embed/**'
-      - 'packages/hooks/**'
-      - 'packages/sdk/**'
-      - 'packages/viewer/**'
-      - 'packages/viewer-e2e/**'
-      - 'shared/**'
-      - 'storybook/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - 'nx.json'
-      - 'eslint.config.mts'
-      - 'vitest.shared.mts'
-      - 'vitest.setup.mts'
-      - 'tsconfig.base.json'
-      - '.github/workflows/ci-quality.yaml'
-      - '.github/workflows/cd-platform-staging.yaml'
-      - '.github/workflows/cd-platform-production.yaml'
 
 permissions:
   contents: read
