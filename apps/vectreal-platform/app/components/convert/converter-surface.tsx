@@ -62,6 +62,7 @@ import {
 	KEPT_CONVERSIONS,
 	DESTRUCTIVE_OPTIONS,
 	measuredBytes,
+	missingTexturesNote,
 	refusalMessage,
 	type Conversion
 } from './converter-surface.utils'
@@ -853,6 +854,8 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	}
 
 	const isReady = status === 'ready' && Boolean(file)
+	/* The files a glTF went without, said beside the file it is about. */
+	const textureNote = file ? missingTexturesNote(file) : null
 	const stageBox = useTrackedHeight(rootRef)
 
 	return (
@@ -1011,27 +1014,32 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 					  the file it would discard instead, and the primary gets a row of
 					  its own.
 					*/}
-					<div className="flex min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1">
-						<p className="text-muted-foreground min-w-0 text-sm">
-							<span className="text-foreground truncate font-medium">
-								{file.name}
-							</span>
-							{sourceBytes !== null && <> · {formatFileSize(sourceBytes)}</>}
-						</p>
-						<button
-							type="button"
-							onClick={startOver}
-							/*
+					<div className="flex min-w-0 flex-col gap-2">
+						<div className="flex min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1">
+							<p className="text-muted-foreground min-w-0 text-sm">
+								<span className="text-foreground truncate font-medium">
+									{file.name}
+								</span>
+								{sourceBytes !== null && <> · {formatFileSize(sourceBytes)}</>}
+							</p>
+							<button
+								type="button"
+								onClick={startOver}
+								/*
 							  `isHandingOff` as well as `isConverting`. "Convert
 							  another" clears the source the publisher draft is
 							  built from, so pressing it during "Opening the
 							  publisher" emptied the model mid-serialization.
 							*/
-							disabled={isConverting || isHandingOff}
-							className="text-muted-foreground hover:text-foreground text-sm underline underline-offset-4 transition-colors disabled:opacity-50"
-						>
-							Convert another
-						</button>
+								disabled={isConverting || isHandingOff}
+								className="text-muted-foreground hover:text-foreground text-sm underline underline-offset-4 transition-colors disabled:opacity-50"
+							>
+								Convert another
+							</button>
+						</div>
+						{textureNote && (
+							<p className="text-muted-foreground text-sm">{textureNote}</p>
+						)}
 					</div>
 
 					{options.length > 0 && (

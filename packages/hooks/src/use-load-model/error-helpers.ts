@@ -1,4 +1,8 @@
-import { isMissingAssetsError, ModelFetchError } from '@vctrl/core/model-loader'
+import {
+	isMissingAssetsError,
+	missingFilesOf,
+	ModelFetchError
+} from '@vctrl/core/model-loader'
 
 import { StructuredLoadError } from './types'
 
@@ -66,7 +70,11 @@ export const normalizeLocalLoadError = (
 		recoverable: true,
 		source: 'local-upload',
 		cause: error,
-		context
+		/*
+		  The files the model named and did not get, so the refusal can name
+		  them; empty for any other failure. Read through `refusalFileNames`.
+		*/
+		context: { ...context, missingFiles: missingFilesOf(error) }
 	})
 }
 
@@ -160,5 +168,29 @@ function hostOf(url: string): string | null {
 		return new URL(url, globalThis.location?.href).host
 	} catch {
 		return null
+	}
+}
+
+/**
+ * What a refusal can name for the reader: the files a model named and did not
+ * get, and the models a selection held more than one of. Empty when the error
+ * carries neither. The one reading of the context keys both are written under.
+ */
+export function refusalFileNames(error: StructuredLoadError | null): {
+	model: string | null
+	missing: readonly string[]
+	models: readonly string[]
+} {
+	const context = error?.context ?? {}
+	const strings = (value: unknown): readonly string[] =>
+		Array.isArray(value)
+			? value.filter((item): item is string => typeof item === 'string')
+			: []
+
+	return {
+		model: typeof context.fileName === 'string' ? context.fileName : null,
+		missing:
+			error?.code === 'missing_assets' ? strings(context.missingFiles) : [],
+		models: error?.code === 'multiple_models' ? strings(context.fileNames) : []
 	}
 }

@@ -38,7 +38,9 @@ vi.mock('../../lib/posthog/posthog-react', () => ({ usePostHog: () => null }))
 vi.mock('../../lib/persistence/pending-scene-idb', () => ({
 	clearPendingSceneDraft: vi.fn(async () => undefined)
 }))
-vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
+vi.mock('sonner', () => ({
+	toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() }
+}))
 
 const SOURCE = { kind: 'url', url: '/rocket.glb' } as const
 const outcome = (
@@ -57,6 +59,7 @@ beforeEach(() => {
 	resetSceneState.mockReset()
 	vi.mocked(toast.error).mockReset()
 	vi.mocked(toast.success).mockReset()
+	vi.mocked(toast.warning).mockReset()
 })
 
 describe('useSceneUpload', () => {
@@ -69,6 +72,24 @@ describe('useSceneUpload', () => {
 		expect(load).toHaveBeenCalledWith(SOURCE)
 		expect(resetSceneState).toHaveBeenCalledTimes(1)
 		expect(toast.success).toHaveBeenCalledWith('Loaded rocket.glb')
+	})
+
+	it('says which images a glTF opened without, in place of "Loaded"', async () => {
+		load.mockResolvedValue({
+			...outcome('ready'),
+			file: { name: 'scene.gltf', missingTextures: ['textures/wood.png'] }
+		})
+		const { result } = renderHook(() => useSceneUpload())
+
+		await act(() =>
+			result.current.openModel({ kind: 'files', files: [] as File[] })
+		)
+
+		expect(resetSceneState).toHaveBeenCalledTimes(1)
+		expect(toast.success).not.toHaveBeenCalled()
+		expect(toast.warning).toHaveBeenCalledWith(
+			'scene.gltf opened without textures/wood.png, which did not come with it, so those surfaces show their plain color. To see them textured, drop the whole folder it lives in.'
+		)
 	})
 
 	it('leaves the scene to a newer load that took the stage', async () => {

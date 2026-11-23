@@ -161,6 +161,34 @@ describe('a single model reaches the loader for its format', () => {
 })
 
 describe('a bundle reaches the loader with its siblings', () => {
+	it('carries the images a glTF loaded without onto the model it puts on screen', async () => {
+		const { ctx, loadGLTFWithAssetsToThreeJS } = context()
+		loadGLTFWithAssetsToThreeJS.mockResolvedValueOnce({
+			scene: { name: 'scene.gltf', assetCount: 1 },
+			animations: [],
+			document: {},
+			missingTextures: ['textures/wood.png']
+		} as never)
+
+		const loaded = await loadModelFromFiles(
+			[file('scene.gltf'), file('scene.bin')],
+			ctx
+		)
+
+		expect(loaded.file.missingTextures).toEqual(['textures/wood.png'])
+	})
+
+	it('carries nothing when the glTF brought every image', async () => {
+		const { ctx } = context()
+
+		const loaded = await loadModelFromFiles(
+			[file('scene.gltf'), file('scene.bin')],
+			ctx
+		)
+
+		expect(loaded.file).not.toHaveProperty('missingTextures')
+	})
+
 	it('passes the files beside a .gltf to the glTF loader', async () => {
 		const { ctx, loadGLTFWithAssetsToThreeJS, loadToThreeJS } = context()
 		const gltf = file('scene.gltf')
@@ -285,6 +313,13 @@ describe('a selection that is not one model is refused, and says why', () => {
 		)
 
 		expect(loaded.file.name).toBe('one.glb')
+	})
+
+	it('names the models in the order the owner declares, a glTF first', async () => {
+		const error = await loadError([file('chair.fbx'), file('chair.gltf')])
+
+		expect(error.code).toBe('multiple_models')
+		expect(error.context?.fileNames).toEqual(['chair.gltf', 'chair.fbx'])
 	})
 
 	it('counts an upper-case model among the multiple', async () => {

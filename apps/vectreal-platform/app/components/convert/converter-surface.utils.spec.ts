@@ -5,6 +5,7 @@ import { convertPairBySlug } from '../../lib/convert/convert-pairs'
 import {
 	downloadContainer,
 	measuredBytes,
+	missingTexturesNote,
 	refusalMessage
 } from './converter-surface.utils'
 
@@ -96,10 +97,74 @@ describe('refusalMessage', () => {
 		)
 	})
 
+	it('names the models, and keeps the one this page converts', () => {
+		const error = {
+			code: 'multiple_models',
+			context: { fileNames: ['chair.gltf', 'chair.fbx'] }
+		} as never
+		const fbx = convertPairBySlug('fbx-to-glb')!
+
+		expect(refusalMessage(error, gltf, gltfCopy)).toBe(
+			'That folder holds chair.gltf and chair.fbx. Leave just chair.gltf, with its own files.'
+		)
+		expect(refusalMessage(error, fbx, null)).toBe(
+			'That selection holds chair.gltf and chair.fbx. Drop just chair.fbx.'
+		)
+		expect(
+			refusalMessage(
+				{
+					code: 'multiple_models',
+					context: { fileNames: ['chair.fbx', 'chair.stl'] }
+				} as never,
+				glb,
+				null
+			)
+		).toBe('That selection holds chair.fbx and chair.stl. Drop just chair.fbx.')
+	})
+
+	it('names the files a model did not get', () => {
+		const error = {
+			code: 'missing_assets',
+			context: { fileName: 'chair.gltf', missingFiles: ['textures/wood.png'] }
+		} as never
+
+		expect(refusalMessage(error, gltf, gltfCopy)).toBe(
+			'chair.gltf needs textures/wood.png, which did not come with it. Drop the folder it lives in.'
+		)
+		// A sample opened by URL names no file, and has no folder to drop.
+		expect(
+			refusalMessage(
+				{
+					code: 'missing_assets',
+					context: { missingFiles: ['textures/wood.png'] }
+				} as never,
+				gltf,
+				gltfCopy
+			)
+		).toBe(gltfCopy!.refusal)
+	})
+
 	it('falls back to the bundle refusal, then to the format sentence', () => {
 		expect(refusalMessage(null, gltf, gltfCopy)).toBe(gltfCopy!.refusal)
 		expect(refusalMessage(null, glb, null)).toBe(
 			`Check it is a valid ${glb.fromLabel}.`
 		)
+	})
+})
+
+describe('missingTexturesNote', () => {
+	it('names the images a glTF converts without', () => {
+		expect(
+			missingTexturesNote({
+				name: 'scene.gltf',
+				missingTextures: ['textures/wood.png']
+			})
+		).toBe(
+			'textures/wood.png did not come with scene.gltf, so those surfaces show their plain color. Drop the folder it lives in to keep them textured.'
+		)
+	})
+
+	it('says nothing when nothing was missing', () => {
+		expect(missingTexturesNote({ name: 'chair.glb' })).toBeNull()
 	})
 })

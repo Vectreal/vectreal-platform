@@ -29,6 +29,10 @@ import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 import { stripDecodedDracoExtension } from '../draco/strip-decoded-draco-extension'
 import { stripDecodedMeshoptExtension } from '../meshopt/meshopt-codec'
 import { threeObjectToGLB } from '../model-exporter/three-object-glb'
+import {
+	dropTexturesWithoutImage,
+	preferArrivedImages
+} from '../model-loader/missing-assets'
 
 export type LoadResult = {
 	document: Document
@@ -166,9 +170,12 @@ export async function loadFromJSON(
 	emitProgress('Loading model from JSON document', 0)
 
 	try {
+		preferArrivedImages(json)
 		const document = await io.readJSON(json)
 		stripDecodedDracoExtension(document)
 		stripDecodedMeshoptExtension(document)
+		/* A glTF dropped without some of its images loaded without them; so does its optimizable copy. */
+		dropTexturesWithoutImage(document)
 		const originalReport = inspect(document)
 		normalizeURIs(document)
 		const binary = await exportFn(document)

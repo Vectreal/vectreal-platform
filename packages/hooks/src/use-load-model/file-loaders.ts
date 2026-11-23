@@ -269,7 +269,10 @@ const loadGltfModel = async (
 				type: ModelFileTypes.gltf,
 				name: gltfFile.name,
 				sourcePackageBytes,
-				sourceTextureBytes: textureBytes
+				sourceTextureBytes: textureBytes,
+				...(result.missingTextures && {
+					missingTextures: result.missingTextures
+				})
 			}
 		}
 	} catch (error) {

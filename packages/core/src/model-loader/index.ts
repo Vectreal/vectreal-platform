@@ -19,7 +19,11 @@ export {
   name came to disagree in the first place.
 */
 export { referencedUris } from './referenced-assets'
-export { isMissingAssetsError, missingAssetsError } from './missing-assets'
+export {
+	isMissingAssetsError,
+	missingAssetsError,
+	missingFilesOf
+} from './missing-assets'
 // For a page that draws a published file with three's own loader.
 export { registerBakedLightmap } from './baked-lightmap-plugin'
 /*

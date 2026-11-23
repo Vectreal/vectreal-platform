@@ -40,7 +40,11 @@ import {
 	getThreeKtx2Loader,
 	prepareThreeKtx2Transcoder
 } from './ktx2-three-loader'
-import { missingAssetsError } from './missing-assets'
+import {
+	dropTexturesWithoutImage,
+	missingAssetsError,
+	preferArrivedImages
+} from './missing-assets'
 import { registerNonColorVertexColors } from './non-color-vertex-colors'
 import { referencedAssetNames, referencedUris } from './referenced-assets'
 import { resolveModifiedUrl } from './resolve-modified-url'
@@ -383,10 +387,27 @@ export class ModelLoader {
 			*/
 			const bytesFor = (uri: string) => referenceIn(assets, uri, modelPath)
 
+			/*
+			  Every reference that found no file, images and buffers both, so
+			  a refusal names all of them at once. Throwing at the images
+			  first named only the textures of a glTF missing its `.bin` too,
+			  and the visitor who brought them was refused a second time for a
+			  file the first answer never mentioned.
+
+			  A missing image alone is not a refusal: the model loads without
+			  that texture, the way an OBJ or an FBX without its images does,
+			  and `missingTextures` says which surfaces went without. Only a
+			  missing buffer (the geometry itself) or an image the glTF gives
+			  no source for at all stops the load.
+			*/
+			const missingImages: string[] = []
+			const missingBuffers: string[] = []
+			const missingFiles: string[] = []
+			const missingImageFiles: string[] = []
+			let malformedImage = false
+
 			// Validate that referenced images exist in assets
 			if (gltfJson.images) {
-				const missingImages: string[] = []
-
 				gltfJson.images.forEach((image, index: number) => {
 					// Check if image has a URI reference
 					if (image.uri) {
@@ -395,6 +416,7 @@ export class ModelLoader {
 
 						if (!bytesFor(image.uri)) {
 							missingImages.push(`Image ${index}: ${image.uri}`)
+							missingImageFiles.push(fileNameOf(image.uri))
 						}
 					} else if (
 						typeof image.bufferView !== 'number' ||
@@ -402,15 +424,9 @@ export class ModelLoader {
 					) {
 						// Image must have either a URI or a valid bufferView index (>= 0)
 						missingImages.push(`Image ${index}: (no URI or bufferView)`)
+						malformedImage = true
 					}
 				})
-
-				if (missingImages.length > 0) {
-					const availableAssets = Array.from(assets.keys()).join(', ')
-					throw missingAssetsError(
-						`Missing required image files:\n${missingImages.join('\n')}\n\nAvailable assets: ${availableAssets || '(none)'}`
-					)
-				}
 			}
 
 			/*
@@ -425,8 +441,6 @@ export class ModelLoader {
 			  go looking for, the same way an image with a `bufferView` has none.
 			*/
 			if (gltfJson.buffers) {
-				const missingBuffers: string[] = []
-
 				/*
 				  ONLY THE BUFFERS THE DOCUMENT ACTUALLY READS. Checking every
 				  declaration refused documents that load perfectly well: an
@@ -446,15 +460,24 @@ export class ModelLoader {
 
 					if (!bytesFor(buffer.uri)) {
 						missingBuffers.push(`Buffer ${index}: ${buffer.uri}`)
+						missingFiles.push(fileNameOf(buffer.uri))
 					}
 				})
+			}
 
-				if (missingBuffers.length > 0) {
-					const availableAssets = Array.from(assets.keys()).join(', ')
-					throw missingAssetsError(
-						`Missing required buffer files:\n${missingBuffers.join('\n')}\n\nAvailable assets: ${availableAssets || '(none)'}`
-					)
-				}
+			if (missingBuffers.length > 0 || malformedImage) {
+				missingFiles.unshift(...missingImageFiles)
+				const availableAssets = Array.from(assets.keys()).join(', ')
+				const sections = [
+					missingImages.length > 0 &&
+						`Missing required image files:\n${missingImages.join('\n')}`,
+					missingBuffers.length > 0 &&
+						`Missing required buffer files:\n${missingBuffers.join('\n')}`
+				].filter(Boolean)
+				throw missingAssetsError(
+					`${sections.join('\n\n')}\n\nAvailable assets: ${availableAssets || '(none)'}`,
+					missingFiles
+				)
 			}
 
 			/*
@@ -499,7 +522,7 @@ export class ModelLoader {
 			)
 
 			await this.codecs.registerDecoders(gltfJson.extensionsUsed ?? [])
-			const document = await this.io.readJSON({
+			const jsonDocument = {
 				json: gltfJson,
 				resources: resources.entries().reduce(
 					(acc, [key, value]) => {
@@ -508,9 +531,14 @@ export class ModelLoader {
 					},
 					{} as Record<string, Uint8Array<ArrayBuffer>>
 				)
-			})
+			}
+			preferArrivedImages(jsonDocument)
+			const document = await this.io.readJSON(jsonDocument)
 			stripDecodedDracoExtension(document)
 			stripDecodedMeshoptExtension(document)
+			const missingTextures = [
+				...new Set(dropTexturesWithoutImage(document).map(fileNameOf))
+			]
 
 			const totalSize =
 				gltfBuffer.byteLength +
@@ -528,7 +556,8 @@ export class ModelLoader {
 				type: ModelFileTypes.gltf,
 				size: totalSize,
 				name: fileName,
-				loadTime
+				loadTime,
+				...(missingTextures.length > 0 && { missingTextures })
 			}
 		} catch (error) {
 			throw new Error(`Failed to load GLTF with assets: ${error}`, {
@@ -630,7 +659,8 @@ export class ModelLoader {
 							size: modelResult.size,
 							name: modelResult.name,
 							loadTime: modelResult.loadTime,
-							glbBytes: modelResult.glbBytes
+							glbBytes: modelResult.glbBytes,
+							missingTextures: modelResult.missingTextures
 						})
 					},
 					(error) => {
@@ -948,5 +978,18 @@ export class ModelLoader {
 				items: { loaded, total }
 			})
 		}
+	}
+}
+
+/**
+ * A glTF URI as the file it names on disk. URIs are percent-encoded by spec, so
+ * `wood%20grain.png` is the file a visitor knows as `wood grain.png`; one that
+ * does not decode is already its own spelling.
+ */
+function fileNameOf(uri: string): string {
+	try {
+		return decodeURIComponent(uri)
+	} catch {
+		return uri
 	}
 }

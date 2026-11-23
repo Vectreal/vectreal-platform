@@ -20,6 +20,7 @@ export {
 	fetchManifestAssetData,
 	type FetchManifestAssetsOptions
 } from './utils/fetch-manifest-assets'
+export { refusalFileNames } from './error-helpers'
 export {
 	unreadableSelectionOf,
 	type UnreadableSelection
