@@ -34,11 +34,11 @@
 		"class-variance-authority": "^0.7.1",
 		"cmdk": "^1.1.1",
 		"framer-motion": "^13.0.0",
-		"lucide-react": "^1.66.0",
+		"lucide-react": "^1.73.0",
 		"react": "catalog:",
 		"react-day-picker": "^10.0.2",
-		"react-hook-form": "^7.91.0",
-		"react-resizable-panels": "^4.16.1",
+		"react-hook-form": "^7.92.0",
+		"react-resizable-panels": "^4.24.0",
 		"sonner": "^2.0.8",
 		"vaul": "^1.1.2"
 	}
