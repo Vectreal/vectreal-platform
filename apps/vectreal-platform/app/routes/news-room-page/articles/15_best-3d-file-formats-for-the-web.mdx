@@ -1,9 +1,9 @@
 ---
-title: "The best 3D file formats for the web in 2026"
+title: "Best 3D file format for the web: GLB, glTF, USDZ, OBJ, STL, FBX"
 slug: "best-3d-file-formats-for-the-web"
-excerpt: "For a 3D model on a web page, use glTF 2.0 packed as a single GLB file, and compress its textures and geometry before it ships. Add a USDZ copy only if people on iPhone and iPad should be able to place the model in their room. OBJ, STL and FBX are formats to convert from, not to publish."
+excerpt: "For a 3D model on a web page, use glTF 2.0 packed as a single GLB file, and compress its textures and geometry before it ships. Add a USDZ copy only if people on iPhone and iPad should be able to place the model in their room. OBJ, STL and FBX are formats to convert from: STL is built for 3D scanning and printing, FBX for moving models between 3D apps."
 publishedAt: "2026-10-14"
-updatedAt: "2026-10-14"
+updatedAt: "2026-11-23"
 category: "concepts"
 tags:
   - "formats"
@@ -59,7 +59,7 @@ When people work on the file rather than ship it. A `.gltf` is a readable text f
 
 ## Do I need a USDZ file as well?
 
-Only for Apple's AR. AR Quick Look on iPhone, iPad and Vision Pro opens `.usdz` and `.reality` files, and not glTF ([Apple, AR Quick Look](https://developer.apple.com/augmented-reality/quick-look/)). If a shopper should be able to put your chair in their living room from Safari, the page needs a USDZ beside the GLB.
+Only for Apple's AR. AR Quick Look on iPhone, iPad and Vision Pro opens `.usdz` and `.reality` files, and not glTF ([Apple, AR Quick Look](https://developer.apple.com/augmented-reality/quick-look/)). If a shopper should be able to put your chair in their living room from Safari, the page needs a USDZ beside the GLB. On Shopify you don't make it yourself: Shopify converts the GLB you upload so both versions exist ([Shopify Help Center](https://help.shopify.com/en/manual/products/product-media/product-media-types)). For any other page, the [GLB to USDZ converter](https://vectreal.com/convert/glb-to-usdz?utm_source=newsroom&utm_medium=article&utm_campaign=best-3d-file-formats-for-the-web) writes one, and [how to convert GLB or glTF to USDZ](https://vectreal.com/news-room/convert-glb-gltf-to-usdz?utm_source=newsroom&utm_medium=article&utm_campaign=best-3d-file-formats-for-the-web) covers what changes on the way.
 
 `<model-viewer>` handles that with a second attribute, `ios-src`, pointing at the USDZ. Without one it can generate a USDZ on the fly, though its own documentation says animations are not supported that way yet ([model-viewer documentation](https://modelviewer.dev/docs/)).
 
@@ -121,4 +121,4 @@ If what you have is an FBX, an OBJ, an STL or a loose glTF folder, turn it into 
 
 [Convert a file](https://vectreal.com/convert?utm_source=newsroom&utm_medium=article&utm_campaign=best-3d-file-formats-for-the-web)
 
-All sources were checked on 5 October 2026, the three.js and Babylon.js loader pages on 11 October.
+All sources were checked on 5 October 2026, the three.js and Babylon.js loader pages on 11 October, and Shopify's product media page on 23 November.
