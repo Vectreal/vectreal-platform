@@ -5,6 +5,7 @@
   whose design owns them.
 */
 export { FeatureCompareGrid } from './feature-compare-grid'
+export { MadeForYouSection } from './made-for-you-section'
 export {
 	PricingCardsSection,
 	type PricingCardsSectionProps
