@@ -342,10 +342,10 @@ export const PLAN_OFFER_DESCRIPTIONS: Record<Plan, string> = {
 // ---------------------------------------------------------------------------
 
 /*
-  What a brand pays for models we make, in euros. PLACEHOLDERS from the
-  "Offer and pricing" proposal (Notion), decided on Sun 15 Nov: change them
-  here and the pricing page follows. The pilot is five standard models plus
-  the setup, so its price is derived, never typed twice.
+  What a brand pays for models we make, in euros, as decided on 16 Nov on the
+  "Offer and pricing" page (Notion): change them here and the pricing page
+  follows. The pilot is five standard models plus the setup, so its price is
+  derived, never typed twice.
 */
 export const MADE_FOR_YOU_PRICES = {
 	free: 0,
@@ -383,7 +383,7 @@ export const PRICING_PAGE_COPY = {
 		rows: {
 			free: {
 				title: 'Free model',
-				body: 'One product, from your 3D or CAD data, a short video, or three photos. GLB and USDZ files in two working days.'
+				body: 'One product, from your 3D or CAD data, a one-minute walk-around video, or three photos of a simple product. GLB and USDZ files in two working days.'
 			},
 			standard: {
 				title: 'Standard model',
@@ -391,12 +391,12 @@ export const PRICING_PAGE_COPY = {
 			},
 			artist: {
 				title: 'Artist model',
-				body: 'A complex product, modelled by a vetted 3D artist. A preview to approve first, two revision rounds.',
+				body: 'A complex product, modeled by a vetted 3D artist. A preview to approve first, two revision rounds, about ten working days.',
 				byQuote: 'By quote, typically'
 			},
 			setup: {
 				title: 'Setup',
-				body: "Your models in Shopify's own 3D slot, plus the 3D scene on your product page.",
+				body: "Your models in Shopify's own 3D slot, plus the 3D scene and scroll section on your product page.",
 				once: 'once'
 			}
 		},
