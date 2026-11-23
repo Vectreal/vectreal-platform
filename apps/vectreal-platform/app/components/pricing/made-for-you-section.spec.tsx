@@ -8,12 +8,12 @@ import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { expect, it } from 'vitest'
 
-import { MadeForYouSection } from './made-for-you-section'
 import {
 	MADE_FOR_YOU_PRICES,
 	PILOT_PRICE,
 	PRICING_PAGE_COPY
 } from '../../constants/product-copy'
+import { MadeForYouSection } from './made-for-you-section'
 
 const COPY = PRICING_PAGE_COPY.madeForYou
 
