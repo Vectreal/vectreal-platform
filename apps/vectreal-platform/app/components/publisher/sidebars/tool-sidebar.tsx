@@ -1,9 +1,6 @@
 import { useAtomValue, useSetAtom } from 'jotai/react'
 import { memo, useCallback, useEffect } from 'react'
 
-import { ComposeSidebar } from './compose-sidebar'
-import { getComposeToolDefinition } from './compose-sidebar/compose-tools'
-import { DynamicSidebar } from './dynamic-sidebar'
 import {
 	arePublisherActionsDisabledAtom,
 	cameraToolOpenRequestAtom,
@@ -16,6 +13,9 @@ import {
 	PUBLISHER_BELOW_TOOL_BAR,
 	PUBLISHER_LAYER
 } from '../shell/shell-layout'
+import { ComposeSidebar } from './compose-sidebar'
+import { getComposeToolDefinition } from './compose-sidebar/compose-tools'
+import { DynamicSidebar } from './dynamic-sidebar'
 
 interface ToolSidebarProps {
 	isMobile?: boolean

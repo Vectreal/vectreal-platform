@@ -1,5 +1,5 @@
-import type { AgentScope } from './agent-scopes'
 import type { DashboardOperation } from '../dashboard/dashboard-operations'
+import type { AgentScope } from './agent-scopes'
 
 /**
  * Which scope lets an agent perform each dashboard operation, or `null` for an

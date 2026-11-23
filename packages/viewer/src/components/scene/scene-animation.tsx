@@ -13,15 +13,15 @@ import {
 } from './resolve-playback-clips'
 
 import type {
+	ViewerCommand,
+	ViewerInteractionEvent
+} from '../../types/viewer-interactions'
+import type {
 	PlaybackAction,
 	PlaybackClip,
 	PlaybackEffect,
 	PlaybackState
 } from './animation-playback'
-import type {
-	ViewerCommand,
-	ViewerInteractionEvent
-} from '../../types/viewer-interactions'
 import type { AnimationLoopMode, AnimationSettings } from '@vctrl/core'
 import type { AnimationAction, AnimationClip, Object3D } from 'three'
 

@@ -11,18 +11,18 @@ import {
 } from 'react'
 import { Link } from 'react-router'
 
-import { HERO_POSTERS, HERO_STILLS } from './hero-assets'
-import { ArrowLink } from '../arrow-link'
-import { FigureLabel, Readout } from './hero-readout'
-import styles from './hero-sheet.module.css'
-import { createHeroStore, fallBackToStill } from './hero-store'
-import { useMountWhenVisibleAndIdle } from './use-mount-when-visible-and-idle'
 import { HOME_PAGE_COPY } from '../../../constants/product-copy'
 import {
 	HERO_SOURCE_SAMPLE_ID,
 	publisherSampleHref
 } from '../../../lib/samples/sample-models'
+import { ArrowLink } from '../arrow-link'
 import { StageBoundary } from '../stage/stage-boundary'
+import { HERO_POSTERS, HERO_STILLS } from './hero-assets'
+import { FigureLabel, Readout } from './hero-readout'
+import styles from './hero-sheet.module.css'
+import { createHeroStore, fallBackToStill } from './hero-store'
+import { useMountWhenVisibleAndIdle } from './use-mount-when-visible-and-idle'
 
 import type { HeroStageElements } from './hero-stage-client'
 

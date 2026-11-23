@@ -7,13 +7,13 @@ import { valueMappings } from '@shared/utils'
 import { resolveLighting } from '@vctrl/core'
 import { useState } from 'react'
 
-import StageColorField from './stage-color-field'
 import { DrillDown, DrillDownView } from '../../drill-down'
 import {
 	type BackgroundType,
 	backgroundOfType
 } from '../lighting-settings/lighting-edits'
 import { useLightingDraft } from '../lighting-settings/use-lighting-draft'
+import StageColorField from './stage-color-field'
 
 const BACKGROUNDS: { type: BackgroundType; label: string }[] = [
 	{ type: 'none', label: 'None' },

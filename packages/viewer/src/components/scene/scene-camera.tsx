@@ -30,7 +30,6 @@ import { prefersReducedMotion } from './reduced-motion'
 import { useCameraFlight } from './use-camera-flight'
 import { viewportAspectOf } from './viewport-aspect'
 
-import type { InitialFramingControls } from './initial-framing'
 import type {
 	ViewerCommand,
 	ViewerCommandExecutor,
@@ -40,6 +39,7 @@ import type {
 	SceneCameraSnapshot,
 	SceneCameraSnapshotCapture
 } from '../../types/viewer-types'
+import type { InitialFramingControls } from './initial-framing'
 
 /**
  * Default camera options for the VectrealViewer.

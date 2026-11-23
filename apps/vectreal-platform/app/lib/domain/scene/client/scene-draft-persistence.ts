@@ -1,8 +1,8 @@
 import { SupersededError } from '@vctrl/core/model-optimizer'
 
-import { serializeSceneAssetData } from './scene-draft-serialization'
 import { originalPreset } from '../../../../constants/optimizations'
 import { savePendingSceneDraft } from '../../../persistence/pending-scene-idb'
+import { serializeSceneAssetData } from './scene-draft-serialization'
 
 import type { SceneMetaState } from '../../../../types/publisher-config'
 import type { Optimizations, SceneSettings, ServerSceneData } from '@vctrl/core'

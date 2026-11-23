@@ -9,7 +9,6 @@ import { join } from 'node:path'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { getStandInArticles } from './news-stand-in'
 import {
 	INDEXNOW_KEY,
 	articleUrlsLiveBetween,
@@ -17,6 +16,7 @@ import {
 	submitToIndexNow
 } from '../app/lib/news/news-indexnow.server'
 import { resolvePublishedAt } from '../app/lib/news/news-schedule'
+import { getStandInArticles } from './news-stand-in'
 
 const { standIn: newest, previous } = getStandInArticles()
 const LIVE_AT = resolvePublishedAt(newest.publishedAt)

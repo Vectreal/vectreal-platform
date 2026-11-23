@@ -12,6 +12,7 @@
  * `api-key:read` before it calls this.
  */
 
+import { decryptEmbedToken } from '../../security/embed-token-cipher.server'
 import {
 	isApiKeyKindDisclosable,
 	type ApiKeyRowValue
@@ -20,7 +21,6 @@ import {
 	resolveApiKeyState,
 	type ApiKeyLifecycleRow
 } from './api-key-lifecycle'
-import { decryptEmbedToken } from '../../security/embed-token-cipher.server'
 
 import type { ApiKeyKind } from './api-key-disclosure'
 

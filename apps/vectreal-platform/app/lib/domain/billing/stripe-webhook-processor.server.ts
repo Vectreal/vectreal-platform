@@ -28,12 +28,6 @@
 import { eq } from 'drizzle-orm'
 import Stripe from 'stripe'
 
-import {
-	cancelSubscription,
-	findOrganizationByCustomerId,
-	findOrganizationBySubscriptionId,
-	syncSubscriptionFromStripe
-} from './stripe-subscription-sync.server'
 import { getDbClient } from '../../../db/client'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
 import { billingWebhookEvents } from '../../../db/schema/billing/webhook-events'
@@ -43,6 +37,12 @@ import {
 	getStripeClient,
 	resolveStripeWebhookSecret
 } from '../../stripe.server'
+import {
+	cancelSubscription,
+	findOrganizationByCustomerId,
+	findOrganizationBySubscriptionId,
+	syncSubscriptionFromStripe
+} from './stripe-subscription-sync.server'
 
 // ---------------------------------------------------------------------------
 // Analytics helper

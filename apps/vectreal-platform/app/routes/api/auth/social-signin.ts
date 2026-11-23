@@ -1,12 +1,12 @@
 import { ApiResponse } from '@shared/utils'
 import { redirect } from 'react-router'
 
-import { Route } from './+types/social-signin'
 import { ensureValidCsrfFormData } from '../../../lib/http/csrf.server'
 import { recordRateLimitAttempt } from '../../../lib/http/rate-limit.server'
 import { verifyTurnstileToken } from '../../../lib/http/turnstile.server'
 import { reportServerError } from '../../../lib/observability/report-server-error.server'
 import { createSupabaseClient } from '../../../lib/supabase.server'
+import { Route } from './+types/social-signin'
 
 const OAUTH_PROVIDERS = new Set(['google', 'github'])
 

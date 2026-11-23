@@ -8,7 +8,6 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { ok, stubSceneApi } from './fixtures/scene-api-stub'
 import { BillingLimitError } from '../app/lib/domain/billing/client/billing-limit-error'
 import { executeSceneSaveOrchestrator } from '../app/lib/domain/scene/client/scene-save-orchestrator'
 import {
@@ -16,6 +15,7 @@ import {
 	reduceSaveProgress,
 	summarizeSaveProgress
 } from '../app/lib/domain/scene/client/scene-save-progress'
+import { ok, stubSceneApi } from './fixtures/scene-api-stub'
 
 import type {
 	SavePanelState,

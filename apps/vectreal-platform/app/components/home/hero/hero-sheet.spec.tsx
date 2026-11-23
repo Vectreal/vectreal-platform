@@ -8,10 +8,10 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { beforeAll, expect, it, vi } from 'vitest'
 
-import { HERO_STILLS } from './hero-assets'
-import { HeroSheet } from './hero-sheet'
 import { HOME_PAGE_COPY } from '../../../constants/product-copy'
 import { HERO_MODEL } from '../../../lib/samples/sample-models'
+import { HERO_STILLS } from './hero-assets'
+import { HeroSheet } from './hero-sheet'
 
 const HERO = HOME_PAGE_COPY.hero
 

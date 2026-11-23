@@ -6,14 +6,14 @@ import { XLogo } from '@shared/components/assets/icons/x-logo'
 import { YoutubeLogo } from '@shared/components/assets/icons/youtube-logo'
 import { Link } from 'react-router'
 
-import { useConsent } from './consent/consent-context'
-import { ThemeToggleButton } from './theme-toggle-button'
 import {
 	COMMUNITY,
 	FOOTER,
 	entersFunnel,
 	type SiteLink
 } from '../lib/navigation/site-map'
+import { useConsent } from './consent/consent-context'
+import { ThemeToggleButton } from './theme-toggle-button'
 
 const SOCIAL = [
 	{ label: 'GitHub', href: COMMUNITY.github, Icon: GithubMark },

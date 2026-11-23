@@ -6,12 +6,12 @@
 import { PERSISTED_BAKE_FILENAME, SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
 import { describe, expect, it } from 'vitest'
 
-import { hotspotArtworkFileName } from './hotspot-artwork'
-import { describePublishSource, publishSourceMatches } from './publish-source'
 import {
 	balancedPreset,
 	originalPreset
 } from '../../../constants/optimizations'
+import { hotspotArtworkFileName } from './hotspot-artwork'
+import { describePublishSource, publishSourceMatches } from './publish-source'
 
 const model = [
 	{ id: 'gltf', name: 'scene.gltf', mimeType: 'model/gltf+json' },

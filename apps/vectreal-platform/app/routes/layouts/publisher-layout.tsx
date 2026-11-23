@@ -5,7 +5,6 @@ import { Provider, useAtomValue, useSetAtom } from 'jotai/react'
 import { useCallback, useLayoutEffect } from 'react'
 import { Outlet, type MetaFunction } from 'react-router'
 
-import { Route } from './+types/publisher-layout'
 import { useConsent } from '../../components/consent/consent-context'
 import ControlsOverlay from '../../components/publisher/controls-overlay'
 import { PublisherViewerCaptureProvider } from '../../components/publisher/publisher-viewer-capture-context'
@@ -39,6 +38,7 @@ import {
 } from '../../lib/stores/publisher-config-store'
 import { createSupabaseClient } from '../../lib/supabase.server'
 import { identifyMobileRequest } from '../../lib/utils/identify-mobile-request'
+import { Route } from './+types/publisher-layout'
 
 import type {
 	PublishedSceneMetaResponse,

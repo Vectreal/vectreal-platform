@@ -1,13 +1,6 @@
 import { useAtom, useSetAtom } from 'jotai/react'
 import { memo, useCallback, useEffect, useState } from 'react'
 
-import {
-	CAMERA_REORDER_HINT_ID,
-	CameraDetail,
-	CameraList,
-	TransitionSettings
-} from './camera-views'
-import { useSceneCameras } from './use-scene-cameras'
 import { cameraToolOpenRequestAtom } from '../../../../../lib/stores/publisher-config-store'
 import { exitHotspotCameraAtom } from '../../../../../lib/stores/scene-settings-store'
 import {
@@ -16,6 +9,13 @@ import {
 	useDrillDownNavigation
 } from '../../drill-down'
 import { useAnnouncer } from '../reorder-list'
+import {
+	CAMERA_REORDER_HINT_ID,
+	CameraDetail,
+	CameraList,
+	TransitionSettings
+} from './camera-views'
+import { useSceneCameras } from './use-scene-cameras'
 
 /**
  * Opens the camera another tool linked to, once, as the panel mounts. It goes

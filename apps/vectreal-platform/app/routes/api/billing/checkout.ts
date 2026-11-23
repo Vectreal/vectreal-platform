@@ -28,7 +28,6 @@
 
 import { ApiResponse } from '@shared/utils'
 
-import { Route } from './+types/checkout'
 import { isPaidPlan, PURCHASABLE_PLANS } from '../../../constants/plan-config'
 import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
 import { planChangeAppliesImmediately } from '../../../lib/domain/billing/billing-situation'
@@ -50,6 +49,7 @@ import { getUserOrganizations } from '../../../lib/domain/user/user-repository.s
 import { ensureSameOriginMutation } from '../../../lib/http/csrf.server'
 import { reportServerError } from '../../../lib/observability/report-server-error.server'
 import { getStripeClient } from '../../../lib/stripe.server'
+import { Route } from './+types/checkout'
 
 import type { PostHogContext } from '../../../lib/posthog/posthog-middleware'
 

@@ -2,11 +2,6 @@ import { SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 
-import { EmbedErrorState } from './embed-error-state'
-import SceneEmbedInfoPopover from './scene-embed-info-popover'
-import SceneEmbedViewer from './scene-embed-viewer'
-import { useSceneEmbedScene } from './use-scene-embed-scene'
-import VectrealEmbedBadge from './vectreal-embed-badge'
 import {
 	resolveEmbedCameraControls,
 	resolveEmbedHotspotPresentation,
@@ -17,6 +12,11 @@ import { useHostedPreviewBridge } from '../../lib/domain/embed/hosted-preview-br
 import { shouldShowInfoPopover } from '../../lib/domain/scene/scene-presentation'
 import { useErrorReport } from '../../lib/observability/use-error-report'
 import { toViewerLoadingThumbnail } from '../../lib/viewer/viewer-loading-thumbnail'
+import { EmbedErrorState } from './embed-error-state'
+import SceneEmbedInfoPopover from './scene-embed-info-popover'
+import SceneEmbedViewer from './scene-embed-viewer'
+import { useSceneEmbedScene } from './use-scene-embed-scene'
+import VectrealEmbedBadge from './vectreal-embed-badge'
 
 import type { SceneEmbedManifestResponse } from '../../types/api'
 import type {

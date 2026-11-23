@@ -16,8 +16,8 @@ import {
 import { createMemoryRouter, MemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { Footer } from './footer'
 import { FOOTER, type SiteLink } from '../lib/navigation/site-map'
+import { Footer } from './footer'
 
 vi.mock('./consent/consent-context', () => ({
 	useConsent: () => ({ setPreferencesOpen: vi.fn() })

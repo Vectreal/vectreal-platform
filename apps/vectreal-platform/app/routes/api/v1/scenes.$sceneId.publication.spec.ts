@@ -8,13 +8,13 @@ import {
 import { RouterContextProvider } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { action } from './scenes.$sceneId.publication'
 import { agentActorContext } from '../../../lib/domain/agent/agent-actor-context'
 import { EntitlementRequiredError } from '../../../lib/domain/billing/entitlement-required-error'
 import { QuotaExceededError } from '../../../lib/domain/billing/quota-exceeded-error'
+import { action } from './scenes.$sceneId.publication'
 
-import type { Route } from './+types/scenes.$sceneId.publication'
 import type { StagedMutation } from '../../../lib/domain/agent/agent-idempotency.server'
+import type { Route } from './+types/scenes.$sceneId.publication'
 
 const mocks = vi.hoisted(() => ({
 	recordAgentAudit: vi.fn(),

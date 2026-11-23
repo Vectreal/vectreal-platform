@@ -5,9 +5,9 @@ import {
 } from '@vctrl/core'
 import { sceneLookSchema } from '@vctrl/sdk'
 
+import { normalizePresentationSettings } from '../scene-presentation'
 import { parseCameraSettings } from './scene-settings-camera.parser.server'
 import { normalizeHotspots } from './scene-settings-hotspots.parser.server'
-import { normalizePresentationSettings } from '../scene-presentation'
 
 import type { SceneSettings } from '@vctrl/core'
 

@@ -4,8 +4,8 @@ import { ArrowRight } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 
-import { HomeSceneTour, useHomeTour } from './home-scene-tour'
 import { HOME_PAGE_COPY } from '../../constants/product-copy'
+import { HomeSceneTour, useHomeTour } from './home-scene-tour'
 
 const COPY = HOME_PAGE_COPY.pilot
 

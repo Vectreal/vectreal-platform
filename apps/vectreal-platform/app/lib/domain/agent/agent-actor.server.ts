@@ -4,8 +4,8 @@ import { agentApiError } from './agent-api-response'
 import { evaluateAgentClaims, readBearerToken } from './agent-bearer'
 import { findAgentGrantForMember } from './agent-grant-repository.server'
 
-import type { AgentScope } from './agent-scopes'
 import type { MembershipRole } from '../dashboard/dashboard-operations'
+import type { AgentScope } from './agent-scopes'
 
 export interface AgentActor {
 	userId: string

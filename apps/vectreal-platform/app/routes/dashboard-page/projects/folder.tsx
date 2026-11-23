@@ -1,6 +1,5 @@
 import { data } from 'react-router'
 
-import { Route } from './+types/folder'
 import { ContentListing } from '../../../components/dashboard'
 import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
@@ -12,6 +11,7 @@ import {
 	getSceneFolderAncestry
 } from '../../../lib/domain/scene/server/scene-folder-repository.server'
 import { shouldRevalidateForRouteParams } from '../../../lib/navigation/dashboard-route-behavior'
+import { Route } from './+types/folder'
 
 import type { ShouldRevalidateFunction } from 'react-router'
 

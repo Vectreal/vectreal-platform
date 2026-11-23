@@ -1,13 +1,13 @@
 import { useEffect } from 'react'
 import { TextureLoader, type Texture } from 'three'
 
-import { HERO_SHADOW_URL } from './hero-assets'
-import { HERO_RESOLVED_LIGHTING } from './hero-lighting'
-import { fallBackToStill } from './hero-store'
 import { prefersReducedMotion } from '../../../lib/motion/motion-tokens'
 import { HERO_MODEL } from '../../../lib/samples/sample-models'
 import { markHeroSettled } from '../stage/hero-settled'
 import { createStageEngine } from '../stage/stage-engine'
+import { HERO_SHADOW_URL } from './hero-assets'
+import { HERO_RESOLVED_LIGHTING } from './hero-lighting'
+import { fallBackToStill } from './hero-store'
 
 import type { HeroStore } from './hero-store'
 

@@ -1,8 +1,8 @@
 import { Document, WebIO } from '@gltf-transform/core'
 import { describe, expect, it, vi } from 'vitest'
 
-import { ModelLoader } from './model-loader'
 import { ModelOptimizer } from '../model-optimizer/model-optimizer'
+import { ModelLoader } from './model-loader'
 
 /**
  * Where WebAssembly cannot compile (a CSP without `wasm-unsafe-eval`), the

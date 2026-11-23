@@ -12,8 +12,8 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { createRoutesStub, Link } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { Navigation } from './index'
 import { NAV } from '../../lib/navigation/site-map'
+import { Navigation } from './index'
 
 const session = vi.hoisted(() => ({
 	user: null as null | { email: string; user_metadata: Record<string, string> }

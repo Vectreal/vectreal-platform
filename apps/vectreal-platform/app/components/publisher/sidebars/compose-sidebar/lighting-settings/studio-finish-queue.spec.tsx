@@ -11,8 +11,8 @@ import { createStore, Provider } from 'jotai'
 import { useAtomValue } from 'jotai/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import LightingSettings from './lighting-settings-panel'
 import { lightingAtom } from '../../../../../lib/stores/scene-settings-store'
+import LightingSettings from './lighting-settings-panel'
 
 const model = vi.hoisted(() => ({ loaded: false, bake: vi.fn() }))
 

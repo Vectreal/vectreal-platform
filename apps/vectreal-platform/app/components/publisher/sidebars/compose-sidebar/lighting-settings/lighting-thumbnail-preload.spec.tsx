@@ -9,11 +9,11 @@ import { ModelProvider } from '@vctrl/hooks/use-load-model'
 import { createStore, Provider } from 'jotai'
 import { describe, expect, it, vi } from 'vitest'
 
-import LightingSettings from './lighting-settings-panel'
 import {
 	environmentThumbnail,
 	lightingSetupThumbnail
 } from '../../../../../lib/lighting/lighting-thumbnails'
+import LightingSettings from './lighting-settings-panel'
 
 vi.mock('./use-bake-preview', async (original) => ({
 	...(await original<typeof import('./use-bake-preview')>()),

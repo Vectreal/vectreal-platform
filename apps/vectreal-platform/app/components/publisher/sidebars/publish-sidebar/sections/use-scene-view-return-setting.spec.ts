@@ -8,12 +8,12 @@ import { createStore, Provider } from 'jotai'
 import { createElement, type ReactNode } from 'react'
 import { describe, expect, it } from 'vitest'
 
-import { useSceneViewReturnSetting } from './use-scene-view-return-setting'
 import {
 	cameraAtom,
 	hotspotsAtom,
 	presentationAtom
 } from '../../../../../lib/stores/scene-settings-store'
+import { useSceneViewReturnSetting } from './use-scene-view-return-setting'
 
 import type { CameraConfig, HotspotDefinition } from '@vctrl/core'
 

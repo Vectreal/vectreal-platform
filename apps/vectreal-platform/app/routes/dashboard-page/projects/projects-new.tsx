@@ -34,7 +34,6 @@ import { data, redirect, Form as RemixForm, useLocation } from 'react-router'
 import { useAuthenticityToken } from 'remix-utils/csrf/react'
 import { z, ZodError } from 'zod'
 
-import { Route } from './+types/projects-new'
 import { useRouteDrawer } from '../../../hooks/use-route-drawer'
 import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
 import {
@@ -54,6 +53,7 @@ import {
 	buildUpgradeModalState,
 	upgradeModalAtom
 } from '../../../lib/stores/upgrade-modal-store'
+import { Route } from './+types/projects-new'
 
 const projectFormSchema = z.object({
 	name: z

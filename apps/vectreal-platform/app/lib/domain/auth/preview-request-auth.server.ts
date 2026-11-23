@@ -1,11 +1,11 @@
 import { ApiResponse } from '@shared/utils'
 
-import { validatePreviewApiKeyForProject } from './preview-api-key-auth.server'
 import { UUID_REGEX } from '../../../constants/utility-constants'
 import { getAuthUser } from '../../http/auth.server'
 import { withNoStore } from '../../http/response-headers.server'
 import { hasPreviewTokenCredential } from '../embed/embed-access-policy'
 import { getProject } from '../project/project-repository.server'
+import { validatePreviewApiKeyForProject } from './preview-api-key-auth.server'
 
 /**
  * Who is asking for a scene preview: an API key holder for this project, or a

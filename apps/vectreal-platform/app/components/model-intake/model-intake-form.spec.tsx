@@ -5,8 +5,8 @@ import { createRoutesStub } from 'react-router'
 import { AuthenticityTokenProvider } from 'remix-utils/csrf/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { ModelIntakeForm } from './model-intake-form'
 import { MODEL_INTAKE_CLIENT_CONSENT_COPY } from '../../constants/model-intake-client-consent-copy'
+import { ModelIntakeForm } from './model-intake-form'
 
 import type { ModelIntakeActionData } from '../../lib/domain/model-intake/model-intake-shared'
 

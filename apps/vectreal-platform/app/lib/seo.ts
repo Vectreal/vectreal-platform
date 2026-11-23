@@ -1,8 +1,8 @@
-import { SHARE_CARD_SIZE, shareCardImagePath } from './share-card-paths'
 import {
 	PLATFORM_SOCIAL_DESCRIPTION,
 	SUPPORTED_FORMAT_NAMES
 } from '../constants/product-copy'
+import { SHARE_CARD_SIZE, shareCardImagePath } from './share-card-paths'
 
 import type { loader } from '../root'
 import type { MetaArgs, MetaDescriptor } from 'react-router'

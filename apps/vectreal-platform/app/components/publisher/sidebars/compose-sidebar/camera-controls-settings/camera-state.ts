@@ -1,8 +1,8 @@
 import { slugify } from '@shared/utils'
 import { DEFAULT_SCENE_TRANSITION } from '@vctrl/core'
 
-import { defaultCameraOptions } from './constants'
 import { applyDefaultCameraFlag } from '../../../../../lib/domain/scene/scene-camera'
+import { defaultCameraOptions } from './constants'
 
 import type {
 	CameraProps,

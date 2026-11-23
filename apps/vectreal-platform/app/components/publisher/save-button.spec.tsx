@@ -13,8 +13,8 @@ import { render, screen } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { describe, expect, it, vi } from 'vitest'
 
-import SaveButton from './save-button'
 import { dispatchSaveProgressAtom } from '../../lib/stores/save-progress-store'
+import SaveButton from './save-button'
 
 import type { SaveAvailabilityState } from '../../lib/domain/scene'
 

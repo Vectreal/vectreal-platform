@@ -1,6 +1,6 @@
-import { isImgTo3dEnabled, isImgTo3dMockMode } from './img-to-3d-gate'
 import { getPosthogClient } from '../../posthog/posthog-client.server'
 import { getOrCreateDefaultOrganization } from '../user/user-repository.server'
+import { isImgTo3dEnabled, isImgTo3dMockMode } from './img-to-3d-gate'
 
 import type { User } from '@supabase/supabase-js'
 

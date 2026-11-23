@@ -9,8 +9,8 @@ import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import DocsIndexPage from './index'
 import { DOC_AUDIENCES, docsPages } from '../../lib/docs/docs-manifest'
+import DocsIndexPage from './index'
 
 const renderPage = () =>
 	render(

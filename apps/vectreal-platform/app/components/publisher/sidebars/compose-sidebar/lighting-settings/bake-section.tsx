@@ -2,7 +2,6 @@ import { Button } from '@shared/components/ui/button'
 import { Toggle } from '@shared/components/ui/toggle'
 import { Loader2 } from 'lucide-react'
 
-import { bakedAnything, drawingLabel } from './use-bake-preview'
 import {
 	BAKE_RECOVERY_NOTES,
 	BAKE_SKIP_REASONS,
@@ -12,6 +11,7 @@ import {
 } from '../../../../../lib/domain/scene/client/studio-finish-reasons'
 import { InlineNotice } from '../../../../layout-components'
 import { PanelCaption } from '../../sidebar-section'
+import { bakedAnything, drawingLabel } from './use-bake-preview'
 
 import type { BakePreview } from '../../../../../lib/stores/publisher-config-store'
 import type { BakePassOutcome } from '../../../../../workers/publish-export.worker.types'

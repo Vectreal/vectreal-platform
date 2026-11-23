@@ -1,6 +1,5 @@
 import { data } from 'react-router'
 
-import { Route } from './+types/consent'
 import {
 	buildConsentSetCookie,
 	type ConsentChoices,
@@ -10,6 +9,7 @@ import { upsertConsent } from '../../lib/domain/consent/consent-repository.serve
 import { ensureSameOriginMutation } from '../../lib/http/csrf.server'
 import { reportServerError } from '../../lib/observability/report-server-error.server'
 import { createSupabaseClient } from '../../lib/supabase.server'
+import { Route } from './+types/consent'
 
 function parseChoices(body: unknown): ConsentChoices | null {
 	if (!body || typeof body !== 'object') return null

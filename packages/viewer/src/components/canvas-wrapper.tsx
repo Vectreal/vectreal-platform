@@ -2,12 +2,6 @@ import { PerformanceMonitor } from '@react-three/drei'
 import { CanvasProps, Canvas as ThreeCanvas } from '@react-three/fiber'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 
-import { cn, withHostClasses } from './class-names'
-import ContextLossListener from './context-loss-listener'
-import { VIEWER_FOCUS_RING } from './focus-ring'
-import { FirstFrameWatch, LastFrame, LastFrameCapture } from './last-frame'
-import RenderFailure from './render-failure'
-import { useViewerMessages } from './viewer-messages'
 import {
 	type ContextLossEvent,
 	useContextLossRecovery
@@ -21,6 +15,12 @@ import {
 	useViewportDetection
 } from '../hooks/use-viewport-detection'
 import { VIEWER_MODEL_FADE_DURATION_MS } from '../hooks/viewer-loading.constants'
+import { cn, withHostClasses } from './class-names'
+import ContextLossListener from './context-loss-listener'
+import { VIEWER_FOCUS_RING } from './focus-ring'
+import { FirstFrameWatch, LastFrame, LastFrameCapture } from './last-frame'
+import RenderFailure from './render-failure'
+import { useViewerMessages } from './viewer-messages'
 
 import type { LoadingState } from '../hooks/use-viewer-loading'
 

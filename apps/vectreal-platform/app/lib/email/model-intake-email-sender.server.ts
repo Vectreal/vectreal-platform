@@ -1,6 +1,7 @@
 import { render } from '@react-email/render'
 import { createElement, type ReactElement } from 'react'
 
+import { MODEL_INTAKE_COPY } from '../../constants/product-copy'
 import {
 	getResendClient,
 	resolveContactInboxEmail,
@@ -11,7 +12,6 @@ import {
 	ModelIntakeInternalEmail,
 	type ModelIntakeInternalEmailProps
 } from './templates/model-intake-internal'
-import { MODEL_INTAKE_COPY } from '../../constants/product-copy'
 
 import type { ModelIntakeLocale } from '../domain/model-intake/model-intake-shared'
 

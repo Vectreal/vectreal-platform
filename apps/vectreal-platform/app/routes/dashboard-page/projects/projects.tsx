@@ -5,7 +5,6 @@ import { useCallback, useMemo, useState } from 'react'
 import { data, Link, Outlet, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 
-import { Route } from './+types/projects'
 import {
 	ProjectsBrowser,
 	type ProjectBrowseItem,
@@ -32,6 +31,7 @@ import { getProjectsScenes } from '../../../lib/domain/scene/server/scene-folder
 import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
 import { shouldRevalidateWithinScope } from '../../../lib/navigation/dashboard-route-behavior'
 import { renameDialogAtom } from '../../../lib/stores/dashboard-management-store'
+import { Route } from './+types/projects'
 
 import type { DashboardEntityRef } from '../../../lib/domain/dashboard/dashboard-confirmation'
 import type { ShouldRevalidateFunction } from 'react-router'

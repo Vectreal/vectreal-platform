@@ -3,7 +3,6 @@ import { cn } from '@shared/utils'
 import { Download, ImageUp } from 'lucide-react'
 import { data, Link } from 'react-router'
 
-import { Route } from './+types/generations'
 import {
 	DetailPanelSection,
 	EmptyState
@@ -22,6 +21,7 @@ import {
 } from '../../lib/domain/img-to-3d/img-to-3d-contract'
 import { imgTo3dServerDeps } from '../../lib/domain/img-to-3d/img-to-3d-deps.server'
 import { listImgTo3dGenerations } from '../../lib/domain/img-to-3d/img-to-3d-handlers'
+import { Route } from './+types/generations'
 
 /*
   Every image-to-3D batch in the caller's organization, so a generation can be

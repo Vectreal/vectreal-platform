@@ -5,8 +5,8 @@ import {
 } from '@vctrl/core'
 import { useState } from 'react'
 
-import { formatDegrees, LightingGlobe } from './lighting-globe'
 import { SettingGroup } from '../../sidebar-section'
+import { formatDegrees, LightingGlobe } from './lighting-globe'
 
 import type { Meta, StoryObj } from '@storybook/react-vite'
 

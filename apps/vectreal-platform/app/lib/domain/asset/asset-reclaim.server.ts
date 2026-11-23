@@ -1,13 +1,13 @@
 import { and, eq, notInArray, sql } from 'drizzle-orm'
 
+import { getDbClient } from '../../../db/client'
+import { assets } from '../../../db/schema'
 import {
 	deleteAssets,
 	findAssetFolderId,
 	selectUnreferencedAssetIds,
 	selectUnreferencedAssetIdsInFolder
 } from './asset-storage.server'
-import { getDbClient } from '../../../db/client'
-import { assets } from '../../../db/schema'
 
 const db = getDbClient()
 

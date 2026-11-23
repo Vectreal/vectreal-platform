@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+	CONVERT_INDEX_PATH,
+	CONVERT_PAIRS,
+	convertPairPath
+} from '../convert/convert-pairs'
+import {
 	CACHEABLE_PUBLIC_PATH_LIST,
 	CACHEABLE_PUBLIC_PATH_PREFIXES,
 	isAnonymousCacheableRequest,
@@ -10,11 +15,6 @@ import {
 	CDN_PROTECTED_PREFIXES,
 	normalizePathForCachePolicy
 } from './cdn-cache-policy.server'
-import {
-	CONVERT_INDEX_PATH,
-	CONVERT_PAIRS,
-	convertPairPath
-} from '../convert/convert-pairs'
 
 function req(url: string, headers: Record<string, string> = {}): Request {
 	return new Request(url, { headers })

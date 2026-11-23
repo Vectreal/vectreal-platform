@@ -1,5 +1,5 @@
-import { isLocallyCapturedThumbnail } from './scene-change-detection'
 import { thumbnailAssetIdFromUrl } from '../scene-thumbnail-url'
+import { isLocallyCapturedThumbnail } from './scene-change-detection'
 
 import type { SceneMetaState } from '../../../../types/publisher-config'
 

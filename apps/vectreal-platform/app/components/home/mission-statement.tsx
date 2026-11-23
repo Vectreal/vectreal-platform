@@ -1,7 +1,7 @@
 import { cn } from '@shared/utils'
 
-import styles from './mission-statement.module.css'
 import { HOME_PAGE_COPY } from '../../constants/product-copy'
+import styles from './mission-statement.module.css'
 
 import type { CSSProperties } from 'react'
 

@@ -8,10 +8,6 @@ import { Focus, Gauge, RotateCw, SlidersHorizontal, ZoomIn } from 'lucide-react'
 import { memo, useCallback, useState } from 'react'
 
 import {
-	CAMERA_CONTROLS_FIELDS,
-	defaultControlsOptions
-} from './camera-controls-settings/constants'
-import {
 	INTERACTION_FEELS,
 	type InteractionFeel
 } from '../../../../constants/viewer-defaults'
@@ -19,6 +15,10 @@ import { controlsAtom } from '../../../../lib/stores/scene-settings-store'
 import { DrillDown, DrillDownTrigger, DrillDownView } from '../drill-down'
 import { FieldSlider } from '../field-slider'
 import { SettingGroup } from '../sidebar-section'
+import {
+	CAMERA_CONTROLS_FIELDS,
+	defaultControlsOptions
+} from './camera-controls-settings/constants'
 
 import type { FieldConfig } from '../../../../types/settings-field'
 import type { ControlsProps } from '@vctrl/core'

@@ -6,13 +6,13 @@ import {
 	SelectValue
 } from '@shared/components/ui/select'
 
-import { StepBlock, StepToggle } from './optimization-step'
 import {
 	closestPreset,
 	NearestPresetGroup
 } from '../../../sidebars/nearest-preset-group'
 import { SettingGroup } from '../../../sidebars/sidebar-section'
 import { useOptimizationSettings } from '../../use-optimization-settings'
+import { StepBlock, StepToggle } from './optimization-step'
 
 import type { SliderPreset } from '@shared/components/ui/slider'
 import type { FC } from 'react'

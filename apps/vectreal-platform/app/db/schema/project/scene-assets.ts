@@ -10,9 +10,9 @@ import {
 } from 'drizzle-orm/pg-core'
 import { authUid, authenticatedRole } from 'drizzle-orm/supabase'
 
+import { canAccessAsset } from '../rls'
 import { assets } from './assets'
 import { sceneSettings } from './scene-settings'
-import { canAccessAsset } from '../rls'
 
 export const sceneAssets = pgTable(
 	'scene_assets',

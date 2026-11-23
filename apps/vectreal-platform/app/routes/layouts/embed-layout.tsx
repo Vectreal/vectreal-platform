@@ -1,6 +1,5 @@
 import { data, Outlet, useRouteError, type MetaFunction } from 'react-router'
 
-import { Route } from './+types/embed-layout'
 import { EmbedErrorState } from '../../components/scene-embed/embed-error-state'
 import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
 import { hasEntitlement } from '../../lib/domain/billing/entitlement-service.server'
@@ -33,6 +32,7 @@ import {
 } from '../../lib/errors/error-state-copy'
 import { useErrorReport } from '../../lib/observability/use-error-report'
 import { buildMeta } from '../../lib/seo'
+import { Route } from './+types/embed-layout'
 
 import type { SceneEmbedManifestResponse } from '../../types/api'
 

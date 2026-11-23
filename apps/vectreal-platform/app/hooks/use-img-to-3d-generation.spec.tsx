@@ -12,15 +12,15 @@ import { createMemoryRouter, RouterProvider, useParams } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+	imgTo3dContentDisposition,
+	type ImgTo3dListedBatch
+} from '../lib/domain/img-to-3d/img-to-3d-contract'
+import {
 	MAX_CONSECUTIVE_POLL_FAILURES,
 	useImgTo3dBatchStates,
 	useImgTo3dGeneration,
 	type ImgTo3dGeneration
 } from './use-img-to-3d-generation'
-import {
-	imgTo3dContentDisposition,
-	type ImgTo3dListedBatch
-} from '../lib/domain/img-to-3d/img-to-3d-contract'
 
 import type { useSceneUpload } from './scene-loader/use-scene-upload'
 

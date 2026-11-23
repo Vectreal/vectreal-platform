@@ -9,8 +9,8 @@
 import { createStore } from 'jotai'
 import { describe, expect, it } from 'vitest'
 
-import { applySceneReanchor } from './apply-hotspot-reanchor'
 import { cameraAtom, hotspotsAtom } from '../../../stores/scene-settings-store'
+import { applySceneReanchor } from './apply-hotspot-reanchor'
 
 import type { CameraConfig, HotspotDefinition } from '@vctrl/core'
 

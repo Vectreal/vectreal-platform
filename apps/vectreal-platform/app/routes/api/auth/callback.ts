@@ -1,6 +1,5 @@
 import { redirect } from 'react-router'
 
-import { Route } from './+types/callback'
 import { captureServerEvent } from '../../../lib/domain/analytics/server-events.server'
 import {
 	buildSigninErrorRedirect,
@@ -10,6 +9,7 @@ import {
 import { initializeUserDefaults } from '../../../lib/domain/user/user-repository.server'
 import { reportServerError } from '../../../lib/observability/report-server-error.server'
 import { createSupabaseClient } from '../../../lib/supabase.server'
+import { Route } from './+types/callback'
 
 import type { PostHogContext } from '../../../lib/posthog/posthog-middleware'
 

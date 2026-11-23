@@ -33,22 +33,6 @@ import {
 } from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 
-import {
-	GeometryCodec,
-	GeometryCodecSizes,
-	gzipSize,
-	pickGeometryCodec
-} from './geometry-codec'
-import {
-	ExportResult,
-	GLBExportResult,
-	GlbPublishOptions,
-	GlbPublishResult,
-	GLTFExportResult,
-	PublishExportOptions,
-	PublishExportResult,
-	USDZExportResult
-} from './types'
 import { stripDecodedDracoExtension } from '../draco/strip-decoded-draco-extension'
 import {
 	GeometryCodecs,
@@ -65,7 +49,23 @@ import {
 	type Ktx2CompressionReport
 } from '../model-optimizer/ktx2-compression'
 import { OperationProgress } from '../types'
+import {
+	GeometryCodec,
+	GeometryCodecSizes,
+	gzipSize,
+	pickGeometryCodec
+} from './geometry-codec'
 import { threeObjectToGLB } from './three-object-glb'
+import {
+	ExportResult,
+	GLBExportResult,
+	GlbPublishOptions,
+	GlbPublishResult,
+	GLTFExportResult,
+	PublishExportOptions,
+	PublishExportResult,
+	USDZExportResult
+} from './types'
 
 const DEFAULT_DRACO_PATH = '/draco/'
 

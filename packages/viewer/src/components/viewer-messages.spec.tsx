@@ -6,9 +6,9 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { useResolvedViewerMessages } from './viewer-messages'
 import { de } from '../locales/de'
 import { en } from '../locales/en'
+import { useResolvedViewerMessages } from './viewer-messages'
 
 afterEach(() => vi.unstubAllGlobals())
 

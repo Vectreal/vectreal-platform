@@ -1,8 +1,8 @@
 import { cn } from '@shared/utils'
 
-import styles from './doc-page-frame.module.css'
 import mdxStyles from '../../styles/mdx.module.css'
 import { DraftingBackdrop } from '../layout-components/drafting-backdrop'
+import styles from './doc-page-frame.module.css'
 
 import type { ReactNode } from 'react'
 

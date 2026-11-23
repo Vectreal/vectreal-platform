@@ -1,8 +1,3 @@
-import { TIGHT_AT } from './plan-fit'
-import {
-	getEntitlementDeltaLabels,
-	getUnlockedEntitlementLabels
-} from './plan-upgrade-features'
 import {
 	DASHBOARD_LOCALE,
 	formatLimitValue
@@ -21,6 +16,11 @@ import {
 	PLAN_CARD_LIMIT_KEYS,
 	PLAN_DISPLAY_NAMES
 } from '../../../constants/product-copy'
+import { TIGHT_AT } from './plan-fit'
+import {
+	getEntitlementDeltaLabels,
+	getUnlockedEntitlementLabels
+} from './plan-upgrade-features'
 
 /**
  * What moving from one plan to another would change, for this organization.

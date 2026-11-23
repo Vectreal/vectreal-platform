@@ -25,7 +25,6 @@ import {
 	vi
 } from 'vitest'
 
-import { getStandInArticles } from './news-stand-in'
 import {
 	getNewsArticles,
 	getPublishedNewsArticles,
@@ -35,6 +34,7 @@ import { resolvePublishedAt } from '../app/lib/news/news-schedule'
 import { redactUrlSecrets } from '../app/lib/posthog/redact-url-secrets'
 // @ts-expect-error -- plain JavaScript, run by Node directly in production.
 import { createServerApp } from '../server-app.mjs'
+import { getStandInArticles } from './news-stand-in'
 
 import type { NewsArticle } from '../app/lib/news/news-article'
 import type { Server } from 'node:http'

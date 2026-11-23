@@ -1,5 +1,5 @@
-import { AGENT_TOKEN_AUDIENCE } from './agent-token-audience'
 import { hasSupabaseAuthCookie } from '../../sessions/supabase-auth-cookie'
+import { AGENT_TOKEN_AUDIENCE } from './agent-token-audience'
 
 /*
   The pure half of the agent token check, kept apart from

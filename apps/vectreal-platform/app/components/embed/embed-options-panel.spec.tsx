@@ -15,7 +15,6 @@ import { fileURLToPath } from 'node:url'
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { EmbedOptionsPanel } from './embed-options-panel'
 import {
 	isEmbedKeyUsable,
 	type EmbedApiKeyOption
@@ -24,6 +23,7 @@ import {
 	EMBED_COPY,
 	EMBED_DOCS_PATH
 } from '../../lib/domain/embed/embed-snippet'
+import { EmbedOptionsPanel } from './embed-options-panel'
 
 import type { EmbedApiKeysApi } from './use-embed-api-keys'
 

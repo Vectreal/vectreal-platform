@@ -7,8 +7,8 @@
 import { createRequestHandler, type ServerBuild } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { sessionCookieMiddleware } from './session-cookie-middleware'
 import { createSupabaseClient } from '../supabase.server'
+import { sessionCookieMiddleware } from './session-cookie-middleware'
 
 type SetAll = (
 	cookies: { name: string; value: string; options: object }[]

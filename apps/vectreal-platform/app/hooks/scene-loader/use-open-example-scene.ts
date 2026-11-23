@@ -1,10 +1,10 @@
 import { useCallback } from 'react'
 
-import { useApplySceneSettings } from './use-scene-settings'
 import { sampleModelSource } from '../../lib/samples/sample-models'
+import { useApplySceneSettings } from './use-scene-settings'
 
-import type { useSceneUpload } from './use-scene-upload'
 import type { ExampleScene } from '../../lib/samples/example-scenes'
+import type { useSceneUpload } from './use-scene-upload'
 
 /**
  * Opens an example scene: its model through the same path any added model

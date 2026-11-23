@@ -36,7 +36,6 @@ import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 import { toast } from 'sonner'
 import { z, ZodError } from 'zod'
 
-import { Route } from './+types/api-keys-edit'
 import {
 	ProjectMultiSelect,
 	type ProjectOption
@@ -59,6 +58,7 @@ import {
 	buildUpgradeModalState,
 	upgradeModalAtom
 } from '../../lib/stores/upgrade-modal-store'
+import { Route } from './+types/api-keys-edit'
 
 const apiKeyEditSchema = z.object({
 	name: z

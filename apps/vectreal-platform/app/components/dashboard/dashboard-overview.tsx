@@ -7,8 +7,8 @@ import { RelativeTime } from './relative-time'
 import { SceneStatusTag } from './scene-status'
 import { SceneThumbnail } from './scene-thumbnail'
 
-import type { SceneSummary } from './scene-card'
 import type { Tidbit } from '../../lib/domain/dashboard/dashboard-tidbits'
+import type { SceneSummary } from './scene-card'
 
 interface DashboardOverviewProps {
 	resumeScene: SceneSummary | null

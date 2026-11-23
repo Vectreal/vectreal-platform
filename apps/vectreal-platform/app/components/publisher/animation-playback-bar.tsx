@@ -3,11 +3,11 @@ import { AnimationControls } from '@vctrl/viewer'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtomValue } from 'jotai/react'
 
+import { toolSidebarStateAtom } from '../../lib/stores/publisher-config-store'
 import {
 	PUBLISHER_BESIDE_TOOL_PANEL,
 	PUBLISHER_LAYER
 } from './shell/shell-layout'
-import { toolSidebarStateAtom } from '../../lib/stores/publisher-config-store'
 
 interface AnimationPlaybackBarProps {
 	visible: boolean

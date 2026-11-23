@@ -40,7 +40,6 @@ import {
 import { useAuthenticityToken } from 'remix-utils/csrf/react'
 import { z, ZodError } from 'zod'
 
-import { Route } from './+types/projects-edit'
 import {
 	isListScopedProjectEditPath,
 	isProjectEditPath
@@ -66,6 +65,7 @@ import {
 } from '../../../lib/domain/project/project-repository.server'
 import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
 import { ensureValidCsrfFormData } from '../../../lib/http/csrf.server'
+import { Route } from './+types/projects-edit'
 
 const projectEditSchema = z.object({
 	name: z

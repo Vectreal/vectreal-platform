@@ -3,7 +3,6 @@ import { useSetAtom } from 'jotai/react'
 import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
-import { useResetSceneState } from './use-scene-settings'
 import { useConsent } from '../../components/consent/consent-context'
 import { buildSceneUploadFailedAnalyticsProps } from '../../lib/domain/analytics/scene-events'
 import { getSceneNameFromFileName } from '../../lib/domain/scene'
@@ -15,6 +14,7 @@ import {
 	sceneMetaAtom,
 	sceneMetaInitialState
 } from '../../lib/stores/publisher-config-store'
+import { useResetSceneState } from './use-scene-settings'
 
 import type {
 	InputFileOrDirectory,

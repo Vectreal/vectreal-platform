@@ -1,5 +1,3 @@
-import { bakeLights, type LightBakeOptions } from './bake-lights'
-import { VectrealLightmap } from './extension'
 import {
 	bakeReport,
 	encodeOnce,
@@ -20,6 +18,8 @@ import {
 } from '../occlusion-bake/plan'
 import { encodeBakePng } from '../occlusion-bake/uv-trace'
 import { bakedLightsSignature } from '../scene-lighting/baked-lights'
+import { bakeLights, type LightBakeOptions } from './bake-lights'
+import { VectrealLightmap } from './extension'
 
 import type { ResolvedLighting } from '../scene-lighting/resolve-lighting'
 import type { Document, Material, Texture } from '@gltf-transform/core'

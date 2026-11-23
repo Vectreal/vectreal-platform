@@ -4,11 +4,11 @@ import { Input } from '@shared/components/ui/input'
 import { data, redirect, useNavigation, type MetaFunction } from 'react-router'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
-import { Route } from './+types/reset-password'
 import { AuthErrorBoundary } from '../../components/errors'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import { buildMeta } from '../../lib/seo'
 import { createSupabaseClient } from '../../lib/supabase.server'
+import { Route } from './+types/reset-password'
 
 export { AuthErrorBoundary as ErrorBoundary }
 

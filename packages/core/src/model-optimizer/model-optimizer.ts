@@ -23,6 +23,7 @@ import {
 import { Object3D } from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 
+import { GeometryCodecs } from '../geometry-codecs/geometry-codecs'
 import { IO_EXTENSIONS } from '../io-extensions'
 import { OperationProgress } from '../types'
 import {
@@ -76,7 +77,6 @@ import {
 	TextureDescriptor,
 	TextureCompressOptions
 } from './types'
-import { GeometryCodecs } from '../geometry-codecs/geometry-codecs'
 
 export { SupersededError } from './document-currency'
 

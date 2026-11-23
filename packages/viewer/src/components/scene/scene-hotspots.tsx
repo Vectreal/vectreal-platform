@@ -2,6 +2,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Box3, Raycaster, Vector3 } from 'three'
 
+import { useViewerMessages } from '../viewer-messages'
 import { isInertWhileOccluded } from './hotspot-interaction'
 import HotspotMarker from './hotspot-marker'
 import {
@@ -12,10 +13,9 @@ import { resolveOpenHotspotId } from './open-hotspot'
 import { resolveHotspotMarkers } from './resolve-hotspot-markers'
 import { resolveHotspotPopoverContent } from './resolve-hotspot-popover'
 import { leftOpenHotspotView } from './scene-view-return'
-import { useViewerMessages } from '../viewer-messages'
 
-import type { isRayBlocked as IsRayBlocked } from './occlusion-raycast'
 import type { ViewerCommandExecutor } from '../../types/viewer-interactions'
+import type { isRayBlocked as IsRayBlocked } from './occlusion-raycast'
 import type { HotspotDefinition } from '@vctrl/core'
 import type { Group, Object3D } from 'three'
 

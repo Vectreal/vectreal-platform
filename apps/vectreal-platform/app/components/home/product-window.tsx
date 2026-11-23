@@ -7,12 +7,6 @@ import {
 import { cn } from '@shared/utils'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 
-import { ArrowLink } from './arrow-link'
-import { ProductPageSketch } from './product-page-sketch'
-import PRODUCT_SHOTS from './product-shots.json'
-import { ProductStage, type FrameRect } from './product-stage'
-import styles from './product-window.module.css'
-import { useRelativeRect } from './use-relative-rect'
 import manageDarkUrl from '../../assets/home/product/manage-dark.webp?url'
 import manageLightUrl from '../../assets/home/product/manage-light.webp?url'
 import prepareDarkUrl from '../../assets/home/product/prepare-dark.webp?url'
@@ -20,6 +14,12 @@ import prepareLightUrl from '../../assets/home/product/prepare-light.webp?url'
 import { HOME_PAGE_COPY } from '../../constants/product-copy'
 import { prefersReducedMotion } from '../../lib/motion/motion-tokens'
 import { entersFunnel } from '../../lib/navigation/site-map'
+import { ArrowLink } from './arrow-link'
+import { ProductPageSketch } from './product-page-sketch'
+import PRODUCT_SHOTS from './product-shots.json'
+import { ProductStage, type FrameRect } from './product-stage'
+import styles from './product-window.module.css'
+import { useRelativeRect } from './use-relative-rect'
 
 const COPY = HOME_PAGE_COPY.product
 

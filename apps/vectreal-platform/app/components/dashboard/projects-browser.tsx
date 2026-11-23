@@ -14,8 +14,8 @@ import {
 import { LayoutGrid, Rows3, Search, SearchX } from 'lucide-react'
 import { useMemo } from 'react'
 
-import { DataTable } from './data-table'
 import { EmptyState } from '../layout-components'
+import { DataTable } from './data-table'
 import { ProjectCard } from './project-card'
 import { type SceneStatusCounts } from './status-breakdown'
 import { createProjectColumns, type ProjectRow } from './table-columns'

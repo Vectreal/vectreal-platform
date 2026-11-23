@@ -3,15 +3,15 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 import {
-	getEntitlementDeltaLabels,
-	getUnlockedEntitlementLabels,
-	UPGRADE_FEATURE_DISPLAY_LIMIT
-} from './plan-upgrade-features'
-import {
 	PLAN_ENTITLEMENTS,
 	type EntitlementKey
 } from '../../../constants/plan-config'
 import { UPGRADE_FEATURE_HIGHLIGHT_KEYS } from '../../../constants/product-copy'
+import {
+	getEntitlementDeltaLabels,
+	getUnlockedEntitlementLabels,
+	UPGRADE_FEATURE_DISPLAY_LIMIT
+} from './plan-upgrade-features'
 
 /**
  * One owner for what an upgrade unlocks.

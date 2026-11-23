@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 
-import { useConsent } from './consent-context'
 import { usePostHog } from '../../lib/posthog/posthog-react'
+import { useConsent } from './consent-context'
 
 interface PostHogIdentifyProps {
 	userId: string

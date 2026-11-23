@@ -1,8 +1,8 @@
 import { randomUUID } from 'crypto'
 
-import { sceneSettingsService } from './scene-settings-service.server'
 import { getProject } from '../../project/project-repository.server'
 import { getOrCreateDefaultProject } from '../../user/user-repository.server'
+import { sceneSettingsService } from './scene-settings-service.server'
 
 export function assertParsed<T>(value: T, message: string): asserts value is T {
 	if (!value) {

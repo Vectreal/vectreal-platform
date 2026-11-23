@@ -27,12 +27,12 @@
 
 import { ApiResponse } from '@shared/utils'
 
-import { Route } from './+types/webhook'
 import {
 	constructStripeEvent,
 	processStripeWebhookEvent
 } from '../../../lib/domain/billing/stripe-webhook-processor.server'
 import { reportServerError } from '../../../lib/observability/report-server-error.server'
+import { Route } from './+types/webhook'
 
 // ---------------------------------------------------------------------------
 // Action

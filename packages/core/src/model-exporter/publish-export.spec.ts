@@ -6,10 +6,10 @@ import {
 import { Vector3 } from 'three'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { ModelExporter } from './model-exporter'
 import { readGlbExtensionsUsed } from '../model-loader/glb-extensions'
 import { ModelLoader } from '../model-loader/model-loader'
 import { ModelOptimizer } from '../model-optimizer/model-optimizer'
+import { ModelExporter } from './model-exporter'
 
 import type { Mesh } from 'three'
 

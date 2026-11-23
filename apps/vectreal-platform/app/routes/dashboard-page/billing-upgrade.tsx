@@ -22,7 +22,6 @@ import {
 	useSearchParams
 } from 'react-router'
 
-import { Route } from './+types/billing-upgrade'
 import { InlineNotice } from '../../components/layout-components/inline-notice'
 import { isPaidPlan, type PaidPlan } from '../../constants/plan-config'
 import {
@@ -53,6 +52,7 @@ import {
 	useFeatureFlagEnabled,
 	usePostHog
 } from '../../lib/posthog/posthog-react'
+import { Route } from './+types/billing-upgrade'
 
 import type { BillingCheckoutOptions } from '../../lib/domain/dashboard/dashboard-types'
 import type { PostHogContext } from '../../lib/posthog/posthog-middleware'

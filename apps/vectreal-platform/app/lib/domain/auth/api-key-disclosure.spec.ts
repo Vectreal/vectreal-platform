@@ -10,11 +10,11 @@
 
 import { describe, expect, it } from 'vitest'
 
+import { apiKeyKindEnum } from '../../../db/schema/auth/api-keys'
 import {
 	isApiKeyKindDisclosable,
 	KIND_IS_DISCLOSABLE
 } from './api-key-disclosure'
-import { apiKeyKindEnum } from '../../../db/schema/auth/api-keys'
 
 describe('API key disclosure', () => {
 	it('lets an embed token be read back', () => {

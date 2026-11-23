@@ -1,5 +1,5 @@
-import { readBearerToken } from './agent-bearer'
 import { createSupabaseAdminClient } from '../../supabase.server'
+import { readBearerToken } from './agent-bearer'
 
 /**
  * Ends the Auth session behind an agent request's bearer token, after

@@ -13,6 +13,7 @@
 import { act, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { HOME_PAGE_COPY } from '../../constants/product-copy'
 import {
 	frameBox,
 	placeClip,
@@ -20,7 +21,6 @@ import {
 	type FrameRect
 } from './product-stage'
 import { markHeroSettled, resetHeroSettled } from './stage/hero-settled'
-import { HOME_PAGE_COPY } from '../../constants/product-copy'
 
 vi.mock('./embed-stage-client', () => ({
 	default: () => <div>live stage</div>

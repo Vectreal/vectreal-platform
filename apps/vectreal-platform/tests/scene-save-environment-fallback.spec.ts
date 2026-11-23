@@ -11,9 +11,9 @@
 import { SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { ok, stubSceneApi } from './fixtures/scene-api-stub'
 import { buildThumbnailFrameSignature } from '../app/lib/domain/scene/client/scene-change-detection'
 import { executeSceneSaveOrchestrator } from '../app/lib/domain/scene/client/scene-save-orchestrator'
+import { ok, stubSceneApi } from './fixtures/scene-api-stub'
 
 const { warning, error } = vi.hoisted(() => ({
 	warning: vi.fn(),

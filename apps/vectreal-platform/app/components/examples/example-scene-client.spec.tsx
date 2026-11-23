@@ -3,8 +3,8 @@ import { render } from '@testing-library/react'
 import { Group, Mesh } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 
-import ExampleSceneClient from './example-scene-client'
 import { exampleSceneById } from '../../lib/samples/example-scenes'
+import ExampleSceneClient from './example-scene-client'
 
 import type { Object3D } from 'three'
 

@@ -7,9 +7,9 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { describe, expect, it } from 'vitest'
 
-import { CleanupFields } from './cleanup-fields'
 import { balancedPreset } from '../../../../../constants/optimizations'
 import { optimizationAtom } from '../../../../../lib/stores/scene-optimization-store'
+import { CleanupFields } from './cleanup-fields'
 
 describe('CleanupFields', () => {
 	it('switches mesh merging in the planned settings', () => {

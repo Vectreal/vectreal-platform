@@ -9,11 +9,11 @@ import { renderHook } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { describe, expect, it, vi } from 'vitest'
 
-import { useOpenExampleScene } from './use-open-example-scene'
 import { exampleSceneById } from '../../lib/samples/example-scenes'
 import { sampleModelSource } from '../../lib/samples/sample-models'
 import { lastSavedSettingsAtom } from '../../lib/stores/publisher-config-store'
 import { shadowsAtom } from '../../lib/stores/scene-settings-store'
+import { useOpenExampleScene } from './use-open-example-scene'
 
 import type { useSceneUpload } from './use-scene-upload'
 import type { ReactNode } from 'react'

@@ -3,12 +3,12 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { createRoutesStub, useLocation } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
 
-import { ArticleCtaPanel } from './article-cta-panel'
 import {
 	AI_HANDOFF_TARGETS,
 	buildTaskPrompt
 } from '../../lib/ai-handoff/ai-handoff-targets'
 import { DEFAULT_ARTICLE_CTA } from '../../lib/news/article-cta'
+import { ArticleCtaPanel } from './article-cta-panel'
 
 import type { ArticleCta } from '../../lib/news/article-cta'
 

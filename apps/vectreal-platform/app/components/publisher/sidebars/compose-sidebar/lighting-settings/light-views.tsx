@@ -5,6 +5,7 @@ import { valueMappings } from '@shared/utils'
 import { resolveLighting } from '@vctrl/core'
 import { Plus, Trash2 } from 'lucide-react'
 
+import { DrillDownTrigger, useDrillDownNavigation } from '../../drill-down'
 import {
 	hexToKelvin,
 	kelvinToHex,
@@ -19,7 +20,6 @@ import {
 	withLightRemoved,
 	wrapDegrees
 } from './lighting-edits'
-import { DrillDownTrigger, useDrillDownNavigation } from '../../drill-down'
 
 import type { useLightingDraft } from './use-lighting-draft'
 import type { SceneLightRole } from '@vctrl/core'

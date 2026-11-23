@@ -2,9 +2,9 @@ import { Button } from '@shared/components/ui/button'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Link } from 'react-router'
 
-import { useConsent, useNeedsBanner } from './consent-context'
 import { CONSENT_POLICY_VERSION } from '../../constants/consent-policy'
 import { duration } from '../../lib/motion/motion-tokens'
+import { useConsent, useNeedsBanner } from './consent-context'
 
 export function ConsentBanner() {
 	const { saveConsent, setPreferencesOpen } = useConsent()

@@ -12,9 +12,9 @@ import {
 } from 'drizzle-orm/pg-core'
 import { authenticatedRole } from 'drizzle-orm/supabase'
 
-import { scenes } from './scenes'
 import { users } from '../core/users'
 import { canAccessScene, canManageScene, isUserSelf } from '../rls'
+import { scenes } from './scenes'
 
 export type SceneStatsSnapshot = {
 	verticesCount?: number

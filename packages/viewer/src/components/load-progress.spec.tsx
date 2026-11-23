@@ -9,9 +9,9 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
+import { de } from '../locales/de'
 import { ViewerLoadClockContext, ViewerLoadProgress } from './load-progress'
 import { ViewerMessagesContext } from './viewer-messages'
-import { de } from '../locales/de'
 
 describe('ViewerLoadProgress', () => {
 	it('names the phase and counts files in the viewer’s language', () => {

@@ -1,4 +1,3 @@
-import { agentApiError } from './agent-api-response'
 import { UUID_REGEX } from '../../../constants/utility-constants'
 import {
 	canPerformDashboardOperation,
@@ -10,6 +9,7 @@ import {
 	resolveSceneMembership,
 	type ResolvedMembership
 } from '../dashboard/dashboard-permissions.server'
+import { agentApiError } from './agent-api-response'
 
 import type { AgentActor } from './agent-actor.server'
 

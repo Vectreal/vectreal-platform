@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { getArticleMarkdown, getDocMarkdown } from './page-markdown.server'
 import { publishedLimit } from '../../constants/product-copy'
 import { docsPages } from '../docs/docs-manifest'
 import { getNewsArticle, getNewsArticles } from '../news/news-manifest.server'
+import { getArticleMarkdown, getDocMarkdown } from './page-markdown.server'
 
 // The real manifest, with a seam to give one article an agent cta no article has yet.
 vi.mock('../news/news-manifest.server', async (importOriginal) => {

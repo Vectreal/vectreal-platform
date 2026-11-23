@@ -1,7 +1,5 @@
 import { and, count, eq, inArray, isNull } from 'drizzle-orm'
 
-import { generateApiKey } from './api-key-generator.server'
-import { resolveApiKeyState } from './api-key-lifecycle'
 import { getDbClient, type DbExecutor } from '../../../db/client'
 import { apiKeyProjects } from '../../../db/schema/auth/api-key-projects'
 import { apiKeys } from '../../../db/schema/auth/api-keys'
@@ -16,6 +14,8 @@ import {
 	rolesFor
 } from '../dashboard/dashboard-operations'
 import { assertDashboardPermission } from '../dashboard/dashboard-permissions.server'
+import { generateApiKey } from './api-key-generator.server'
+import { resolveApiKeyState } from './api-key-lifecycle'
 
 const db = getDbClient()
 

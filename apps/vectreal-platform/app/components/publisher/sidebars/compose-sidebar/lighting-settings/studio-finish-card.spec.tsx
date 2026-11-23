@@ -10,8 +10,6 @@ import { ModelProvider } from '@vctrl/hooks/use-load-model'
 import { createStore, Provider } from 'jotai'
 import { describe, expect, it } from 'vitest'
 
-import LightingSettings from './lighting-settings-panel'
-import { finishStatus, StudioFinishCard } from './studio-finish-card'
 import {
 	BAKE_SKIP_REASONS,
 	nothingCaption
@@ -19,6 +17,8 @@ import {
 import { studioFinishPlanAtom } from '../../../../../lib/stores/publisher-config-store'
 import { lightingAtom } from '../../../../../lib/stores/scene-settings-store'
 import { DrillDown, DrillDownView } from '../../drill-down'
+import LightingSettings from './lighting-settings-panel'
+import { finishStatus, StudioFinishCard } from './studio-finish-card'
 
 import type { BakePreview } from '../../../../../lib/stores/publisher-config-store'
 import type { StudioFinishPlan } from '../../../../../workers/publish-export.worker.types'

@@ -3,12 +3,12 @@ import { useFetcher, useFetchers, useRevalidator } from 'react-router'
 import { useAuthenticityToken } from 'remix-utils/csrf/react'
 import { toast } from 'sonner'
 
-import { useOncePerFetcherResponse } from './use-once-per-fetcher-response'
 import {
 	serializeDashboardMutationRequest,
 	type DashboardMutationRequest,
 	type DashboardMutationResponse
 } from '../lib/domain/dashboard/dashboard-mutations'
+import { useOncePerFetcherResponse } from './use-once-per-fetcher-response'
 
 const ENDPOINT = '/api/dashboard/mutations'
 

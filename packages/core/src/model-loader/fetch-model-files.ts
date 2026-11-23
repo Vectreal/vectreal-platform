@@ -1,6 +1,6 @@
+import { modelFormatForFileName } from '../model-formats'
 import { readWithProgress } from './read-with-progress'
 import { referencedUris } from './referenced-assets'
-import { modelFormatForFileName } from '../model-formats'
 
 import type { ByteProgress } from '../types'
 

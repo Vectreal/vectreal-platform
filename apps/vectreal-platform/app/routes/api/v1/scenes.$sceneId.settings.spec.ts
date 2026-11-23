@@ -6,7 +6,6 @@ import {
 import { RouterContextProvider } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { action, loader } from './scenes.$sceneId.settings'
 import {
 	defaultBoundsOptions,
 	defaultControlsOptions,
@@ -15,6 +14,7 @@ import {
 	normalizeShadowOptions
 } from '../../../constants/viewer-defaults'
 import { agentActorContext } from '../../../lib/domain/agent/agent-actor-context'
+import { action, loader } from './scenes.$sceneId.settings'
 
 import type { Route } from './+types/scenes.$sceneId.settings'
 import type { SceneSettings } from '@vctrl/core'

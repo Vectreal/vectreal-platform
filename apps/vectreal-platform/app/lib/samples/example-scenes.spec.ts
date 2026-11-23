@@ -1,14 +1,14 @@
 import {
+	defaultControlsOptions,
+	INTERACTION_FEELS
+} from '../../constants/viewer-defaults'
+import {
 	EXAMPLE_SCENES,
 	exampleSceneById,
 	exampleSettingsSnippet,
 	publisherExampleHref
 } from './example-scenes'
 import { BALANCED_CAMERA } from './sample-models'
-import {
-	defaultControlsOptions,
-	INTERACTION_FEELS
-} from '../../constants/viewer-defaults'
 
 describe('example scenes', () => {
 	it('gives every example a unique id a link can name', () => {

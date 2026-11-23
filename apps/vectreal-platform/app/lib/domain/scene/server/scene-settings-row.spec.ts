@@ -13,8 +13,8 @@ import { resolveSceneViewCameras } from '@vctrl/viewer/hotspots'
 import { getTableColumns } from 'drizzle-orm'
 import { describe, expect, it, vi } from 'vitest'
 
-import { rowToSceneSettings } from './scene-settings-repository.server'
 import { sceneSettings } from '../../../../db/schema'
+import { rowToSceneSettings } from './scene-settings-repository.server'
 
 // The repository imports the client, which throws at module scope without
 // `DATABASE_URL`; nothing here touches the database. Hoisted above the import.
