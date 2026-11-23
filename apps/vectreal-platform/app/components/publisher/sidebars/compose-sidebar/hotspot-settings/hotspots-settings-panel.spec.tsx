@@ -832,6 +832,15 @@ describe('HotspotsSettingsPanel content', () => {
 })
 
 describe('HotspotsSettingsPanel ordering', () => {
+	it('keeps the rows out of the tab order, so the handle is the one keyboard control', () => {
+		store.set(hotspotsAtom, sequence(3))
+		render(<HotspotsSettingsPanel />)
+
+		for (const row of screen.getAllByRole('listitem')) {
+			expect(row).toHaveAttribute('tabindex', '-1')
+		}
+	})
+
 	it('moves a marker one step down the sequence', () => {
 		store.set(hotspotsAtom, sequence(3))
 		render(<HotspotsSettingsPanel />)
@@ -909,7 +918,7 @@ describe('HotspotsSettingsPanel ordering', () => {
 		render(<HotspotsSettingsPanel />)
 
 		const handle = handleFor('Marker 1')
-		handle.focus()
+		act(() => handle.focus())
 
 		act(() => {
 			fireEvent.keyDown(handle, { key: 'ArrowDown' })
