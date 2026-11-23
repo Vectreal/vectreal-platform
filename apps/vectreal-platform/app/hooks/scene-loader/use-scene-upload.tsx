@@ -1,12 +1,16 @@
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useSetAtom } from 'jotai/react'
 import { useCallback, useRef, useState } from 'react'
+import { Link } from 'react-router'
 import { toast } from 'sonner'
 
 import { useConsent } from '../../components/consent/consent-context'
 import { buildSceneUploadFailedAnalyticsProps } from '../../lib/domain/analytics/scene-events'
 import { getSceneNameFromFileName } from '../../lib/domain/scene'
-import { getUploadLoadErrorMessage } from '../../lib/domain/scene/scene-load-error-messages'
+import {
+	getUploadLoadErrorMessage,
+	uploadLoadErrorLink
+} from '../../lib/domain/scene/scene-load-error-messages'
 import { clearPendingSceneDraft } from '../../lib/persistence/pending-scene-idb'
 import { usePostHog } from '../../lib/posthog/posthog-react'
 import {
@@ -93,7 +97,24 @@ export function useSceneUpload() {
 				const message =
 					failureMessage?.(result.error) ??
 					getUploadLoadErrorMessage(result.error)
-				toast.error(message)
+				const link = uploadLoadErrorLink(result.error)
+				/*
+				  A link under the sentence rather than the toast's action button,
+				  which sits beside it and squeezed the sentence into a column a
+				  few words wide. It is a navigation, so it is a link.
+				*/
+				toast.error(
+					message,
+					link
+						? {
+								description: (
+									<Link to={link.to} className="underline underline-offset-2">
+										{link.label}
+									</Link>
+								)
+							}
+						: undefined
+				)
 
 				if (consent?.analytics && result.error) {
 					posthog?.capture(

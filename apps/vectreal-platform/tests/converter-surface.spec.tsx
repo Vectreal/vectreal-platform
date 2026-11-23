@@ -333,7 +333,8 @@ function resetContext() {
 	}
 }
 
-vi.mock('@vctrl/hooks/use-load-model', () => ({
+vi.mock('@vctrl/hooks/use-load-model', async (importActual) => ({
+	...(await importActual<typeof import('@vctrl/hooks/use-load-model')>()),
 	useLoadProgress: () => null,
 	useModelContext: () =>
 		useSyncExternalStore(

@@ -315,6 +315,13 @@ describe('a selection that is not one model is refused, and says why', () => {
 		expect(error.message).toContain('notes.txt')
 	})
 
+	it('says what an unreadable selection was', async () => {
+		const error = await loadError([file('front.jpg'), file('back.heic')])
+
+		expect(error.code).toBe('unsupported_format')
+		expect(error.context?.selection).toEqual({ kind: 'photos' })
+	})
+
 	it('refuses a USDZ on its own, in front of the loader', async () => {
 		/*
 		  THE DEFECT THIS CLOSES. The owner advertised USDZ import and there is no

@@ -69,6 +69,33 @@ describe('refusalMessage', () => {
 		}
 	})
 
+	it('says what an unreadable selection was', () => {
+		const refused = (selection: unknown) =>
+			({ code: 'unsupported_format', context: { selection } }) as never
+		const obj = convertPairBySlug('obj-to-glb')!
+
+		expect(refusalMessage(refused({ kind: 'photos' }), obj, null)).toMatch(
+			/^Photos are not a 3D model/
+		)
+		expect(
+			refusalMessage(
+				refused({ kind: 'blender', fileName: 'Chair.blend' }),
+				obj,
+				null
+			)
+		).toContain('export it as OBJ')
+		expect(
+			refusalMessage(
+				refused({ kind: 'archive', fileName: 'chair.zip' }),
+				obj,
+				null
+			)
+		).toContain('chair.zip is a zip archive')
+		expect(refusalMessage(refused(null), obj, null)).toBe(
+			'Nothing in that selection is a format we can read. This page converts OBJ.'
+		)
+	})
+
 	it('falls back to the bundle refusal, then to the format sentence', () => {
 		expect(refusalMessage(null, gltf, gltfCopy)).toBe(gltfCopy!.refusal)
 		expect(refusalMessage(null, glb, null)).toBe(
