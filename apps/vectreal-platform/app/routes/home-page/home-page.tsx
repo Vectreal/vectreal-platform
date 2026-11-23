@@ -32,7 +32,7 @@ const HomePage = () => (
 	<main>
 		<HeroSheet />
 
-		<SheetFrame>
+		<SheetFrame spacious>
 			<Band aria-labelledby="product-heading">
 				<ProductWindow />
 			</Band>
