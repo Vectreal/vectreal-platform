@@ -70,9 +70,10 @@ function invalidToken(): Response {
 
 /**
  * The one place an agent request's bearer token becomes an actor; nothing
- * reads a cookie. Routes never call it directly: they call
- * `authorizeAgentRequest`, which adds the grant's rate limit and the scope
- * (`tests/agent-api-routes.spec.ts` holds every `/api/v1` route to that).
+ * reads a cookie. Routes never call it directly: each declares its access
+ * with `agentGate`, which calls it through `authorizeAgentRequest` and adds
+ * the rate limits and the scope (`tests/agent-api-routes.spec.ts` holds every
+ * `/api/v1` route to that).
  *
  * In order, each refusal thrown as a Response:
  * 1. the token comes from `Authorization` alone (a session cookie beside it is

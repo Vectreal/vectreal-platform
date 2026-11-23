@@ -20,7 +20,9 @@ pnpm add @vctrl/hooks
 present packages/hooks/package.json "type": "module"
 absent packages/hooks/package.json "require"
 exists packages/hooks/src/use-export-model/use-export-model.spec.ts
-present packages/hooks/src/use-load-model/types.ts { kind: 'url'; url: string | URL; init?: RequestInit }
+present packages/hooks/src/use-load-model/types.ts kind: 'url'
+present packages/hooks/src/use-load-model/types.ts expectedBytes?: number
+present packages/hooks/src/use-load-model/types.ts phase: Exclude<LoadPhase, 'preparing'>
 present packages/core/src/model-loader/fetch-model-files.ts if (url.origin !== modelUrl.origin) continue
 present packages/hooks/src/use-load-model/use-load-model.ts onProgress(fraction * 90)
 */}
@@ -130,9 +132,12 @@ does.
   bytes are a GLB.
 - **`init`** goes with every request: headers, `credentials`, `referrerPolicy`. Credentials follow the browser's default, so cookies go only to your own origin; for a URL someone else supplied, pass `credentials: 'omit'`.
   Its `signal` aborts the download (the model file, and for a `.gltf` the files it references): what was on screen stays, and `load` resolves `empty` rather than reporting an error. A newer `load` or `reset` aborts the download too, and the load resolves `empty`; what is on screen is then theirs to decide. Once the files have all arrived, the parse runs to the end.
-- **Progress** runs to 90 while the model file downloads, when the host sends a
-  `Content-Length`, and the parse fills the rest. A `.gltf`'s buffers and
-  images download after it without moving the bar.
+- **Progress**: while it loads, the state's `phase` is `fetching` and `bytes`
+  counts the model file as it arrives, against `expectedBytes` when you pass
+  it, else the host's `Content-Length` (`total` is null when neither says, or
+  when a gzipped body outgrows the declared length). A `.gltf`'s buffers and
+  images download after it without counting. A URL that names no file, such as
+  a download endpoint, is named by its `Content-Disposition`.
 
 To fetch the files without loading them, `fetchModelFiles` from
 `@vctrl/core/model-loader` does the same fetch and returns the `File`s.
@@ -152,7 +157,10 @@ To fetch the files without loading them, `fetchModelFiles` from
 | `file` | `ModelFile \| null` | Loaded file metadata + Three.js model. Non-null exactly when `status` is `'ready'` |
 | `error` | `StructuredLoadError \| null` | Non-null exactly when `status` is `'error'` |
 | `sceneData` | `ServerSceneData \| undefined` | The resolved payload, for scene sources |
-| `progress` | `number` | Progress value from 0-100 |
+| `phase` | `'fetching' \| 'parsing'` | While `status` is `'loading'`: downloading the bytes, or turning them into a scene (Draco, meshopt and KTX2 decode included). A picked file, or a scene payload carrying its assets, starts in `'parsing'` |
+| `bytes` | `{ loaded: number; total: number \| null } \| undefined` | While fetching: the bytes arrived and the size expected. Updated once per whole percent |
+| `items` | `{ loaded: number; total: number } \| undefined` | While parsing: the files (textures, buffers) the parse has loaded. The total grows as files are found, so it is a count, not a fraction |
+| `progress` | `number` | Deprecated: a 0-100 value that mixes measured bytes with fixed parsing steps. Read `phase`, `bytes` and `items` |
 | `source` | `'files' \| 'url' \| 'scene-data' \| 'server' \| null` | What the current state came from |
 | `load(source)` | `Promise<LoadOutcome>` | Load a model; resolves to the terminal state plus `stillCurrent()` and `stillOnScreen()` |
 | `supportedFileTypes` | `ModelFileTypes[]` | Every format the loader accepts, from `@vctrl/core/model-formats` |

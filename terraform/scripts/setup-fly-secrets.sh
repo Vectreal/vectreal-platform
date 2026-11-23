@@ -230,6 +230,12 @@ FLY_SECRETS_OPTIONAL=(
   # Genuinely degrades: without it every brand letter's code opens the
   # free-model form instead of a sample-store page (model-intake-shared.ts).
   "MODEL_INTAKE_STORE_PAGES"
+  # Genuinely degrades: without it the intake pages lead with their text
+  # instead of a turning scene (model-intake-shared.ts).
+  "MODEL_INTAKE_SCENES"
+  # Genuinely degrades: without it the home page's three-photos band shows
+  # its steps without the scroll tour (home-tour-scene.server.ts).
+  "HOME_TOUR_SCENE"
 )
 
 # Sent to Fly. One value covers both environments.

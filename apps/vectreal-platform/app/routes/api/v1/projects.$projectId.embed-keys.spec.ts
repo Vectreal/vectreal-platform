@@ -4,15 +4,16 @@ import {
 	createdEmbedKeySchema,
 	embedKeyListSchema
 } from '@vctrl/sdk'
+import { RouterContextProvider } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { action, loader } from './projects.$projectId.embed-keys'
+import { agentActorContext } from '../../../lib/domain/agent/agent-actor-context'
 import { QuotaExceededError } from '../../../lib/domain/billing/quota-exceeded-error'
 
 import type { Route } from './+types/projects.$projectId.embed-keys'
 
 const mocks = vi.hoisted(() => ({
-	authorizeAgentRequest: vi.fn(),
 	recordAgentAudit: vi.fn(),
 	withIdempotency: vi.fn(),
 	resolveProjectMembership: vi.fn(),
@@ -21,9 +22,14 @@ const mocks = vi.hoisted(() => ({
 	resolveApiKeyValue: vi.fn()
 }))
 
+// The gate is held to every route by tests/agent-api-routes.spec.ts; a
+// handler here runs on the actor the gate would have put in context.
 vi.mock('../../../lib/domain/agent/agent-request.server', () => ({
-	authorizeAgentRequest: mocks.authorizeAgentRequest
+	agentGate: vi.fn()
 }))
+
+const contextFor = (actor: unknown) =>
+	new RouterContextProvider(new Map([[agentActorContext, actor]]))
 vi.mock('../../../lib/domain/agent/agent-audit.server', () => ({
 	recordAgentAudit: mocks.recordAgentAudit
 }))
@@ -87,11 +93,16 @@ const post = (body: unknown = { name: 'Shop page' }) =>
 		body: typeof body === 'string' ? body : JSON.stringify(body)
 	})
 const act = (request: Request, projectId = PROJECT) =>
-	action({ request, params: { projectId } } as unknown as Route.ActionArgs)
+	action({
+		request,
+		params: { projectId },
+		context: contextFor(actor)
+	} as unknown as Route.ActionArgs)
 const load = (projectId = PROJECT) =>
 	loader({
 		request: new Request(url),
-		params: { projectId }
+		params: { projectId },
+		context: contextFor(actor)
 	} as unknown as Route.LoaderArgs)
 
 async function refusal(promise: Promise<unknown>) {
@@ -106,7 +117,6 @@ async function refusal(promise: Promise<unknown>) {
 
 beforeEach(() => {
 	for (const fn of Object.values(mocks)) fn.mockReset()
-	mocks.authorizeAgentRequest.mockResolvedValue(actor)
 	mocks.resolveProjectMembership.mockResolvedValue({
 		organizationId: 'org-1',
 		projectId: PROJECT,
@@ -130,9 +140,6 @@ describe('POST /api/v1/projects/:projectId/embed-keys', () => {
 
 		const response = await act(request)
 
-		expect(mocks.authorizeAgentRequest).toHaveBeenCalledWith(request, {
-			scope: 'embed:manage'
-		})
 		expect(mocks.withIdempotency).toHaveBeenCalledWith(
 			{
 				grantId: 'grant-1',
@@ -215,19 +222,6 @@ describe('POST /api/v1/projects/:projectId/embed-keys', () => {
 		expect(failure.code).toBe('invalid_request')
 		expect(mocks.withIdempotency).not.toHaveBeenCalled()
 	})
-
-	it('answers 405 to any other method, after the gate', async () => {
-		const request = new Request(url, { method: 'PATCH' })
-
-		const response = (await act(request)) as Response
-
-		expect(mocks.authorizeAgentRequest).toHaveBeenCalledWith(request, {
-			scope: 'embed:manage'
-		})
-
-		expect(response.status).toBe(405)
-		expect(response.headers.get('Allow')).toBe('GET, POST')
-	})
 })
 
 describe('GET /api/v1/projects/:projectId/embed-keys', () => {
@@ -251,10 +245,6 @@ describe('GET /api/v1/projects/:projectId/embed-keys', () => {
 
 		const response = await load()
 
-		expect(mocks.authorizeAgentRequest).toHaveBeenCalledWith(
-			expect.any(Request),
-			{ scope: 'embed:manage' }
-		)
 		expect(response.headers.get('Cache-Control')).toBe('no-store')
 		const text = await response.text()
 		expect(text).not.toContain(TOKEN)

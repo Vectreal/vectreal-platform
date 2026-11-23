@@ -14,6 +14,7 @@ import type {
 	HotspotDefinition,
 	SceneInteractionDefinition
 } from '@vctrl/core'
+import type { StructuredLoadError } from '@vctrl/hooks/use-load-model'
 import type {
 	VectrealViewerProps,
 	ViewerCommandExecutor,
@@ -27,6 +28,8 @@ interface UseHostedPreviewBridgeParams {
 	hotspots?: HotspotDefinition[]
 	/** Commands to execute once on viewer_ready (e.g. from URL params). */
 	initialCommands?: import('@vctrl/viewer').ViewerCommand[]
+	/** The scene load's failure, told to the page once per failure. */
+	loadError?: null | Pick<StructuredLoadError, 'code' | 'recoverable'>
 }
 
 export type HostedPreviewBridgeProps = Pick<
@@ -90,12 +93,21 @@ export function buildHotspotDescriptors(
 	}))
 }
 
+/** Where the scene's load is: under way, or failed. */
+function isLoadState(message: HostedPreviewOutgoingMessage): boolean {
+	return (
+		message.type === 'load_failed' ||
+		(message.type === 'viewer_event' && message.event.type === 'load_progress')
+	)
+}
+
 export function useHostedPreviewBridge({
 	sceneId,
 	interactions,
 	cameras,
 	hotspots,
-	initialCommands
+	initialCommands,
+	loadError
 }: UseHostedPreviewBridgeParams): HostedPreviewBridgeProps {
 	const executorRef = useRef<null | ViewerCommandExecutor>(null)
 	const parentOriginRef = useRef<null | string>(null)
@@ -140,6 +152,17 @@ export function useHostedPreviewBridge({
 
 			// If we don't know the parent origin yet, queue for when it's established.
 			if (!parentOriginRef.current) {
+				/*
+				  Only the latest word on the load: the page has not pinged yet.
+				  Every progress kept would reach it at once as a burst about the
+				  past, and a failure a retry has since moved past would tell it
+				  of an error no longer on screen.
+				*/
+				if (isLoadState(message)) {
+					outboundQueueRef.current = outboundQueueRef.current.filter(
+						(queued) => !isLoadState(queued)
+					)
+				}
 				outboundQueueRef.current.push(message)
 				return
 			}
@@ -170,6 +193,22 @@ export function useHostedPreviewBridge({
 		},
 		[sceneId]
 	)
+
+	/*
+	  Through the queue, unlike readiness: a page that pings after the load
+	  failed still needs to hear it, or its ready() waits out the timeout. The
+	  viewer never sees this failure, so it is not a viewer_event.
+	*/
+	useEffect(() => {
+		if (!loadError) return
+		postMessageToParent({
+			source: HOSTED_PREVIEW_VIEWER_SOURCE,
+			type: 'load_failed',
+			sceneId,
+			code: loadError.code,
+			recoverable: loadError.recoverable
+		})
+	}, [loadError, postMessageToParent, sceneId])
 
 	const executeInteraction = useCallback(
 		(interaction: SceneInteractionDefinition, index: number) => {

@@ -4,7 +4,7 @@ import { castsOcclusion, type OcclusionBakePlan } from './plan'
 import type { OcclusionBakeOptions } from './options'
 
 /** Raised whenever the baker's output changes for the same input. */
-const OCCLUSION_BAKE_VERSION = 3
+const OCCLUSION_BAKE_VERSION = 4
 
 /*
   Identifies a bake by everything that changes its pixels: where every

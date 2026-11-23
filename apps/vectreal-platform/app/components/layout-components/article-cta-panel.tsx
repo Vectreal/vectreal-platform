@@ -115,7 +115,7 @@ export const ArticleCtaPanel: FC<Props> = ({
 				heading="Convert your own file"
 				description={CONVERT_INDEX_COPY.description}
 				actions={
-					<Button asChild>
+					<Button variant="brand" asChild>
 						<Link to={cta.to} onClick={() => onAction('primary')}>
 							Open the converters
 							<ArrowRight className="h-4 w-4" />
@@ -133,7 +133,7 @@ export const ArticleCtaPanel: FC<Props> = ({
 				heading={HOME_PAGE_COPY.pilot.heading}
 				description={MODEL_INTAKE_COPY.en.meta.description}
 				actions={
-					<Button asChild>
+					<Button variant="brand" asChild>
 						<Link to={MODEL_INTAKE_PATH} onClick={() => onAction('primary')}>
 							{HOME_PAGE_COPY.pilot.cta}
 							<ArrowRight className="h-4 w-4" />
@@ -153,7 +153,7 @@ export const ArticleCtaPanel: FC<Props> = ({
 			description="Drop your own model into the Publisher, or start from one of ours. No account needed."
 			actions={
 				<div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-					<Button asChild>
+					<Button variant="brand" asChild>
 						<Link to="/publisher" onClick={() => onAction('primary')}>
 							Open the Publisher
 							<ArrowRight className="h-4 w-4" />

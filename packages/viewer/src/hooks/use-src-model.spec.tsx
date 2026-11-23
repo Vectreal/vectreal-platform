@@ -13,10 +13,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useSrcModel } from './use-src-model'
 
 import type { SrcLoadOptions, SrcModel } from '../load-src'
+import type { LoadProgress } from '@vctrl/core'
 
 interface Call {
 	src: string
 	options: SrcLoadOptions
+	onProgress?: (progress: LoadProgress) => void
 	resolve: (model: SrcModel) => void
 	reject: (error: unknown) => void
 }
@@ -24,9 +26,13 @@ interface Call {
 const calls = vi.hoisted(() => [] as Call[])
 
 vi.mock('../load-src', () => ({
-	loadSrcModel: (src: string, options: SrcLoadOptions) =>
+	loadSrcModel: (
+		src: string,
+		options: SrcLoadOptions,
+		onProgress?: (progress: LoadProgress) => void
+	) =>
 		new Promise<SrcModel>((resolve, reject) =>
-			calls.push({ src, options, resolve, reject })
+			calls.push({ src, options, onProgress, resolve, reject })
 		)
 }))
 
@@ -204,5 +210,29 @@ describe('useSrcModel', () => {
 		unmount()
 
 		expect(calls[0].options.init?.signal?.aborted).toBe(true)
+	})
+
+	it('says where the load is, one render per whole percent', async () => {
+		let renders = 0
+		const { result } = renderHook(() => {
+			renders += 1
+			return useSrcModel('https://cdn.example.com/a.glb')
+		})
+		await vi.waitFor(() => expect(calls).toHaveLength(1))
+		const report = calls[0].onProgress!
+
+		act(() => report({ phase: 'fetching', bytes: { loaded: 10, total: 1000 } }))
+		expect(result.current).toMatchObject({
+			status: 'loading',
+			progress: { phase: 'fetching', bytes: { loaded: 10, total: 1000 } }
+		})
+
+		const before = renders
+		// Still 1%: no render.
+		act(() => report({ phase: 'fetching', bytes: { loaded: 15, total: 1000 } }))
+		expect(renders).toBe(before)
+
+		act(() => report({ phase: 'parsing' }))
+		expect(result.current).toMatchObject({ progress: { phase: 'parsing' } })
 	})
 })

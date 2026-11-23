@@ -1,7 +1,7 @@
 import { ModelExporter } from '@vctrl/core/model-exporter'
 import { ModelLoader } from '@vctrl/core/model-loader'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { useAtom, useAtomValue } from 'jotai/react'
+import { useAtom, useAtomValue, useStore } from 'jotai/react'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 
 import { useStudioFinishPlan } from './use-studio-finish-plan'
@@ -42,13 +42,17 @@ import type {
 	BakePassOutcome,
 	PublishExportOutcome
 } from '../../../../../workers/publish-export.worker.types'
+import type { LightingSettings } from '@vctrl/core'
 import type { Object3D } from 'three'
 
 /**
- * What publishing would export now, as the request and as a key: the bakes,
- * down to the lights a light map holds, and the codecs it encodes with. The
- * preview runs this exact export, so a preview with the current key is the
- * file publishing would ship, and publish uploads it as it is.
+ * What publishing would export now, in its two parts. The studio finish is
+ * the bake alone, the model with occlusion and light maps drawn in and no
+ * codec applied, keyed on what it bakes down to the lights a light map holds.
+ * The publish encode then takes the finish, or the model when nothing is
+ * baked, and applies the codecs the scene asks for. Keeping the codecs out of
+ * the finish is what lets a codec switch, such as GPU-compressed textures,
+ * leave a finish that took minutes to draw in place.
  */
 export function usePublishExport() {
 	const lighting = useAtomValue(lightingAtom)
@@ -65,8 +69,11 @@ export function usePublishExport() {
 		const bakes = eligibleBakes(asked, plan)
 		const geometry = resolvePublishGeometryOptions(optimizations, dracoReport)
 		return {
-			request: { ...geometry, ktx2, ...bakes },
-			key: JSON.stringify({ bakes: bakesKey(lighting), ...geometry, ktx2 }),
+			/** The bake alone: no Draco or meshopt, no KTX2. */
+			finishRequest: { dracoWorthApplying: false, ktx2: false, ...bakes },
+			finishKey: finishKeyOf(lighting),
+			/** The codecs publish encodes the finish, or the model, with. */
+			request: { ...geometry, ktx2, occlusion: false, lights: false as const },
 			bakesAnything: bakes.occlusion || Boolean(bakes.lights),
 			/** Whether the lighting asks for any bake, whether or not it can run. */
 			asksAnything: asked.occlusion || Boolean(asked.lights)
@@ -74,23 +81,108 @@ export function usePublishExport() {
 	}, [lighting, optimizations, dracoReport, ktx2, plan])
 }
 
+/** What a finish for `lighting` is keyed on: what it bakes, nothing else. */
+export const finishKeyOf = (lighting: LightingSettings | undefined) =>
+	JSON.stringify(bakesKey(lighting))
+
 /**
- * The preview, while it still belongs to the document on screen and to what
+ * Whether a preview still belongs to the document on screen and to what
  * publishing would bake. A new model, optimization pass or bake leaves it
- * describing something else, so it reads as no preview at all.
+ * describing something else, so it reads as no preview at all. A codec
+ * switch does not: publish encodes the finish as it is.
  */
+const isCurrent = (
+	preview: BakePreview | null,
+	now: { document: unknown; passRevision: number; finishKey: string }
+): preview is BakePreview =>
+	preview !== null &&
+	preview.source.document === now.document &&
+	preview.source.passRevision === now.passRevision &&
+	preview.source.bakes === now.finishKey
+
+/** The preview while it is current; see `isCurrent`. */
 export function useCurrentPreview(): BakePreview | null {
 	const preview = useAtomValue(bakePreviewAtom)
 	const { optimizer } = useModelContext(true)
 	const { passRevision } = useAtomValue(optimizationRuntimeAtom)
-	const { key } = usePublishExport()
+	const { finishKey } = usePublishExport()
 	const document = optimizer?._getDocument?.()
-	return preview &&
-		preview.source.document === document &&
-		preview.source.passRevision === passRevision &&
-		preview.source.bakes === key
+	return isCurrent(preview, { document, passRevision, finishKey })
 		? preview
 		: null
+}
+
+type Store = ReturnType<typeof useStore>
+
+/**
+ * The preview once no bake is drawing, current for `document` and the bakes
+ * `finishKey` names, read from the store rather than a render: a save or
+ * publish asks after awaiting, when the render it started from is long gone.
+ */
+export async function settledPreview(
+	store: Store,
+	document: unknown,
+	finishKey: string
+): Promise<BakePreview | null> {
+	await new Promise<void>((resolve) => {
+		if (store.get(bakePreviewAtom)?.status !== 'baking') return resolve()
+		const unsubscribe = store.sub(bakePreviewAtom, () => {
+			if (store.get(bakePreviewAtom)?.status === 'baking') return
+			unsubscribe()
+			resolve()
+		})
+	})
+	const preview = store.get(bakePreviewAtom)
+	const { passRevision } = store.get(optimizationRuntimeAtom)
+	return isCurrent(preview, { document, passRevision, finishKey })
+		? preview
+		: null
+}
+
+/**
+ * The studio finish as part of what a save writes. A finish drawn since the
+ * last save, or still drawing, is an unsaved change. A save waits for a bake
+ * in flight and takes the finish drawn for the lighting it saves; once the
+ * save has stored it, it is no change any more.
+ */
+export function useFinishForSave() {
+	const store = useStore()
+	const { optimizer } = useModelContext(true)
+	const preview = useCurrentPreview()
+	const sentRef = useRef<BakePreview | null>(null)
+
+	const captureStudioFinish = useCallback(
+		async (lighting: LightingSettings | undefined) => {
+			const settled = await settledPreview(
+				store,
+				optimizer?._getDocument?.(),
+				finishKeyOf(lighting)
+			)
+			const finish = studioFinishToSave(settled)
+			sentRef.current = finish ? settled : null
+			return finish
+		},
+		[store, optimizer]
+	)
+
+	// Matched by its file, which showing or hiding the preview during the
+	// save copies along, so only a rebake since is left unsaved.
+	const markFinishSaved = useCallback(() => {
+		const sent = sentRef.current
+		sentRef.current = null
+		store.set(bakePreviewAtom, (current) =>
+			current?.file && current.file === sent?.file
+				? { ...current, stored: true }
+				: current
+		)
+	}, [store])
+
+	return {
+		hasUnsavedFinish:
+			preview?.status === 'baking' || Boolean(studioFinishToSave(preview)),
+		captureStudioFinish,
+		markFinishSaved
+	}
 }
 
 /*
@@ -107,7 +199,7 @@ function usePreviewLifetime(current: BakePreview | null) {
 	// hiding the preview, so one failure is reported once.
 	const failure = current?.failure
 	const reports = current?.reports
-	const uvLayoutFailure = current?.outcome?.uvLayoutFailure
+	const uvLayoutFailure = current?.uvLayoutFailure
 	const reportable = useMemo(() => {
 		const reported = failuresToReport({ failure, reports, uvLayoutFailure })
 		// One report per run, naming every fault in it.
@@ -156,8 +248,8 @@ export const drawingLabel = (progress: BakePreview['progress']) => {
 }
 
 /*
-  A finished export as a preview to show: the bakes it reports, its file
-  loaded for the viewer, and the file itself, which publish ships unchanged.
+  A finished bake as a preview to show: the bakes it reports, its file
+  loaded for the viewer, and the file itself, which publish encodes.
   Throws the first bake's reason when every bake failed, since then it has
   nothing to show; publish ships whichever bake worked.
 */
@@ -186,7 +278,8 @@ async function finishedPreview(
 		shown: true,
 		model: scene,
 		reports,
-		outcome,
+		file: outcome.buffer,
+		uvLayoutFailure: outcome.uvLayoutFailure,
 		durationMs
 	}
 }
@@ -214,8 +307,9 @@ function failedPreview(
  * the document is loaded and the saved lighting has hydrated: until then the
  * key on screen describes the defaults, and the restored preview would read
  * as stale at once. Once per finish; a finish the author has moved past is
- * not brought back. It has no export stats, so publish exports afresh, and a
- * save keeps the stored finish rather than sending it again.
+ * not brought back. Publish encodes its file rather than baking again,
+ * unless it was saved as a published file, and a save keeps the stored
+ * finish rather than sending it again.
  */
 export function useRestoreSavedFinish(saved: SavedFinishRef | null) {
 	const [preview, setPreview] = useAtom(bakePreviewAtom)
@@ -225,7 +319,7 @@ export function useRestoreSavedFinish(saved: SavedFinishRef | null) {
 	)
 	const hasUnsavedChanges = useAtomValue(hasUnsavedChangesAtom)
 	const lighting = useAtomValue(lightingAtom)
-	const { key } = usePublishExport()
+	const { finishKey } = usePublishExport()
 	const loader = useMemo(() => new ModelLoader(), [])
 	const attemptedRef = useRef(false)
 	const document = optimizer?._getDocument?.()
@@ -243,13 +337,14 @@ export function useRestoreSavedFinish(saved: SavedFinishRef | null) {
 		// preview already on screen, and one left behind stays behind.
 		if (attemptedRef.current) return
 		attemptedRef.current = true
-		const source = { document, passRevision, bakes: key }
+		const source = { document, passRevision, bakes: finishKey }
 		void (async () => {
 			try {
 				const response = await fetch(saved.url)
 				if (!response.ok) return
+				const file = await response.arrayBuffer()
 				const { scene } = await loader.loadToThreeJS(
-					new File([await response.arrayBuffer()], STUDIO_FINISH_FILENAME, {
+					new File([file], STUDIO_FINISH_FILENAME, {
 						type: 'model/gltf-binary'
 					})
 				)
@@ -265,7 +360,8 @@ export function useRestoreSavedFinish(saved: SavedFinishRef | null) {
 						shown: true,
 						model: scene,
 						reports: saved.reports,
-						restored: true
+						...(saved.unencoded ? { file } : {}),
+						stored: true
 					}
 				})
 			} catch {
@@ -279,16 +375,17 @@ export function useRestoreSavedFinish(saved: SavedFinishRef | null) {
 		preview,
 		asSaved,
 		passRevision,
-		key,
+		finishKey,
 		loader,
 		setPreview
 	])
 }
 
 /**
- * Shows what a publish just exported as the preview, so the publisher shows
- * the finish it shipped. For an export run with the document and request on
- * screen; a failure to show it leaves the publish as it was.
+ * Shows the finish a publish just baked as the preview, so the publisher
+ * shows the finish it shipped and a save keeps it. For a bake run with the
+ * document and request on screen; a failure to show it leaves the publish as
+ * it was.
  */
 export function useShowPublishedFinish() {
 	const [, setPreview] = useAtom(bakePreviewAtom)
@@ -321,38 +418,45 @@ export function useShowPublishedFinish() {
 	)
 }
 
-const anyBakeFailed = (outcome: PublishExportOutcome) =>
-	[outcome.occlusion, outcome.lights].some(
+const anyBakeFailed = (reports: BakePreview['reports']) =>
+	[reports?.occlusion, reports?.lights].some(
 		(report) => report !== undefined && 'failed' in report
 	)
 
 /**
- * A current preview's file, when every bake in it worked: what publish ships
- * as it is. A failed bake may well work on a second try, so that one is
- * baked again instead.
+ * A current preview's file and reports, when every bake in it worked: the
+ * finish publish encodes rather than baking again. A failed bake may well
+ * work on a second try, so that one is baked again instead, and so is a
+ * restored finish saved as a published file, which has no file to encode.
  */
-export const reusableFinish = (preview: BakePreview | null) =>
-	preview?.status === 'ready' &&
-	preview.outcome &&
-	!anyBakeFailed(preview.outcome)
-		? preview.outcome
+export function reusableFinish(
+	preview: BakePreview | null
+): StudioFinishToSave | undefined {
+	return preview?.status === 'ready' &&
+		preview.file &&
+		!anyBakeFailed(preview.reports)
+		? {
+				bytes: preview.file,
+				reports: {
+					occlusion: preview.reports?.occlusion,
+					lights: preview.reports?.lights
+				}
+			}
 		: undefined
+}
 
 /**
  * What a save sends of a current preview: its file and reports, when it is
- * reusable and drew anything. Nothing otherwise, which leaves the stored
- * finish as it is: the server shows that one only while it still matches
- * the scene, so a stale one is never shown and the next finish replaces it.
+ * reusable, drew anything and is not the stored one restored. Nothing
+ * otherwise, which leaves the stored finish as it is: the server shows that
+ * one only while it still matches the scene, so a stale one is never shown
+ * and the next finish replaces it.
  */
 export function studioFinishToSave(
 	preview: BakePreview | null
 ): StudioFinishToSave | undefined {
-	const outcome = reusableFinish(preview)
-	if (!outcome || !bakedAnything(preview)) return undefined
-	return {
-		bytes: outcome.buffer,
-		reports: { occlusion: outcome.occlusion, lights: outcome.lights }
-	}
+	if (preview?.stored || !bakedAnything(preview)) return undefined
+	return reusableFinish(preview)
 }
 
 /** Whether a finished preview changed anything a viewer would draw. */
@@ -368,6 +472,15 @@ export interface ShownBakeContext {
 	canAnimate: boolean
 	/** Whether a clip is playing right now. */
 	isAnimating: boolean
+	/** Whether a clip holds the model off its bind pose, as the viewer reports it. */
+	isPosed: boolean
+}
+
+export interface ShownBake {
+	/** The baked copy the viewer draws in place of the model, if any. */
+	model: Object3D | undefined
+	/** Whether a finish the author shows is held back because the model is posed. */
+	heldByPose: boolean
 }
 
 /**
@@ -376,28 +489,32 @@ export interface ShownBakeContext {
  * preview's lifetime.
  *
  * The viewer never animates the copy it draws in place of the model, so the
- * copy only matches the model while the model rests in its bind pose. A model
- * nothing can pose keeps the copy in every tool. One the runtime can pose,
- * by playing, pausing mid-clip, scrubbing or holding a clip's closing pose,
- * keeps it only inside the Lighting tool, where the author asked to look at
- * the bake, and never while a clip plays.
+ * copy only matches the model while the model rests in its bind pose, which
+ * keeps it in every tool. While a clip poses the model (playing, paused
+ * mid-clip, scrubbed or held at its end) the copy is held back, except inside
+ * the Lighting tool while nothing plays, where the author asked to look at
+ * the bake.
  */
 export function useShownBake({
 	isLightingOpen,
 	canAnimate,
-	isAnimating
-}: ShownBakeContext): Object3D | undefined {
+	isAnimating,
+	isPosed
+}: ShownBakeContext): ShownBake {
 	const preview = useCurrentPreview()
 	usePreviewLifetime(preview)
-	const matchesModel = !canAnimate || (isLightingOpen && !isAnimating)
-	return matchesModel &&
+	const shows =
 		preview?.status === 'ready' &&
 		// A bake that changed nothing has no switch to turn it off, and its copy
 		// would only freeze an animated model in its rest pose.
 		bakedAnything(preview) &&
 		preview.shown
-		? preview.model
-		: undefined
+	const matchesModel =
+		!canAnimate || !isPosed || (isLightingOpen && !isAnimating)
+	return {
+		model: shows && matchesModel ? preview.model : undefined,
+		heldByPose: shows && !matchesModel
+	}
 }
 
 /**
@@ -421,7 +538,7 @@ export function useBakePreview() {
 
 	const bake = useCallback(async () => {
 		if (!document || isPending || !publishExport.bakesAnything) return
-		const source = { document, passRevision, bakes: publishExport.key }
+		const source = { document, passRevision, bakes: publishExport.finishKey }
 		const started = performance.now()
 		// The model it replaces is freed once the viewer lets go of it.
 		setPreview({ status: 'baking', source, shown: true })
@@ -446,7 +563,7 @@ export function useBakePreview() {
 				.exportDocumentGLB(document)
 				.catch(failWith('unprepared'))
 			const outcome = await runPublishExportInWorker(
-				{ glb: data, ...publishExport.request },
+				{ glb: data, ...publishExport.finishRequest },
 				report
 			)
 			settle(

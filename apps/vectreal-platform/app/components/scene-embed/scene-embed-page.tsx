@@ -136,11 +136,12 @@ const SceneEmbedPage = ({
 	showsVectrealBranding = false,
 	initialManifest
 }: SceneEmbedPageProps) => {
-	const { file, sceneData, loadError, retrySceneLoad } = useSceneEmbedScene({
-		sceneId,
-		projectId,
-		initialManifest
-	})
+	const { file, sceneData, loadError, loadProgress, retrySceneLoad } =
+		useSceneEmbedScene({
+			sceneId,
+			projectId,
+			initialManifest
+		})
 	const initialCommands = useInitialCommands()
 	const hotspotPresentation = useHotspotPresentation()
 	const showCameraControls = useEmbedCameraControls()
@@ -151,7 +152,8 @@ const SceneEmbedPage = ({
 		interactions: sceneData?.interactions,
 		cameras: sceneData?.camera?.cameras,
 		hotspots: sceneData?.hotspots,
-		initialCommands
+		initialCommands,
+		loadError
 	})
 
 	// `useHostedPreviewBridge` returns a fresh object each render, and the viewer
@@ -236,6 +238,7 @@ const SceneEmbedPage = ({
 			<SceneEmbedViewer
 				file={file}
 				sceneData={sceneData}
+				loadProgress={loadProgress}
 				loadingThumbnail={loadingThumbnail}
 				// A scene that names no environment is lit by the default, which
 				// `{}` asks for; an absent manifest says nothing yet.

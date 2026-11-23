@@ -1,6 +1,7 @@
 /**
- * The viewer shows a bake preview in every tool unless the model can be
- * animated, and then only inside the Lighting tool while no clip plays. That it is
+ * The viewer shows a bake preview in every tool while the model rests in its
+ * bind pose, and while a clip poses it only inside the Lighting tool while no
+ * clip plays. That it is
  * drawn as `displayedModel` is pinned in `compare-displayed-model.spec.ts`.
  *
  * A source guard: the route module cannot be imported by a test. Which preview
@@ -22,6 +23,13 @@ describe('the publisher bake preview', () => {
 		expect(call).toMatch(/isLightingOpen: openComposeTool === 'lighting'/)
 		expect(call).toMatch(/\bcanAnimate,/)
 		expect(call).toMatch(/isAnimating: animationStatus\.playing/)
+		expect(call).toMatch(/isPosed: animationStatus\.posed/)
+	})
+
+	it('explains a finish the pose holds back, in the editor only', () => {
+		expect(publisher).toMatch(
+			/note=\{\s*!isPreviewMode && !comparedModel && shownBake\.heldByPose/
+		)
 	})
 
 	it('counts a model as animatable when the viewer would mount its runtime', () => {

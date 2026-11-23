@@ -17,6 +17,8 @@ export interface DraftingBackdropProps {
 	phoneHorizon?: number
 	/** See `DraftingBackdropOptions.calm`. For the product's work surfaces. */
 	calm?: boolean
+	/** One frame, drawn as the floor lies, and nothing that moves or answers the reader: for a section whose one effect is something else. */
+	still?: boolean
 	/** Positions the box. Defaults to filling its nearest positioned ancestor, behind it. */
 	className?: string
 }
@@ -39,6 +41,7 @@ export default function DraftingBackdropClient({
 	horizon = 0.5,
 	phoneHorizon = 0.68,
 	calm = false,
+	still = false,
 	className
 }: DraftingBackdropProps) {
 	const boxRef = useRef<HTMLDivElement>(null)
@@ -54,7 +57,8 @@ export default function DraftingBackdropClient({
 			.then(({ createDraftingBackdrop }) => {
 				if (cancelled) return
 				dispose = createDraftingBackdrop(canvas, {
-					reducedMotion: prefersReducedMotion(),
+					// Reduced motion's path is exactly a still floor: one frame, no listeners.
+					reducedMotion: still || prefersReducedMotion(),
 					host,
 					calm,
 					view: (box) =>
@@ -69,7 +73,7 @@ export default function DraftingBackdropClient({
 			cancelled = true
 			dispose?.()
 		}
-	}, [focusX, horizon, phoneHorizon, calm])
+	}, [focusX, horizon, phoneHorizon, calm, still])
 
 	/*
 	  A canvas keeps its intrinsic height under top and bottom, so a box sizes it

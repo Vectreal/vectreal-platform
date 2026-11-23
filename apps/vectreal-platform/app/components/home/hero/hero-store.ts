@@ -67,13 +67,11 @@ export function useHeroState<T>(
 }
 
 /**
- * The stage could not run, or stopped partway, so the poster stands and the
- * readout stops waiting: the poster inked whole, not wherever the download
- * stopped, because it is drawn from the file the readout names. The hero is
- * done with the GPU either way, so the page's other stages stop waiting too.
+ * The stage could not run, or stopped partway, so the still stands and the
+ * readout stops waiting. The hero is done with the GPU either way, so the
+ * page's other stages stop waiting too.
  */
-export function fallBackToPoster(store: HeroStore, frame: HTMLElement | null) {
-	frame?.style.setProperty('--plot', '1')
-	store.set({ status: 'drawn', busy: false, shownBytes: HERO_MODEL.bytes })
+export function fallBackToStill(store: HeroStore) {
+	store.set({ status: 'still', busy: false, shownBytes: HERO_MODEL.bytes })
 	markHeroSettled()
 }

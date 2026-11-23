@@ -74,7 +74,7 @@ const loadPublishedSceneModel = async (
 	sceneId: string | undefined,
 	payload: ServerScenePayload,
 	publishedModel: PublishedModelRef,
-	{ modelLoader, publish, onProgress }: LoadContext,
+	{ modelLoader, publish, onProgress, onBytes }: LoadContext,
 	assetHeaders?: HeadersInit
 ): Promise<LoadedModel> => {
 	// Started before the download rather than after it: a decoder's script,
@@ -97,7 +97,8 @@ const loadPublishedSceneModel = async (
 		{ [PUBLISHED_MODEL_KEY]: publishedModel },
 		{
 			headers: assetHeaders,
-			onProgress: (fraction) => onProgress(Math.round(fraction * 60))
+			onProgress: (fraction) => onProgress(Math.round(fraction * 60)),
+			onBytes
 		}
 	)
 
@@ -149,7 +150,8 @@ export const loadModelFromSceneData = async (
 	assetHeaders?: HeadersInit
 ): Promise<LoadedModel> => {
 	const { sceneId, sceneData: payload, parseMode } = source
-	const { modelLoader, optimizer, publish, onProgress, mayIngest } = ctx
+	const { modelLoader, optimizer, publish, onProgress, onBytes, mayIngest } =
+		ctx
 
 	if (payload.publishedModel) {
 		return loadPublishedSceneModel(
@@ -177,7 +179,8 @@ export const loadModelFromSceneData = async (
 					...payload,
 					assetData: await fetchManifestAssetData(payload.assetRefs, {
 						headers: assetHeaders,
-						onProgress: (fraction) => onProgress(Math.round(fraction * 40))
+						onProgress: (fraction) => onProgress(Math.round(fraction * 40)),
+						onBytes
 					})
 				}
 			: payload

@@ -65,6 +65,10 @@
 			"types": "./scene-camera/index.d.ts",
 			"default": "./scene-camera/index.js"
 		},
+		"./camera-schema": {
+			"types": "./camera-schema/index.d.ts",
+			"default": "./camera-schema/index.js"
+		},
 		"./node": {
 			"types": "./node/index.d.ts",
 			"default": "./node/index.js"
@@ -88,7 +92,8 @@
 		"meshoptimizer": "catalog:",
 		"three": "catalog:",
 		"three-mesh-bvh": "catalog:",
-		"watlas": "1.0.1"
+		"watlas": "1.0.1",
+		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"@nx/vite": "catalog:",

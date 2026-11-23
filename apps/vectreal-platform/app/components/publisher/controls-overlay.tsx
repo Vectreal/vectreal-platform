@@ -33,7 +33,6 @@ import { useLocationChangeState } from '../../hooks/use-location-change-state'
 import { useOptimizationDrawerFlow } from '../../hooks/use-optimization-drawer-flow'
 import { usePublisherSaveAction } from '../../hooks/use-publisher-save-action'
 import { usePublisherScene } from '../../hooks/use-publisher-scene'
-import { useSampleDownload } from '../../hooks/use-sample-download'
 import { resolveSceneMetrics } from '../../lib/domain/scene'
 import { sceneDownloadBytes } from '../../lib/domain/scene/scene-environment-bytes'
 import { isSceneOverSizeLimit } from '../../lib/domain/scene/scene-size-limit'
@@ -116,6 +115,8 @@ const OverlayControls = ({
 		openSceneId,
 		isRestoringDraft,
 		uploadFiles,
+		openModel,
+		openingSubject,
 		retrySceneLoad,
 		saveSceneSettings,
 		saveAvailability,
@@ -132,24 +133,22 @@ const OverlayControls = ({
 	*/
 	const navigation = useNavigation()
 	// Here, not in the empty stage, which opening a variant unmounts.
-	const imgTo3d = useImgTo3dGeneration(uploadFiles, sceneId)
+	const imgTo3d = useImgTo3dGeneration(openModel, sceneId)
 	const surface = resolvePublisherSurface({
 		status,
 		hasScene: Boolean(openSceneId),
 		// Navigating within the publisher (to a scene just saved, or between
 		// scenes) is a load, and so is reading a signed-in draft back out of
-		// IndexedDB, and so is downloading a generated variant before the
-		// loader is handed it: in each, a model is on its way and the stage
-		// should wait.
+		// IndexedDB, and so is a variant the URL names before its open has
+		// started: in each, a model is on its way and the stage should wait.
+		// A download is the loader's own `loading`, so it needs no input here.
 		isNavigating:
 			isRestoringDraft ||
 			(imgTo3d.opening !== null && imgTo3d.opening.error === null) ||
 			(navigation.state === 'loading' &&
 				Boolean(navigation.location?.pathname?.startsWith('/publisher')))
 	})
-	// Here rather than in the empty stage, which a revalidation unmounts mid-download: see its `sampleDownload`.
-	const sampleDownload = useSampleDownload()
-	const openExampleScene = useOpenExampleScene(uploadFiles)
+	const openExampleScene = useOpenExampleScene(openModel)
 	/*
 	  The rail, the publish card, the sidebars and the header's scene controls
 	  act on a scene, so an empty stage has none of them: nothing on screen is a
@@ -372,7 +371,7 @@ const OverlayControls = ({
 					<EmptyStage
 						isMobile={isMobile}
 						onUpload={uploadFiles}
-						sampleDownload={sampleDownload}
+						onOpenModel={openModel}
 						onOpenExample={openExampleScene}
 						recentScenes={recentScenes}
 						imgTo3d={
@@ -394,6 +393,7 @@ const OverlayControls = ({
 						) : (
 							<PublisherSurfaceFallback
 								surface={surface}
+								subject={openingSubject}
 								onRetry={retrySceneLoad}
 							/>
 						)}

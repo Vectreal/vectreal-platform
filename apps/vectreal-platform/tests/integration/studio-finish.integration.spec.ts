@@ -64,7 +64,11 @@ describe('the studio finish a draft keeps', () => {
 		sceneId: string,
 		sceneAssetIds: string[],
 		settings: Partial<SceneSettings> = {},
-		studioFinish?: { assetId: string; reports: typeof reports } | null
+		studioFinish?: {
+			assetId: string
+			reports: typeof reports
+			unencoded?: true
+		} | null
 	) =>
 		sceneSettingsService.saveSceneSettingsFromAssetIds({
 			sceneId,
@@ -132,8 +136,12 @@ describe('the studio finish a draft keeps', () => {
 		bake: { lights: true }
 	}
 
-	/** A saved draft with a finish made for its baked lighting. */
-	const draftWithFinish = async () => {
+	/**
+	 * A saved draft with a finish made for its baked lighting: a bake before
+	 * any codec, unless `encoded` says it is a whole published file, as every
+	 * finish saved before the codecs left it was.
+	 */
+	const draftWithFinish = async ({ encoded = false } = {}) => {
 		const sceneId = randomUUID()
 		const model = [
 			await makeAsset('scene.gltf'),
@@ -144,8 +152,31 @@ describe('the studio finish a draft keeps', () => {
 			sceneId,
 			model,
 			{ lighting: baked },
-			{ assetId: finishId, reports }
+			{ assetId: finishId, reports, ...(encoded ? {} : { unencoded: true }) }
 		)
+		if (encoded) {
+			// As a release before the fix recorded it: against the whole
+			// publish source, codecs included.
+			const [row] = await db
+				.select({ studioFinish: schema.sceneSettings.studioFinish })
+				.from(schema.sceneSettings)
+				.where(eq(schema.sceneSettings.sceneId, sceneId))
+			const { model: ids, bakes } = JSON.parse(row.studioFinish!.source)
+			await db
+				.update(schema.sceneSettings)
+				.set({
+					studioFinish: {
+						...row.studioFinish!,
+						source: JSON.stringify({
+							model: ids,
+							draco: { method: 'edgebreaker' },
+							gpuTextures: true,
+							bakes
+						})
+					}
+				})
+				.where(eq(schema.sceneSettings.sceneId, sceneId))
+		}
 		return { sceneId, model, finishId }
 	}
 
@@ -164,6 +195,58 @@ describe('the studio finish a draft keeps', () => {
 		await save(sceneId, model, {
 			lighting: { ...baked, lights: [{ role: 'key', azimuth: 31 }] }
 		})
+
+		expect(await sceneSettingsService.resolveSceneFinish(sceneId)).toBeNull()
+	})
+
+	// The trigger of the lost finish: Publish > GPU-compressed textures.
+	it('stays through a change to how publishing encodes the textures', async () => {
+		const { sceneId, model, finishId } = await draftWithFinish()
+
+		await save(sceneId, model, {
+			lighting: baked,
+			presentation: { compressTexturesForGpu: false }
+		})
+
+		expect(
+			await sceneSettingsService.resolveSceneFinish(sceneId)
+		).toMatchObject({ asset: { id: finishId }, unencoded: true })
+	})
+
+	// Finishes hidden by a codec switch before the fix are found again.
+	it('finds a finish saved as a published file again after a codec switch', async () => {
+		const { sceneId, model, finishId } = await draftWithFinish({
+			encoded: true
+		})
+
+		await save(sceneId, model, {
+			lighting: baked,
+			presentation: { compressTexturesForGpu: false }
+		})
+
+		expect(
+			await sceneSettingsService.resolveSceneFinish(sceneId)
+		).toMatchObject({ asset: { id: finishId }, unencoded: false })
+	})
+
+	it('stays through the GPU switch turned on and back off, saved each time', async () => {
+		const { sceneId, model, finishId } = await draftWithFinish()
+
+		for (const compressTexturesForGpu of [true, false]) {
+			await save(sceneId, model, {
+				lighting: baked,
+				presentation: { compressTexturesForGpu }
+			})
+			expect(
+				await sceneSettingsService.resolveSceneFinish(sceneId)
+			).toMatchObject({ asset: { id: finishId } })
+		}
+	})
+
+	it('retires a finish saved as a published file once its model changes', async () => {
+		const { sceneId } = await draftWithFinish({ encoded: true })
+
+		await save(sceneId, [await makeAsset('scene.gltf')], { lighting: baked })
 
 		expect(await sceneSettingsService.resolveSceneFinish(sceneId)).toBeNull()
 	})

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { isSceneCamera, normalizeCameraSettings } from './camera-settings'
 
@@ -16,12 +16,16 @@ describe('isSceneCamera', () => {
 })
 
 describe('normalizeCameraSettings keeps only a usable framingAspect', () => {
+	const onRepair = vi.fn()
 	const normalize = (framingAspect: unknown) =>
-		normalizeCameraSettings({
-			cameras: [
-				{ cameraId: 'front', name: 'Front', framingAspect } as CameraConfig
-			]
-		})?.cameras?.[0]
+		normalizeCameraSettings(
+			{
+				cameras: [
+					{ cameraId: 'front', name: 'Front', framingAspect } as CameraConfig
+				]
+			},
+			{ onRepair }
+		)?.cameras?.[0]
 
 	it('keeps a valid one', () => {
 		expect(normalize(1.25)?.framingAspect).toBe(1.25)
@@ -30,9 +34,13 @@ describe('normalizeCameraSettings keeps only a usable framingAspect', () => {
 	it.each([0, -1, Number.NaN, Infinity, '1.25', null])(
 		'drops %s, so it reads as a camera saved before the field',
 		(value) => {
+			onRepair.mockClear()
 			const camera = normalize(value)
 			expect(camera).toBeDefined()
 			expect(camera).not.toHaveProperty('framingAspect')
+			expect(onRepair).toHaveBeenCalledWith([
+				{ cameraIndex: 0, field: 'framingAspect' }
+			])
 		}
 	)
 
@@ -42,5 +50,127 @@ describe('normalizeCameraSettings keeps only a usable framingAspect', () => {
 				cameras: [{ cameraId: 'front', name: 'Front' }]
 			})?.cameras?.[0]
 		).toEqual({ cameraId: 'front', name: 'Front', initial: true })
+	})
+})
+
+describe('normalizeCameraSettings repairs what a stored camera cannot use', () => {
+	const normalizeOne = (
+		entry: Record<string, unknown>,
+		onRepair = vi.fn()
+	) => ({
+		camera: normalizeCameraSettings(
+			{ cameras: [{ cameraId: 'front', name: 'Front', ...entry }] } as never,
+			{ onRepair }
+		)?.cameras?.[0] as Record<string, unknown> | undefined,
+		onRepair
+	})
+
+	it.each([0, 180, -10, 400, Number.NaN, '60'])(
+		'drops a fov of %s, so the lens keeps its own',
+		(fov) => {
+			const { camera, onRepair } = normalizeOne({ fov })
+			expect(camera).not.toHaveProperty('fov')
+			expect(onRepair).toHaveBeenCalledWith([{ cameraIndex: 0, field: 'fov' }])
+		}
+	)
+
+	it('keeps a fov inside (0, 180) and reports nothing', () => {
+		const { camera, onRepair } = normalizeOne({ fov: 35 })
+		expect(camera?.['fov']).toBe(35)
+		expect(onRepair).not.toHaveBeenCalled()
+	})
+
+	it('carries every vector exactly as stored, readable or not', () => {
+		// The opening pose and a hotspot camera's aim read any stored vector as
+		// "this camera has a pose", so a repair here would move the camera.
+		const stored = {
+			position: { x: 1, y: 2, z: 3 },
+			target: 'origin',
+			rotation: [0.1, 0.2, 0.3, 'XYZ'],
+			lookAt: [0, 1]
+		}
+		const { camera, onRepair } = normalizeOne(stored)
+		expect(camera).toMatchObject(stored)
+		expect(onRepair).not.toHaveBeenCalled()
+	})
+
+	it('carries the fields it has no read rule for', () => {
+		const stored = { cameraId: 7, near: 0.5 }
+		const { camera, onRepair } = normalizeOne(stored)
+		expect(camera).toMatchObject(stored)
+		expect(onRepair).not.toHaveBeenCalled()
+	})
+
+	it.each([
+		{ type: 'teleport' },
+		{ type: 'linear', duration: -1 },
+		{ type: 'object_avoidance', objectAvoidance: { samples: 1 } }
+	])('drops a legacy transition the write schema refuses: %o', (transition) => {
+		const { camera, onRepair } = normalizeOne({ transition })
+		expect(camera).not.toHaveProperty('transition')
+		expect(onRepair).toHaveBeenCalledWith([
+			{ cameraIndex: 0, field: 'transition' }
+		])
+	})
+
+	it('keeps a transition the write schema accepts', () => {
+		const transition = { type: 'linear', duration: 800, easing: 'ease_out' }
+		const { camera, onRepair } = normalizeOne({ transition })
+		expect(camera?.['transition']).toEqual(transition)
+		expect(onRepair).not.toHaveBeenCalled()
+	})
+
+	it('carries a list with no scene camera as stored', () => {
+		// The publisher builds one when a hotspot is added to a scene with no
+		// camera; the hotspot's camera is aimed and owned through its kind.
+		const onRepair = vi.fn()
+		const stored = [
+			{ cameraId: 'pin-a', name: 'A', kind: 'hotspot' as const },
+			{ cameraId: 'pin-b', name: 'B', kind: 'hotspot' as const }
+		]
+		const normalized = normalizeCameraSettings(
+			{ cameras: stored },
+			{ onRepair }
+		)
+		expect(normalized?.cameras).toEqual(stored)
+		expect(onRepair).not.toHaveBeenCalled()
+	})
+
+	it.each([null, false, 0, '', { type: 'smooth' }])(
+		'drops a sceneTransition of %o, so switches fly the default',
+		(sceneTransition) => {
+			const onRepair = vi.fn()
+			const normalized = normalizeCameraSettings(
+				{ cameras: [{ cameraId: 'a', name: 'A' }], sceneTransition } as never,
+				{ onRepair }
+			)
+			expect(normalized).not.toHaveProperty('sceneTransition')
+			expect(onRepair).toHaveBeenCalledWith([{ field: 'sceneTransition' }])
+		}
+	)
+
+	it('keeps a sceneTransition the viewer can play', () => {
+		const sceneTransition = { type: 'none' as const }
+		const normalized = normalizeCameraSettings({
+			cameras: [{ cameraId: 'a', name: 'A' }],
+			sceneTransition
+		})
+		expect(normalized?.sceneTransition).toEqual(sceneTransition)
+	})
+
+	it('warns once per read by default, naming every value it dropped', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+		try {
+			normalizeCameraSettings({
+				cameras: [
+					{ cameraId: 'a', name: 'A', fov: 0 },
+					{ cameraId: 'b', name: 'B', fov: 200 }
+				]
+			})
+			expect(warn).toHaveBeenCalledOnce()
+			expect(warn.mock.calls[0][0]).toContain('cameras[0].fov, cameras[1].fov')
+		} finally {
+			warn.mockRestore()
+		}
 	})
 })

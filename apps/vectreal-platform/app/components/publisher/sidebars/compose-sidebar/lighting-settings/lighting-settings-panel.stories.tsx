@@ -97,7 +97,18 @@ function PanelOverScene({ plan }: { plan?: StudioFinishPlan }) {
 	)
 }
 
-export const Panel: Story = { render: () => <PanelOverScene /> }
+/*
+  The panel stories draw a live viewer behind the panel. Its frame depends on
+  how far the environment, the AO and the shadow have come when Chromatic
+  shoots, so, like the viewer's own stories, they are not snapshotted. The
+  finish states below cover the panel's words without a scene.
+*/
+const liveScene = { chromatic: { disableSnapshot: true } }
+
+export const Panel: Story = {
+	parameters: liveScene,
+	render: () => <PanelOverScene />
+}
 
 const TILING_UVS = {
 	baked: [],
@@ -113,6 +124,7 @@ const TILING_UVS = {
  * says so before any preview. Open Settings and report for each toggle.
  */
 export const PanelWithNothingToFinish: Story = {
+	parameters: liveScene,
 	render: () => (
 		<PanelOverScene plan={{ occlusion: TILING_UVS, lights: TILING_UVS }} />
 	)
@@ -120,6 +132,7 @@ export const PanelWithNothingToFinish: Story = {
 
 /** Depth has nothing to take while the studio lights do. */
 export const PanelWithDepthOff: Story = {
+	parameters: liveScene,
 	render: () => (
 		<PanelOverScene
 			plan={{

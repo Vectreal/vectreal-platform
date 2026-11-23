@@ -152,6 +152,20 @@ describe('resolveCameraPose fits a stored position to the viewport', () => {
 		expect(pose.framing).toEqual({ aspect: 2, scale: 4 })
 	})
 
+	it.each([0, 180, -5, Number.NaN])(
+		'keeps the live lens for a stored fov of %s it cannot take',
+		(fov) => {
+			const pose = resolveCameraPose([camera({ fov })], 'front', live(2))
+			expect(pose.fov).toBe(50)
+		}
+	)
+
+	it('takes a stored fov the lens can use', () => {
+		expect(resolveCameraPose([camera({ fov: 30 })], 'front', live(2)).fov).toBe(
+			30
+		)
+	})
+
 	it('keeps the stored pose on a wider viewport', () => {
 		const pose = resolveCameraPose(
 			[camera({ framingAspect: 1 })],

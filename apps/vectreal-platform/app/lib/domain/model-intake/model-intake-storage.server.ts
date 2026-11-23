@@ -1,6 +1,9 @@
 import { createClient, StorageApiError } from '@supabase/supabase-js'
 
-import { MODEL_INTAKE_MAX_PHOTO_BYTES } from './model-intake-shared'
+import {
+	MODEL_INTAKE_MAX_ATTACHMENT_BYTES,
+	MODEL_INTAKE_MAX_PHOTO_BYTES
+} from './model-intake-shared'
 
 import type { IntakePhoto } from './model-intake-photos.server'
 
@@ -118,33 +121,34 @@ export function deleteIntakePhotos(paths: string[]): Promise<void> {
 	return removePaths(paths)
 }
 
-let liftLimitPromise: Promise<void> | null = null
+let attachmentLimitPromise: Promise<void> | null = null
 
 /**
- * Lets the bucket take attachments larger than a photo. The bucket was made
- * with the photo limit, and a signed upload is held to the bucket's limit;
- * photos keep theirs because the server checks each before uploading it.
- * Without a bucket limit, Supabase's project-wide one applies.
+ * Sets the bucket to the attachment limit. The bucket was created with the
+ * photo limit, and a signed upload is held to the bucket's limit; photos keep
+ * theirs because the server checks each before uploading it. The limit is the
+ * attachment cap itself rather than none, so the bucket says what the card
+ * says; Supabase's project-wide limit still applies above it.
  */
-function liftBucketSizeLimit(): Promise<void> {
-	if (!liftLimitPromise) {
-		liftLimitPromise = (async () => {
+function setBucketAttachmentLimit(): Promise<void> {
+	if (!attachmentLimitPromise) {
+		attachmentLimitPromise = (async () => {
 			await ensureBucket()
 			const { error } = await getStorage().updateBucket(MODEL_INTAKE_BUCKET, {
 				public: false,
-				fileSizeLimit: null
+				fileSizeLimit: MODEL_INTAKE_MAX_ATTACHMENT_BYTES
 			})
 			if (error) {
 				throw new Error(
-					`Failed to lift the intake bucket limit: ${error.message}`
+					`Failed to set the intake bucket limit: ${error.message}`
 				)
 			}
 		})().catch((error) => {
-			liftLimitPromise = null
+			attachmentLimitPromise = null
 			throw error
 		})
 	}
-	return liftLimitPromise
+	return attachmentLimitPromise
 }
 
 /** Where a request's attached files live. */
@@ -161,7 +165,7 @@ export async function createIntakeAttachmentUpload(
 	submissionId: string,
 	name: string
 ): Promise<string | 'exists'> {
-	await liftBucketSizeLimit()
+	await setBucketAttachmentLimit()
 	const { data, error } = await getStorage()
 		.from(MODEL_INTAKE_BUCKET)
 		.createSignedUploadUrl(`${intakeAttachmentFolder(submissionId)}/${name}`)

@@ -1,6 +1,6 @@
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue, useSetAtom, useStore } from 'jotai/react'
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback } from 'react'
 import { useRevalidator, useSearchParams } from 'react-router'
 
 import { usePrepareGltfDocument } from './scene-loader/use-scene-document-export'
@@ -10,10 +10,7 @@ import { useSceneSource } from './scene-loader/use-scene-source'
 import { useSceneUpload } from './scene-loader/use-scene-upload'
 import { usePublisherViewerCapture } from '../components/publisher/publisher-viewer-capture-context'
 import { OPENING_VIEW_CAPTURE_OPTIONS } from '../components/publisher/shell/use-opening-view'
-import {
-	studioFinishToSave,
-	useCurrentPreview
-} from '../components/publisher/sidebars/compose-sidebar/lighting-settings/use-bake-preview'
+import { useFinishForSave } from '../components/publisher/sidebars/compose-sidebar/lighting-settings/use-bake-preview'
 import { IMG_TO_3D_OPEN_PARAM } from '../lib/domain/img-to-3d/img-to-3d-contract'
 import { createSceneRequestId as createRequestId } from '../lib/domain/scene/client/scene-request-id'
 import {
@@ -57,6 +54,10 @@ export interface PublisherScene {
 	openSceneId: null | string
 	isRestoringDraft: boolean
 	uploadFiles: ReturnType<typeof useSceneUpload>['uploadFiles']
+	/** Adds a model from files or a URL; see `useSceneUpload`. */
+	openModel: ReturnType<typeof useSceneUpload>['openModel']
+	/** What `openModel` is opening, for the loading surface's title. */
+	openingSubject: ReturnType<typeof useSceneUpload>['subject']
 	retrySceneLoad: () => void
 	saveSceneSettings: ReturnType<typeof useSceneSaveFlow>['saveSceneSettings']
 	saveAvailability: ReturnType<typeof useSceneSaveFlow>['saveAvailability']
@@ -94,7 +95,7 @@ export function usePublisherScene({
 		sceneManifest,
 		isRestoringDraft
 	})
-	const { uploadFiles } = useSceneUpload()
+	const { uploadFiles, openModel, subject: openingSubject } = useSceneUpload()
 
 	const [currentSceneId, setCurrentSceneId] = useAtom(currentSceneIdAtom)
 	const [sceneMetaState, setSceneMetaState] = useAtom(sceneMetaAtom)
@@ -160,16 +161,8 @@ export function usePublisherScene({
 		[requestSceneScreenshot]
 	)
 
-	// Read when a save starts: the preview the author drew for what is saved.
-	const currentPreview = useCurrentPreview()
-	const currentPreviewRef = useRef(currentPreview)
-	useEffect(() => {
-		currentPreviewRef.current = currentPreview
-	}, [currentPreview])
-	const captureStudioFinish = useCallback(
-		() => studioFinishToSave(currentPreviewRef.current),
-		[]
-	)
+	const { hasUnsavedFinish, captureStudioFinish, markFinishSaved } =
+		useFinishForSave()
 
 	const captureShadowBake = useCallback(async () => {
 		try {
@@ -234,7 +227,8 @@ export function usePublisherScene({
 			lastSavedSceneId,
 			setLastSavedSceneId,
 			suppressDirtyDetection: status === 'loading' || isAwaitingSavedBaseline,
-			hasUnsavedOriginalChoice
+			hasUnsavedOriginalChoice,
+			hasUnsavedFinish
 		},
 		optimizationState: {
 			optimizationSettings,
@@ -254,6 +248,7 @@ export function usePublisherScene({
 			captureSceneThumbnail,
 			captureShadowBake,
 			captureStudioFinish,
+			markFinishSaved,
 			resolveSource,
 			recordSavedSource
 		}
@@ -263,6 +258,8 @@ export function usePublisherScene({
 		openSceneId,
 		isRestoringDraft,
 		uploadFiles,
+		openModel,
+		openingSubject,
 		retrySceneLoad,
 		saveSceneSettings,
 		saveAvailability,

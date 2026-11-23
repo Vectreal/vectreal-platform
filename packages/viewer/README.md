@@ -292,7 +292,7 @@ of them:
 | `initial_framing_completed` | `{ cameraId: string \| null }` | Initial framing and stabilization completed |
 | `camera_changed`            | `{ cameraId: string }`         | Active camera changed                       |
 | `hotspot_activated` | `{ hotspotId: string; cameraId: string \| null }` | A visitor activated a hotspot |
-| `animation_state_changed` | `{ playing: boolean; activeClipId: string \| null; complete: boolean }` | Animation playback started, stopped or advanced |
+| `animation_state_changed` | `{ playing: boolean; activeClipId: string \| null; complete: boolean; posed: boolean }` | Animation playback started, stopped or advanced. `posed` is true while a clip holds the model off its bind pose: playing, paused, scrubbed or held at its end |
 | `animation_clip_finished` | `{ clipId: string }` | One animation clip ran to its end |
 
 `ViewerInteractionEvent` also declares `model_loaded` and `auto_rotate_changed`. Both

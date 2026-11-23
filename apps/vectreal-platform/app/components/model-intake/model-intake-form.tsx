@@ -372,6 +372,7 @@ export function ModelIntakeForm({
 
 			<div className="space-y-3">
 				<Button
+					variant="brand"
 					type="submit"
 					size="lg"
 					disabled={

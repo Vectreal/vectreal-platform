@@ -1,7 +1,6 @@
-import { readWithProgress } from '@vctrl/core/model-loader'
-
 import cameraPreviewUrl from '../../assets/models/camera-preview.webp?url'
 import cameraSourceUrl from '../../assets/models/camera-source.glb?url'
+import cameraStudioUrl from '../../assets/models/camera-studio.glb?url'
 import cameraUrl from '../../assets/models/camera.glb?url'
 import rocketPreviewUrl from '../../assets/models/rocket-preview.webp?url'
 import rocketUrl from '../../assets/models/rocket-v3.glb?url'
@@ -9,6 +8,8 @@ import sheenChairPreviewUrl from '../../assets/models/sheen-chair-preview.webp?u
 import sheenChairSourceUrl from '../../assets/models/sheen-chair-source.glb?url'
 import toyCarPreviewUrl from '../../assets/models/toy-car-preview.webp?url'
 import toyCarUrl from '../../assets/models/toy-car.glb?url'
+
+import type { ModelSource } from '@vctrl/hooks/use-load-model'
 
 /**
  * Models anyone can try without handing over their own work.
@@ -140,38 +141,26 @@ export function requireSampleModel(id: string): SampleModel {
 }
 
 /**
- * Fetches a sample as a `File`, ready for the same load path a dropped file
- * takes. Nothing about it is special-cased downstream: it is a real GLB going
- * through the real loader, which is the only version worth offering.
- *
- * Read as a stream so `onProgress` can say how far it is, from 0 to 1. The
- * camera is 18 MB, and on a slow connection a click with nothing after it
- * reads as a click that missed. Measured against `bytes` rather than
- * `Content-Length`: the stream delivers the file as it is on disk, while a
- * compressed response's header counts what crossed the wire.
+ * A sample as the loader opens it: by its URL, named by its own file name
+ * rather than the build's hashed one, and measured against its known size,
+ * which a gzipped response's `Content-Length` would understate.
  */
-export async function fetchSampleModel(
-	sample: Pick<SampleModel, 'url' | 'fileName' | 'bytes'>,
-	onProgress?: (fraction: number) => void
-): Promise<File> {
-	const response = await fetch(sample.url)
-
-	if (!response.ok || !response.body) {
-		throw new Error(`Sample fetch failed: ${response.status}`)
+export function sampleModelSource(
+	sample: Pick<SampleModel, 'url' | 'fileName' | 'bytes'>
+): Extract<ModelSource, { kind: 'url' }> {
+	return {
+		kind: 'url',
+		url: sample.url,
+		fileName: sample.fileName,
+		expectedBytes: sample.bytes
 	}
-
-	const chunks = await readWithProgress(response.body, sample.bytes, onProgress)
-
-	return new File(chunks, sample.fileName, { type: 'model/gltf-binary' })
 }
 
 /**
- * The model the home page draws: Poly Haven's Camera_01, CC0.
- *
- * The optimized file, which is what the hero downloads. Its source is the
- * camera in `SAMPLE_MODELS`: that one is untouched, so the converter and the
- * publisher have something to show on it, and this one would show almost
- * nothing.
+ * The camera sample after the publisher's Balanced preset: Poly Haven's
+ * Camera_01, CC0. Its source is the camera in `SAMPLE_MODELS`: that one is
+ * untouched, so the converter and the publisher have something to show on
+ * it, and this one would show almost nothing.
  *
  * WHAT WAS DONE TO IT. The 4k source was packed into one GLB with the strap
  * removed, and the maker's engravings (brand, model and serial number) painted
@@ -180,15 +169,28 @@ export async function fetchSampleModel(
  * It was then run through the publisher's Balanced preset (1024px WebP at 80,
  * Draco) on 2026-09-24, which produced this file.
  *
+ * `sample-models.spec.ts` pins its size to the file.
+ */
+export const BALANCED_CAMERA = {
+	url: cameraUrl,
+	fileName: 'camera.glb',
+	bytes: 946_600
+} as const
+
+/**
+ * The model the home page draws: `BALANCED_CAMERA` as publishing ships it
+ * with the studio finish the hero is lit by (`HERO_LIGHTING`), baked by
+ * `scripts/bake-home-hero.ts` through the publisher's own publish export.
+ *
  * `sample-models.spec.ts` reads every figure here back from the files,
  * `sourceBytes` included, so the hero's before and after cannot drift from what
  * the sample and the served file weigh.
  */
 export const HERO_MODEL = {
-	url: cameraUrl,
-	fileName: 'camera.glb',
+	url: cameraStudioUrl,
+	fileName: 'camera-studio.glb',
 	/** What the page downloads. Pinned by the spec. */
-	bytes: 946_600,
+	bytes: 1_774_072,
 	/** The same model before the Balanced preset: the camera sample. Pinned by the spec. */
 	sourceBytes: 18_758_168,
 	/** Which face the line drawing shows. */

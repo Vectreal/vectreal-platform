@@ -15,7 +15,11 @@ import type { ViewerCommand, ViewerInteractionEvent } from '@vctrl/viewer'
 export interface EmbedOptions {
 	/** Override the detected iframe origin for postMessage targeting. */
 	iframeOrigin?: string
-	/** Milliseconds before ready() rejects. Default: 15 000. */
+	/**
+	 * Milliseconds of silence before ready() rejects: no progress from the
+	 * scene's load in that long. Default: 15 000. Against a frame older than
+	 * this SDK, which reports no progress, it is the total time.
+	 */
 	readyTimeout?: number
 }
 
@@ -38,6 +42,23 @@ export interface SetTransitionOptions {
 export type EmbedEventMap = {
 	viewer_ready: void
 	model_loaded: void
+	/**
+	 * Where the scene's load is while it shows its loader: `fetching` with the
+	 * model's bytes, `parsing`, then `preparing` (environment, shaders,
+	 * framing). On every phase change and at most every 250 ms within one;
+	 * from an iframe older than this SDK, never.
+	 */
+	load_progress: Extract<
+		ViewerInteractionEvent,
+		{ type: 'load_progress' }
+	>['progress']
+	/**
+	 * The scene could not be loaded. The frame shows an error with a Try again
+	 * button, and becomes ready if a visitor's retry succeeds. `code` is the
+	 * loader's (`url_http`, `gltf_load_failed`, ...); `recoverable` says
+	 * whether trying again can help, as it can after a network failure.
+	 */
+	load_failed: { code: string; recoverable: boolean }
 	camera_changed: { cameraId: string }
 	auto_rotate_changed: { enabled: boolean }
 	animation_state_changed: {
@@ -96,6 +117,10 @@ export type EmbedEventHandler<K extends EmbedEventType> = (
 // VectrealEmbed
 // ---------------------------------------------------------------------------
 
+function loadFailedError({ code }: EmbedEventMap['load_failed']): Error {
+	return new Error(`VectrealEmbed: the scene could not be loaded (${code})`)
+}
+
 const DEFAULT_READY_TIMEOUT_MS = 15_000
 
 export class VectrealEmbed {
@@ -153,39 +178,59 @@ export class VectrealEmbed {
 
 	/**
 	 * Resolves when the embedded viewer emits viewer_ready.
-	 * Rejects if no response within readyTimeout.
+	 *
+	 * Rejects when the scene fails to load (`load_failed`), and after
+	 * `readyTimeout` with no word from the frame. Each `load_progress` starts
+	 * that wait again, so a large scene on a slow network is not given up on
+	 * while it is still arriving.
 	 */
 	ready(): Promise<EmbedReadyInfo> {
 		return new Promise((resolve, reject) => {
-			const timer = window.setTimeout(() => {
-				this.off('viewer_ready', onReady as EmbedEventHandler<'viewer_ready'>)
-				reject(
-					new Error(
-						`VectrealEmbed: viewer did not become ready within ${this.readyTimeout}ms`
-					)
-				)
-			}, this.readyTimeout)
-
-			const onReady = () => {
-				window.clearTimeout(timer)
-				resolve({
-					sceneId: this.sceneId,
-					cameras: this.cameras,
-					hotspots: this.hotspots
-				})
-			}
-
+			const info = () => ({
+				sceneId: this.sceneId,
+				cameras: this.cameras,
+				hotspots: this.hotspots
+			})
 			if (this.isReady) {
-				window.clearTimeout(timer)
-				resolve({
-					sceneId: this.sceneId,
-					cameras: this.cameras,
-					hotspots: this.hotspots
-				})
+				resolve(info())
+				return
+			}
+			if (this.loadFailure) {
+				reject(loadFailedError(this.loadFailure))
 				return
 			}
 
-			this.on('viewer_ready', onReady as EmbedEventHandler<'viewer_ready'>)
+			let timer: number | undefined
+			const settle = () => {
+				window.clearTimeout(timer)
+				this.off('viewer_ready', onReady)
+				this.off('load_failed', onFailed)
+				this.off('load_progress', waitAgain)
+			}
+			const waitAgain = () => {
+				window.clearTimeout(timer)
+				timer = window.setTimeout(() => {
+					settle()
+					reject(
+						new Error(
+							`VectrealEmbed: viewer did not become ready within ${this.readyTimeout}ms of the last word from it`
+						)
+					)
+				}, this.readyTimeout)
+			}
+			const onReady = () => {
+				settle()
+				resolve(info())
+			}
+			const onFailed = (failure: EmbedEventMap['load_failed']) => {
+				settle()
+				reject(loadFailedError(failure))
+			}
+
+			this.on('viewer_ready', onReady)
+			this.on('load_failed', onFailed)
+			this.on('load_progress', waitAgain)
+			waitAgain()
 		})
 	}
 
@@ -343,6 +388,11 @@ export class VectrealEmbed {
 	// Defaulted rather than left undefined: `ready()` promises an array, and an
 	// iframe older than this field sends no `hotspots` at all.
 	private hotspots: EmbedHotspotDescriptor[] = []
+	/**
+	 * The last load's failure, until the frame reports a load again, so a
+	 * ready() called after it rejects rather than waiting out the timeout.
+	 */
+	private loadFailure: EmbedEventMap['load_failed'] | null = null
 
 	// ---------------------------------------------------------------------------
 	// Private helpers
@@ -440,6 +490,11 @@ export class VectrealEmbed {
 				this.handleViewerEvent(data.event)
 				break
 
+			case 'load_failed':
+				this.loadFailure = { code: data.code, recoverable: data.recoverable }
+				this.emit('load_failed', this.loadFailure)
+				break
+
 			case 'interaction_event':
 				this.emit('interaction_event', {
 					interactionId: data.interactionId,
@@ -460,7 +515,17 @@ export class VectrealEmbed {
 				this.emit('viewer_ready', undefined as void)
 				break
 			case 'model_loaded':
-				this.emit('model_loaded', undefined as void)
+				/*
+				  The viewer's own, which fires when the model reaches it, before
+				  framing. This SDK's `model_loaded` has always meant the scene is
+				  visible and is sent for `initial_framing_completed` below, so
+				  passing this one on too would fire it twice, the first time early.
+				*/
+				break
+			case 'load_progress':
+				// A visitor's retry is loading, so the failure is no longer the answer.
+				this.loadFailure = null
+				this.emit('load_progress', event.progress)
 				break
 			case 'camera_changed':
 				this.emit('camera_changed', { cameraId: event.cameraId })

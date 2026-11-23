@@ -46,25 +46,65 @@ export function describePublishSource({
 	presentation: ScenePresentationSettings | null | undefined
 	lighting: LightingSettings | null | undefined
 }): string {
-	const modelAssetIds = assets
-		.filter(
-			(asset) =>
-				!isUrlServedSceneAsset(asset) && asset.name !== PERSISTED_BAKE_FILENAME
-		)
-		.map((asset) => asset.id)
-		.sort()
 	// The same default the publisher hydrates a scene without settings to.
 	const optimizations = optimizationSettings ?? originalPreset
 	const { enabled: dracoEnabled = false, ...dracoOptions } =
 		optimizations.draco ?? {}
 	return JSON.stringify({
-		model: modelAssetIds,
+		model: modelAssetIds(assets),
 		draco: dracoEnabled ? canonicalDracoOptions(dracoOptions) : null,
 		gpuTextures: shouldCompressTexturesForGpu(presentation, {
 			isOriginalPreset: optimizationsMatch(optimizations, originalPreset)
 		}),
 		bakes: bakesKey(lighting ?? undefined)
 	})
+}
+
+/**
+ * Describes what a studio finish saved before any codec is made from: the
+ * model document and what it bakes in, as `describePublishSource` reads both.
+ * Publish encodes such a finish with whatever codecs the scene asks for at the
+ * time, so a change to Draco or GPU texture compression leaves it current; only
+ * a new model or a change to what is baked retires it.
+ */
+export function describeFinishSource({
+	assets,
+	lighting
+}: {
+	assets: readonly { id: string; name: string; mimeType: string | null }[]
+	lighting: LightingSettings | null | undefined
+}): string {
+	return JSON.stringify({
+		model: modelAssetIds(assets),
+		bakes: bakesKey(lighting ?? undefined)
+	})
+}
+
+/**
+ * What a stored studio finish was made from, as `describeFinishSource` writes
+ * it. A finish saved as a published file was recorded against the whole
+ * publish source; its codecs say how that file was encoded, not what was
+ * baked, so only its model and bakes are kept.
+ */
+export function storedFinishSource(source: string): string {
+	const { model, bakes } = JSON.parse(source) as {
+		model?: unknown
+		bakes?: unknown
+	}
+	return JSON.stringify({ model, bakes })
+}
+
+/** The ids standing in for the model document; see `describePublishSource`. */
+function modelAssetIds(
+	assets: readonly { id: string; name: string; mimeType: string | null }[]
+): string[] {
+	return assets
+		.filter(
+			(asset) =>
+				!isUrlServedSceneAsset(asset) && asset.name !== PERSISTED_BAKE_FILENAME
+		)
+		.map((asset) => asset.id)
+		.sort()
 }
 
 /**

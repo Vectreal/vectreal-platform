@@ -11,7 +11,10 @@ import { users } from '../../../db/schema/core/users'
 import { projects } from '../../../db/schema/project/projects'
 import { encryptEmbedToken } from '../../security/embed-token-cipher.server'
 import { assertWithinQuota } from '../billing/quota-enforcement.server'
-import { type DashboardOperation } from '../dashboard/dashboard-operations'
+import {
+	type DashboardOperation,
+	rolesFor
+} from '../dashboard/dashboard-operations'
 import { assertDashboardPermission } from '../dashboard/dashboard-permissions.server'
 
 const db = getDbClient()
@@ -96,19 +99,19 @@ export interface ApiKeyWithDetails {
 }
 
 /**
- * Get all API keys for all organizations the user belongs to (admin/owner only)
+ * Every API key in the organizations where the user's role may read them.
  */
 export async function getAllUserApiKeys(
 	userId: string
 ): Promise<ApiKeyWithDetails[]> {
-	// Get all organizations where user is admin or owner
+	// The roles come from the operation table, never a list of their own.
 	const userOrgs = await db
 		.select({ organizationId: organizationMemberships.organizationId })
 		.from(organizationMemberships)
 		.where(
 			and(
 				eq(organizationMemberships.userId, userId),
-				inArray(organizationMemberships.role, ['admin', 'owner'])
+				inArray(organizationMemberships.role, [...rolesFor('api-key:read')])
 			)
 		)
 

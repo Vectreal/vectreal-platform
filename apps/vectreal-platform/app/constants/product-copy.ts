@@ -420,7 +420,7 @@ export const HOME_PAGE_COPY = {
 	},
 	stage: {
 		figure: 'Fig 01',
-		/** The label once the drawing has turned into the object. */
+		/** The label once the live stage has taken over from the still. */
 		liveView: 'Live view',
 		readouts: {
 			file: 'File',
@@ -430,8 +430,8 @@ export const HOME_PAGE_COPY = {
 		},
 		status: {
 			loading: 'Loading',
-			drawn: 'Drawn from the file',
-			rendering: 'Rendering',
+			/** The live stage could not run: the baked still stays. */
+			still: 'Still image',
 			live: 'Live. Drag to turn'
 		}
 	},
@@ -484,25 +484,18 @@ export const HOME_PAGE_COPY = {
 			{ key: 'we build it in public' },
 			'.'
 		],
-		signature: 'Moritz Becker, founder',
-		/** The figure beside the statement: one model, pulled apart into the path it takes. Back to front. */
-		layers: {
-			file: 'The raw model',
-			prepared: 'Prepared for the web',
-			page: 'On your product page'
-		}
+		signature: 'Moritz Becker, founder'
 	},
 	/**
-	  The free-model offer, the page's first section under the hero. It claims
-	  nothing the `/free-model` page (`MODEL_INTAKE_COPY.en`) does not, so the
-	  offer cannot promise what the intake does not deliver: a service we
-	  perform, never how the model is made.
+	  How the free-model offer works, in steps. It claims nothing the
+	  `/free-model` page (`MODEL_INTAKE_COPY.en`) does not, so the offer cannot
+	  promise what the intake does not deliver: a service we perform, never how
+	  the model is made. The offer itself is the hero's, so it is not repeated
+	  here: the band says what happens, then the same door.
 	*/
 	pilot: {
 		heading: 'Your product in 3D, from three photos.',
-		lead: "Send us three photos of one product. We look at them first and tell you whether we can make a model from them. If we can, the first one is free, as GLB and USDZ files for Shopify's own 3D slot.",
 		cta: 'Request a free model',
-		afterCta: 'If you like it, we make five products as a paid pilot.',
 		stepsLabel: 'How it works',
 		steps: [
 			{

@@ -120,12 +120,17 @@ export async function loader({ request }: Route.LoaderArgs) {
 		getUserOrganizations(user.id)
 	])
 
-	const adminOrgs = organizations.filter((o) =>
-		['admin', 'owner'].includes(o.membership.role)
+	/*
+	  One tab per organization whose keys this role may read, by the operation
+	  table. `canPerformDashboardOperation` and not `assertDashboardPermission`:
+	  throwing would 500 every tab over one organization.
+	*/
+	const keyReaderOrgs = organizations.filter((o) =>
+		canPerformDashboardOperation('api-key:read', { role: o.membership.role })
 	)
 
 	const apiKeyEntitlementEntries = await Promise.all(
-		adminOrgs.map(async ({ organization }) => {
+		keyReaderOrgs.map(async ({ organization }) => {
 			const [entitlement, subscription] = await Promise.all([
 				hasEntitlement(organization.id, 'org_api_keys'),
 				getOrgSubscription(organization.id)
@@ -153,34 +158,19 @@ export async function loader({ request }: Route.LoaderArgs) {
 	  cost a preview; now it would cost a live key in the payload of a page that
 	  never draws it.
 	*/
-	const renderedOrgIds = new Set(adminOrgs.map((o) => o.organization.id))
+	const renderedOrgIds = new Set(keyReaderOrgs.map((o) => o.organization.id))
 
 	/*
-	  Where the value may be resolved, decided per organization.
+	  Where the value may be resolved: the organizations above whose plan
+	  includes API keys. The role is already settled by `api-key:read`, the same
+	  rule `getAllUserApiKeys` filters by in SQL through `rolesFor`.
 
-	  `canPerformDashboardOperation` and not `assertDashboardPermission`: this
-	  page renders one tab per organization, so throwing would 500 all of them
-	  over one. As a filter the check is load-bearing and can be mutation-tested;
-	  as an assert it would be unreachable and prove nothing.
-
-	  It is also not redundant with the `adminOrgs` filter above, which only
-	  chooses tabs. The restriction that actually runs today is a hardcoded
-	  `inArray(role, ['admin', 'owner'])` inside `getAllUserApiKeys` - a second
-	  copy of this rule written in SQL that never consults the table. Before this
-	  line, tightening `api-key:read` changed nothing on this page.
-
-	  The entitlement term is the same argument as the embed route's project
-	  filter: an organization without `org_api_keys` renders
-	  `FeatureUnavailablePanel` instead of a table, so decrypting its keys spends
-	  AES on markup that does not exist and puts plaintext in memory for nobody.
+	  An organization without `org_api_keys` renders `FeatureUnavailablePanel`
+	  instead of a table, so decrypting its keys spends AES on markup that does
+	  not exist and puts plaintext in memory for nobody.
 	*/
 	const valueReadableOrgIds = new Set(
-		adminOrgs
-			.filter((o) =>
-				canPerformDashboardOperation('api-key:read', {
-					role: o.membership.role
-				})
-			)
+		keyReaderOrgs
 			.filter((o) => apiKeysAccessByOrg[o.organization.id]?.granted)
 			.map((o) => o.organization.id)
 	)
@@ -219,7 +209,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	*/
 	return data({
 		keysByOrg: Object.fromEntries(keysByOrg),
-		organizations: adminOrgs,
+		organizations: keyReaderOrgs,
 		apiKeysAccessByOrg
 	})
 }
