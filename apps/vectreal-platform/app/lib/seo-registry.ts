@@ -2,6 +2,7 @@ import { SITE_URL, type SeoPageDefinition } from './seo'
 import { normalizeSlug } from './utils/slug'
 import {
 	PLAN_OFFER_DESCRIPTIONS,
+	PLAN_PRICE_CURRENCY,
 	PLATFORM_FEATURE_LIST,
 	PLATFORM_SOCIAL_DESCRIPTION,
 	PLATFORM_TAGLINE,
@@ -173,7 +174,9 @@ function buildWebApplicationJsonLd() {
 				'@type': 'Offer',
 				name: name.charAt(0).toUpperCase() + name.slice(1),
 				description,
-				...(name === 'free' ? { price: '0', priceCurrency: 'USD' } : {})
+				...(name === 'free'
+					? { price: '0', priceCurrency: PLAN_PRICE_CURRENCY.toUpperCase() }
+					: {})
 			})
 		),
 		publisher: { '@id': `${SITE_URL}/#organization` }

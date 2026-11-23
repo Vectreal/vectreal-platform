@@ -246,9 +246,21 @@ export const PLAN_HIGHLIGHTED: Record<Plan, boolean> = {
 }
 
 // ---------------------------------------------------------------------------
-// Fallback prices (USD) displayed when Stripe is unreachable.
+// Fallback prices displayed when Stripe gives no price.
 // Keep in sync with the Stripe product configuration.
 // ---------------------------------------------------------------------------
+
+/*
+  The currency the Stripe account sells the plans in, and so the currency of
+  every plan price the page writes itself: Free's zero and the fallbacks below.
+  Live prices carry their own currency from Stripe.
+
+  It was nobody's fact. The Free card was the literal "$0", the fallback branch
+  a literal "$", `resolvePlanPrice` formatted fallbacks as 'usd' and the
+  schema.org offer said USD, so when the account moved to euros only the live
+  figures followed and /pricing showed "$0" beside "€19".
+*/
+export const PLAN_PRICE_CURRENCY = 'eur'
 
 /*
   Keyed by `PaidPlan`, not `Partial<Record<Plan, ...>>`.
@@ -260,13 +272,17 @@ export const PLAN_HIGHLIGHTED: Record<Plan, boolean> = {
   `Partial` also made the values optional, so `ANNUAL_DISCOUNT_CLAIM` below
   destructures `monthly` and `annualMonthly` off something the type says may be
   undefined. A total Record makes both halves true.
+
+  `annualMonthly` is `null` for a plan with no yearly price: Stripe sells
+  Business monthly only, so on the yearly toggle it shows its monthly price and
+  no saving, rather than a yearly figure nobody can be charged.
 */
 export const PLAN_FALLBACK_PRICES: Record<
 	PaidPlan,
-	{ monthly: number; annualMonthly: number }
+	{ monthly: number; annualMonthly: number | null }
 > = {
-	pro: { monthly: 29, annualMonthly: 23 },
-	business: { monthly: 79, annualMonthly: 63 }
+	pro: { monthly: 19, annualMonthly: 14 },
+	business: { monthly: 62, annualMonthly: null }
 }
 
 /*
@@ -284,7 +300,7 @@ export const PLAN_FALLBACK_PRICES: Record<
 */
 export const ANNUAL_DISCOUNT_CLAIM = `Save up to ${Math.max(
 	...Object.values(PLAN_FALLBACK_PRICES).map(({ monthly, annualMonthly }) =>
-		Math.round((1 - annualMonthly / monthly) * 100)
+		annualMonthly === null ? 0 : Math.round((1 - annualMonthly / monthly) * 100)
 	)
 )}%`
 

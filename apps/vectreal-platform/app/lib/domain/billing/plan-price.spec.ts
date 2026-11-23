@@ -45,31 +45,46 @@ const LIVE: BillingCheckoutOptions = {
 describe('without a live Stripe price', () => {
 	it('still shows what the plan costs', () => {
 		expect(resolvePlanPrice('pro', 'monthly', NO_LIVE_PRICES)).toEqual({
-			perMonthLabel: '$29',
+			perMonthLabel: '€19',
 			billedLabel: null,
 			priceId: null,
-			perMonthCents: 2900,
-			currency: 'usd'
+			perMonthCents: 1900,
+			currency: 'eur'
 		})
 	})
 
 	it('shows the annual figure the way it is billed', () => {
-		expect(resolvePlanPrice('business', 'annual', NO_LIVE_PRICES)).toEqual({
-			perMonthLabel: '$63',
-			billedLabel: '$756 billed yearly',
+		expect(resolvePlanPrice('pro', 'annual', NO_LIVE_PRICES)).toEqual({
+			perMonthLabel: '€14',
+			billedLabel: '€168 billed yearly',
 			priceId: null,
-			perMonthCents: 6300,
-			currency: 'usd'
+			perMonthCents: 1400,
+			currency: 'eur'
 		})
+	})
+
+	it('shows a plan with no yearly price at its monthly price, billed monthly', () => {
+		/*
+		  Stripe sells Business monthly only. The yearly toggle used to show a
+		  yearly Business figure nobody could be charged.
+		*/
+		expect(resolvePlanPrice('business', 'annual', NO_LIVE_PRICES)).toEqual({
+			perMonthLabel: '€62',
+			billedLabel: null,
+			priceId: null,
+			perMonthCents: 6200,
+			currency: 'eur'
+		})
+		expect(describeAnnualSaving('business', NO_LIVE_PRICES)).toBeNull()
 	})
 
 	it('still names the yearly saving, from the prices it shows', () => {
 		/*
 		  The saving used to read live prices only, so a page showing the fallback
-		  $29 offered no saving beside it. Business: $79 against $63 a month, a
-		  year of it.
+		  price offered no saving beside it. Pro: €19 against €14 a month, a year
+		  of it.
 		*/
-		expect(describeAnnualSaving('business', NO_LIVE_PRICES)).toBe('$192')
+		expect(describeAnnualSaving('pro', NO_LIVE_PRICES)).toBe('€60')
 	})
 
 	it('offers nothing to buy', () => {

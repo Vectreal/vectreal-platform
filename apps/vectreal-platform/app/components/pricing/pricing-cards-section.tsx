@@ -44,6 +44,7 @@ import {
 	PLAN_DISPLAY_NAMES,
 	PLAN_FALLBACK_PRICES,
 	PLAN_HIGHLIGHTED,
+	PLAN_PRICE_CURRENCY,
 	PLAN_TAGLINES
 } from '../../constants/product-copy'
 import { formatPrice } from '../../lib/domain/billing/plan-price'
@@ -107,7 +108,9 @@ function PlanCell({
 	const liveMonthlyAmountCents = livePricing?.monthly?.amountCents ?? null
 	const liveAnnualAmountCents = livePricing?.annual?.amountCents ?? null
 	const liveCurrency =
-		livePricing?.monthly?.currency ?? livePricing?.annual?.currency ?? 'usd'
+		livePricing?.monthly?.currency ??
+		livePricing?.annual?.currency ??
+		PLAN_PRICE_CURRENCY
 
 	const displayAmountCents =
 		period === 'monthly'
@@ -201,7 +204,9 @@ function PlanCell({
 				<div className="pt-2">
 					{isFree ? (
 						<div>
-							<span className="text-h2">$0</span>
+							<span className="text-h2">
+								{formatPrice(0, PLAN_PRICE_CURRENCY, PUBLISHED_COPY_LOCALE)}
+							</span>
 							<span className="text-muted-foreground text-body-sm ml-1">
 								/month
 							</span>
@@ -229,10 +234,14 @@ function PlanCell({
 							) : (
 								<div className="flex items-end gap-2">
 									<span className="text-h2">
-										$
-										{period === 'annual'
-											? (staticAnnualMonthlyPrice ?? staticMonthlyPrice)
-											: staticMonthlyPrice}
+										{staticMonthlyPrice !== null &&
+											formatPrice(
+												(period === 'annual'
+													? (staticAnnualMonthlyPrice ?? staticMonthlyPrice)
+													: staticMonthlyPrice) * 100,
+												PLAN_PRICE_CURRENCY,
+												PUBLISHED_COPY_LOCALE
+											)}
 									</span>
 									<span className="text-muted-foreground text-body-sm mb-1">
 										/month

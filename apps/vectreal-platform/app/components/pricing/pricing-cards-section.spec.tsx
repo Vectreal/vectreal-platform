@@ -14,6 +14,8 @@ import {
 	PLAN_HIGHLIGHTED
 } from '../../constants/product-copy'
 
+import type { BillingCheckoutOptions } from '../../lib/domain/dashboard/dashboard-types'
+
 it('sends Pro and Business to the contact page, not checkout', () => {
 	render(
 		<MemoryRouter>
@@ -59,3 +61,78 @@ it('marks only the highlighted plan as the brand action', () => {
 		[...container.querySelectorAll('[data-variant="brand"]')].map(planOf)
 	).toEqual(highlighted)
 })
+
+/*
+  The Stripe account sells in euros, the way production's prices arrive: Pro
+  monthly and yearly, Business monthly only. The Free card was the literal "$0"
+  and a missing price fell back to a literal "$", so the row read "$0", "€19"
+  and, on the yearly toggle, "$63" beside "€14".
+*/
+const LIVE_EUR: BillingCheckoutOptions = {
+	pro: {
+		monthly: {
+			priceId: 'price_pro_m',
+			amountCents: 1900,
+			currency: 'eur',
+			interval: 'month',
+			intervalCount: 1,
+			productName: 'Pro'
+		},
+		annual: {
+			priceId: 'price_pro_y',
+			amountCents: 16800,
+			currency: 'eur',
+			interval: 'year',
+			intervalCount: 1,
+			productName: 'Pro'
+		}
+	},
+	business: {
+		monthly: {
+			priceId: 'price_business_m',
+			amountCents: 6200,
+			currency: 'eur',
+			interval: 'month',
+			intervalCount: 1,
+			productName: 'Business'
+		},
+		annual: null
+	}
+}
+
+const pricesShown = (
+	period: 'monthly' | 'annual',
+	prices: BillingCheckoutOptions | null
+) => {
+	const { container } = render(
+		<MemoryRouter>
+			<PricingCardsSection
+				period={period}
+				onPeriodChange={() => undefined}
+				prices={prices}
+			/>
+		</MemoryRouter>
+	)
+	return {
+		text: container.textContent ?? '',
+		figures: [...container.querySelectorAll('h3')].map((name) => {
+			let cell = name.parentElement
+			while (cell && !cell.querySelector('.text-h2')) cell = cell.parentElement
+			return [name.textContent, cell?.querySelector('.text-h2')?.textContent]
+		})
+	}
+}
+
+it.each([
+	['monthly', LIVE_EUR, { Free: '€0', Pro: '€19', Business: '€62' }],
+	['annual', LIVE_EUR, { Free: '€0', Pro: '€14', Business: '€62' }],
+	['monthly', null, { Free: '€0', Pro: '€19', Business: '€62' }],
+	['annual', null, { Free: '€0', Pro: '€14', Business: '€62' }]
+] as const)(
+	'prices every plan in euros (%s, live prices: %o)',
+	(period, prices, expected) => {
+		const { text, figures } = pricesShown(period, prices)
+		expect(text).not.toContain('$')
+		expect(Object.fromEntries(figures)).toMatchObject(expected)
+	}
+)

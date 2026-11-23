@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildAuthorPersonJsonLd, buildNewsArticleJsonLd } from './seo-registry'
+import {
+	buildAuthorPersonJsonLd,
+	buildNewsArticleJsonLd,
+	buildSiteStructuredData
+} from './seo-registry'
 
 describe('article author structured data', () => {
 	/*
@@ -26,4 +30,20 @@ describe('article author structured data', () => {
 			expect(person['@id']).toMatch(/#author-[a-z0-9]+(-[a-z0-9]+)*$/)
 		}
 	)
+})
+
+describe('plan offers in structured data', () => {
+	/*
+	  The Free offer said USD while the Stripe account sells in euros, the same
+	  stale currency that put "$0" on the pricing page's Free card.
+	*/
+	it('prices the free plan in the currency the plans are sold in', () => {
+		const webApp = buildSiteStructuredData().find(
+			(node) => node['@type'] === 'WebApplication'
+		) as { offers: { name: string; priceCurrency?: string }[] }
+
+		expect(
+			webApp.offers.find((offer) => offer.name === 'Free')?.priceCurrency
+		).toBe('EUR')
+	})
 })
