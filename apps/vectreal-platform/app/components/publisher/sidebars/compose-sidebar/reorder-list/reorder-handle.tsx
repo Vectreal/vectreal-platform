@@ -13,6 +13,34 @@ const MOVE_BY_KEY: Record<string, ReorderMoveDelta> = {
 	End: 'last'
 }
 
+/** The keys framer-motion's `Reorder.Item` grabs and moves a focused row with. */
+const ROW_KEYS_FRAMER_HANDLES = new Set([
+	' ',
+	'ArrowUp',
+	'ArrowDown',
+	'ArrowLeft',
+	'ArrowRight'
+])
+
+/**
+ * Marks a row key as handled, so framer's own row reorder (which skips an
+ * event whose default is prevented) never sees it. Keys from inside the row,
+ * the handle among them, are left alone.
+ */
+export function swallowRowReorderKey(event: {
+	key: string
+	target: EventTarget
+	currentTarget: EventTarget
+	preventDefault: () => void
+}): void {
+	if (
+		event.target === event.currentTarget &&
+		ROW_KEYS_FRAMER_HANDLES.has(event.key)
+	) {
+		event.preventDefault()
+	}
+}
+
 interface ReorderHandleProps {
 	/** The row's name; the handle is labelled "Reorder <name>". */
 	name: string
@@ -97,8 +125,15 @@ export function ReorderItem({
 			  moves, which would add a second tab stop per list and a second,
 			  silent way to reorder. -1 keeps the row out of the tab order;
 			  framer applies our tabIndex over its own.
+
+			  A click can still focus the row, and framer's row keys would then
+			  move the draft without saving or announcing it. framer skips a key
+			  whose default is already prevented, and ours runs first, so the
+			  row swallows the keys framer acts on when it is the target itself.
+			  Keys from the handle and the row's controls pass through.
 			*/
 			tabIndex={-1}
+			onKeyDown={swallowRowReorderKey}
 			/*
 			  `layout` stays on whatever the motion preference is, and the
 			  preference is honored by the transition instead.
