@@ -24,10 +24,11 @@ export async function loader({ request }: Route.LoaderArgs) {
 		return data({ prices })
 	} catch (error) {
 		/*
-		  Degrades to a page with no prices on it. Stripe genuinely may not be
-		  configured outside production, which is why this is a fallback rather
-		  than a throw - and also why it needs reporting: in production the same
-		  branch means the pricing page is quietly selling nothing.
+		  Degrades to a page with no prices on it, and reports why. A deployment
+		  without a Stripe key never reaches this: `getCheckoutOptions` answers
+		  with no prices. So this is a real failure (Stripe unreachable, a
+		  malformed key), and in production it means the page is quietly
+		  selling nothing.
 		*/
 		reportServerError(error, { request })
 		return data({ prices: null })
