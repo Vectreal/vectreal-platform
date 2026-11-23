@@ -130,6 +130,11 @@ updates:
         update-types: ['version-update:semver-minor']
       - dependency-name: '@types/react-dom'
         update-types: ['version-update:semver-minor']
+      # verdaccio 7 requires Node 24 (engines >=24), and the viewer e2e runs
+      # it on Node 22 like the rest of CI (#1420). It moves with the work item
+      # "Move the runtime off Node 22, then @types/node to match".
+      - dependency-name: 'verdaccio'
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: 'github-actions'
     directory: '/'
