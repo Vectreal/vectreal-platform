@@ -406,7 +406,7 @@ describe('CameraControlsSettingsPanel ordering the cameras', () => {
 	it('saves a move down the order, and keeps focus on the handle', () => {
 		const store = sceneWithCameras()
 		renderPanel(store)
-		handleFor('Front').focus()
+		act(() => handleFor('Front').focus())
 
 		act(() => {
 			fireEvent.keyDown(handleFor('Front'), { key: 'ArrowDown' })

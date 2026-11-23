@@ -91,6 +91,15 @@ export function ReorderItem({
 			onDragStart={onDragStart}
 			onDragEnd={onDragEnd}
 			/*
+			  The handle is the one keyboard control for moving a row: it moves
+			  with the arrows and announces where the row landed. framer-motion
+			  14 also makes each row a tab stop with its own Space and arrow
+			  moves, which would add a second tab stop per list and a second,
+			  silent way to reorder. -1 keeps the row out of the tab order;
+			  framer applies our tabIndex over its own.
+			*/
+			tabIndex={-1}
+			/*
 			  `layout` stays on whatever the motion preference is, and the
 			  preference is honored by the transition instead.
 
