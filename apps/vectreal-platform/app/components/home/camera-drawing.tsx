@@ -1,7 +1,7 @@
 import { cn } from '@shared/utils'
 
 import styles from './camera-drawing.module.css'
-import { HERO_OBJECT_URL, HERO_POSTERS } from './hero/hero-assets'
+import { HERO_POSTERS } from './hero/hero-assets'
 
 import type { CSSProperties } from 'react'
 
@@ -30,10 +30,7 @@ const CROP = {
 	'--crop-w': `${100 / cropW}%`,
 	'--crop-h': `${100 / cropH}%`,
 	'--crop-x': `${(left / (1 - cropW)) * 100}%`,
-	'--crop-y': `${(top / (1 - cropH)) * 100}%`,
-	// The same crop as offsets, for an image placed inside the box rather than painted as its background.
-	'--crop-left': `${(-left / cropW) * 100}%`,
-	'--crop-top': `${(-top / cropH) * 100}%`
+	'--crop-y': `${(top / (1 - cropH)) * 100}%`
 } as CSSProperties
 
 /**
@@ -59,18 +56,4 @@ export const CameraDrawing = ({
 		style={CROP}
 		className={cn(styles.drawing, pencil && styles.pencil, className)}
 	/>
-)
-
-/**
- * The same camera rendered, in the same crop, so it lies exactly over its
- * drawing.
- *
- * An image rather than a background, so it loads lazily: a background image is
- * fetched with the page however far down it sits, and this one weighs more
- * than the drawing.
- */
-export const CameraObject = ({ className }: { className?: string }) => (
-	<div aria-hidden="true" style={CROP} className={cn(styles.object, className)}>
-		<img src={HERO_OBJECT_URL} alt="" loading="lazy" decoding="async" />
-	</div>
 )

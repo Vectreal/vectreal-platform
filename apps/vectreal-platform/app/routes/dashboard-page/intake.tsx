@@ -45,6 +45,7 @@ import {
 	intakeAttachmentName,
 	intakeRequestsByLetter,
 	isIntakeAttachmentSizeAcceptable,
+	MODEL_INTAKE_ATTACHMENT_TOO_LARGE_MESSAGE,
 	isIntakeProductType,
 	MODEL_INTAKE_OUTCOMES,
 	type ModelIntakeOutcome,
@@ -140,7 +141,7 @@ async function startAttachment(id: string, formData: FormData) {
 	}
 	if (!isIntakeAttachmentSizeAcceptable(Number(formData.get('fileSize')))) {
 		return data<IntakeActionResult>(
-			{ error: 'This file is too large to attach.' },
+			{ error: MODEL_INTAKE_ATTACHMENT_TOO_LARGE_MESSAGE },
 			{ status: 400 }
 		)
 	}

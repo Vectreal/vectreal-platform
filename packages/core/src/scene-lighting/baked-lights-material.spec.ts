@@ -5,11 +5,6 @@
  * fails the run.
  */
 import {
-	BAKED_LIGHTMAP_USER_DATA,
-	bakedLightsSignature,
-	resolveLighting
-} from '@vctrl/core'
-import {
 	Group,
 	Mesh,
 	MeshBasicMaterial,
@@ -20,12 +15,14 @@ import {
 } from 'three'
 import { describe, expect, it } from 'vitest'
 
+import { BAKED_LIGHTMAP_USER_DATA, bakedLightsSignature } from './baked-lights'
 import {
 	applyBakedLights,
 	bakedLightsShaderMatchesThree,
 	drawnLightsSignature,
 	patchBakedLightsShader
-} from './baked-lights'
+} from './baked-lights-material'
+import { resolveLighting } from './resolve-lighting'
 
 function bakedMaterial(signature = 'baked-from', scale = 2) {
 	const material = new MeshStandardMaterial({

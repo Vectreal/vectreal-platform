@@ -7,6 +7,7 @@ import {
 	describeDashboardOperationDenial,
 	moveOperationFor,
 	renameOperationFor,
+	rolesFor,
 	type DashboardOperation,
 	type MembershipRole
 } from './dashboard-operations'
@@ -187,5 +188,37 @@ describe('the billing routes', () => {
 			/if \(\s*!membership \|\|\s*!canPerformDashboardOperation\('billing:manage', \{\s*role: membership\.membership\.role\s*\}\)\s*\) \{\s*(return ApiResponse\.forbidden\(|throw redirect\('\/dashboard\/billing')/
 		)
 		expect(route).not.toContain("['owner', 'admin']")
+	})
+})
+
+describe('rolesFor', () => {
+	it("answers the table's roles for an operation", () => {
+		expect(rolesFor('api-key:read')).toBe(
+			DASHBOARD_OPERATION_ROLES['api-key:read']
+		)
+	})
+
+	it('refuses an operation the resource owner may also perform', () => {
+		// A role list would under-grant: a member who made the folder may move it.
+		// @ts-expect-error - not a role-only operation
+		rolesFor('scene-folder:move')
+	})
+})
+
+describe('role filters outside the table', () => {
+	const source = (relativePath: string) =>
+		readFileSync(new URL(relativePath, import.meta.url), 'utf8')
+
+	/** Any array literal of two or more membership roles. */
+	const ROLE_LIST =
+		/\[\s*'(owner|admin|member)'\s*,\s*'(owner|admin|member)'[^\]]*\]/
+
+	it.each([
+		'../auth/api-key-repository.server.ts',
+		'../../../routes/dashboard-page/api-keys.tsx',
+		'../../../routes/dashboard-page/api-keys-new.tsx',
+		'../../../routes/dashboard-page/projects/projects-new.tsx'
+	])('%s asks the table rather than listing roles', (path) => {
+		expect(source(path)).not.toMatch(ROLE_LIST)
 	})
 })

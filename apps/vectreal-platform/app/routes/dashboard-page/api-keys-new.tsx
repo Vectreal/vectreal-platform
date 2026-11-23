@@ -58,6 +58,7 @@ import {
 	getRecommendedUpgrade
 } from '../../lib/domain/billing/entitlement-service.server'
 import { QuotaExceededError } from '../../lib/domain/billing/quota-exceeded-error'
+import { canPerformDashboardOperation } from '../../lib/domain/dashboard/dashboard-operations'
 import { getUserProjects } from '../../lib/domain/project/project-repository.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
@@ -93,9 +94,10 @@ export async function loader({ request }: Route.LoaderArgs) {
 		getUserProjects(user.id)
 	])
 
-	// Only include orgs where user is admin/owner
 	const adminOrgs = organizations.filter((o) =>
-		['admin', 'owner'].includes(o.membership.role)
+		canPerformDashboardOperation('api-key:create', {
+			role: o.membership.role
+		})
 	)
 
 	if (adminOrgs.length === 0) {

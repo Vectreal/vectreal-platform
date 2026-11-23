@@ -103,6 +103,21 @@ describe("load({ kind: 'url' })", () => {
 		expect(loader.received[0].map((file) => file.name)).toEqual(['chair.glb'])
 	})
 
+	it("names the file by the caller's name, over a hashed URL", async () => {
+		stubFetch(async () => new Response(GLB))
+		const { result } = renderHook(() => useLoadModel())
+
+		await act(() =>
+			result.current.load({
+				kind: 'url',
+				url: 'https://cdn.example.com/assets/rocket-3f9a1c.glb',
+				fileName: 'rocket.glb'
+			})
+		)
+
+		expect(loader.received[0].map((file) => file.name)).toEqual(['rocket.glb'])
+	})
+
 	it('fills the bar with the download, then parsing carries on from there', async () => {
 		stubFetch(
 			async () =>

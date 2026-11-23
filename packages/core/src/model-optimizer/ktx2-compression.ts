@@ -14,8 +14,10 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-import { EXTTextureWebP, KHRTextureBasisu } from '@gltf-transform/extensions'
+import { KHRTextureBasisu } from '@gltf-transform/extensions'
 import { listTextureSlots } from '@gltf-transform/functions'
+
+import { dropUnusedWebpExtension } from '../webp-extension'
 
 import type { Document, Texture } from '@gltf-transform/core'
 
@@ -241,17 +243,7 @@ export async function compressTexturesToKtx2(
 		document.createExtension(KHRTextureBasisu).setRequired(true)
 	}
 
-	const webpRemains = document
-		.getRoot()
-		.listTextures()
-		.some((texture) => texture.getMimeType() === 'image/webp')
-	if (!webpRemains) {
-		document
-			.getRoot()
-			.listExtensionsUsed()
-			.find((extension) => extension instanceof EXTTextureWebP)
-			?.dispose()
-	}
+	dropUnusedWebpExtension(document)
 
 	return report
 }

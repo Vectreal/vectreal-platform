@@ -19,10 +19,29 @@ import { ModelFileTypes } from '@vctrl/core/model-loader'
 
 import {
 	LoadedModel,
+	ModelSource,
 	ModelSourceKind,
 	ModelState,
 	StructuredLoadError
 } from './types'
+
+/**
+ * Where a load starts: in `parsing` when its bytes are already here (picked
+ * files, or a scene payload carrying its assets), otherwise in `fetching`.
+ */
+export const initialLoadPhase = (
+	source: ModelSource
+): 'fetching' | 'parsing' => {
+	if (source.kind === 'files') return 'parsing'
+	if (source.kind === 'scene-data') {
+		const { sceneData } = source
+		const fetches =
+			Boolean(sceneData.publishedModel) ||
+			Boolean(sceneData.assetRefs && !sceneData.assetData)
+		return fetches ? 'fetching' : 'parsing'
+	}
+	return 'fetching'
+}
 
 /**
  * Model formats the loader accepts, reported on `useLoadModel`'s return.
@@ -48,13 +67,15 @@ export const emptyModelState: ModelState = {
 
 export const loadingModelState = (
 	source: ModelSourceKind,
-	progress = 0
+	progress = 0,
+	phase: 'fetching' | 'parsing' = source === 'files' ? 'parsing' : 'fetching'
 ): ModelState => ({
 	status: 'loading',
 	file: null,
 	error: null,
 	source,
-	progress
+	progress,
+	phase
 })
 
 export const readyModelState = (

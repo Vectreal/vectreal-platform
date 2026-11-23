@@ -1,7 +1,7 @@
 import { useGLTF } from '@react-three/drei'
 import { VectrealViewer } from '@vctrl/viewer'
 
-import { HERO_MODEL } from '../../lib/samples/sample-models'
+import { BALANCED_CAMERA } from '../../lib/samples/sample-models'
 
 /**
  * The home page's code snippet, run.
@@ -16,10 +16,10 @@ import { HERO_MODEL } from '../../lib/samples/sample-models'
  */
 /** Drops a failed load of the model, so the next render fetches it again rather than rethrowing. */
 export function forgetModel() {
-	useGLTF.clear(HERO_MODEL.url)
+	useGLTF.clear(BALANCED_CAMERA.url)
 }
 
 export default function SnippetResultClient() {
-	const { scene } = useGLTF(HERO_MODEL.url, '/draco/')
+	const { scene } = useGLTF(BALANCED_CAMERA.url, '/draco/')
 	return <VectrealViewer model={scene} />
 }

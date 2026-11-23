@@ -20,6 +20,7 @@ export type {
 	HostedPreviewCustomEventMessage,
 	HostedPreviewHostMessage,
 	HostedPreviewIncomingMessage,
+	HostedPreviewLoadFailedMessage,
 	HostedPreviewOutgoingMessage,
 	HostedPreviewPingMessage,
 	HostedPreviewPongMessage,

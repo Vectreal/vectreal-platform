@@ -15,6 +15,7 @@
 import { randomUUID } from 'node:crypto'
 
 import { count, eq, inArray } from 'drizzle-orm'
+import { RouterContextProvider } from 'react-router'
 import {
 	afterAll,
 	beforeAll,
@@ -25,13 +26,18 @@ import {
 	vi
 } from 'vitest'
 
+import { agentActorContext } from '../../app/lib/domain/agent/agent-actor-context'
+
 import type { AgentActor } from '../../app/lib/domain/agent/agent-actor.server'
 
-const authorizeAgentRequest = vi.hoisted(() => vi.fn())
-
+// The gate is held to every route by tests/agent-api-routes.spec.ts; a
+// handler here runs on the actor the gate would have put in context.
 vi.mock('../../app/lib/domain/agent/agent-request.server', () => ({
-	authorizeAgentRequest
+	agentGate: vi.fn()
 }))
+
+const contextFor = (actor: unknown) =>
+	new RouterContextProvider(new Map([[agentActorContext, actor]]))
 
 type Schema = typeof import('../../app/db/schema')
 type Db = ReturnType<typeof import('../../app/db/client').getDbClient>
@@ -67,7 +73,6 @@ describe('POST /api/v1/projects', () => {
 		key: string,
 		actor = actorFor(grantId, orgId)
 	) {
-		authorizeAgentRequest.mockResolvedValue(actor)
 		const request = new Request('https://vectreal.com/api/v1/projects', {
 			method: 'POST',
 			headers: {
@@ -78,7 +83,7 @@ describe('POST /api/v1/projects', () => {
 		})
 		// The route throws refusals; read them like the framework does.
 		const response = await route
-			.action({ request, params: {}, context: {} } as never)
+			.action({ request, params: {}, context: contextFor(actor) } as never)
 			.catch((error: unknown) => {
 				if (error instanceof Response) return error
 				throw error

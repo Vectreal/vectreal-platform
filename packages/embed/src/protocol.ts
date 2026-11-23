@@ -96,8 +96,31 @@ export interface HostedPreviewCustomEventMessage {
 	payload?: Record<string, unknown>
 }
 
+/**
+ * The scene could not be loaded, so the viewer will not become ready until a
+ * visitor retries from the frame's error state.
+ *
+ * Its own message, not a `viewer_event`: the page that loads the scene sees
+ * the failure, and the viewer never does. No message text and no URLs, which
+ * can carry a signed asset address.
+ */
+export interface HostedPreviewLoadFailedMessage {
+	source: typeof HOSTED_PREVIEW_VIEWER_SOURCE
+	type: 'load_failed'
+	sceneId?: string
+	/**
+	 * The loader's error code, such as `url_http` or `gltf_load_failed`. A
+	 * string rather than a union: a newer frame can send a code this SDK has
+	 * never heard of.
+	 */
+	code: string
+	/** Whether loading again can succeed, as with a network failure. */
+	recoverable: boolean
+}
+
 export type HostedPreviewOutgoingMessage =
 	| HostedPreviewCustomEventMessage
+	| HostedPreviewLoadFailedMessage
 	| HostedPreviewPongMessage
 	| HostedPreviewViewerEventMessage
 

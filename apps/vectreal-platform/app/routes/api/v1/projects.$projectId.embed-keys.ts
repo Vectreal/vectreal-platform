@@ -15,6 +15,7 @@
 import { ApiResponse } from '@shared/utils'
 import { createEmbedKeyInputSchema } from '@vctrl/sdk'
 
+import { agentActorFrom } from '../../../lib/domain/agent/agent-actor-context'
 import {
 	agentApiError,
 	agentBillingRefusal
@@ -22,7 +23,7 @@ import {
 import { recordAgentAudit } from '../../../lib/domain/agent/agent-audit.server'
 import { withIdempotency } from '../../../lib/domain/agent/agent-idempotency.server'
 import { AGENT_OPERATION_SCOPES } from '../../../lib/domain/agent/agent-operation-scopes'
-import { authorizeAgentRequest } from '../../../lib/domain/agent/agent-request.server'
+import { agentGate } from '../../../lib/domain/agent/agent-request.server'
 import { resolveAgentProject } from '../../../lib/domain/agent/agent-resource.server'
 import {
 	createApiKey,
@@ -41,10 +42,15 @@ import type { CreatedEmbedKey, EmbedKey, EmbedKeyList } from '@vctrl/sdk'
 /** The dashboard embed panel's default, so both mint the same key. */
 const EXPIRY_DAYS = 90
 
-export async function loader({ request, params }: Route.LoaderArgs) {
-	const actor = await authorizeAgentRequest(request, {
-		scope: AGENT_OPERATION_SCOPES['api-key:read']
+export const middleware = [
+	agentGate({
+		GET: AGENT_OPERATION_SCOPES['api-key:read'],
+		POST: AGENT_OPERATION_SCOPES['api-key:create']
 	})
+]
+
+export async function loader({ params, context }: Route.LoaderArgs) {
+	const actor = agentActorFrom(context)
 	const { projectId } = await resolveAgentProject(
 		params.projectId,
 		actor,
@@ -76,19 +82,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	)
 }
 
-export async function action({ request, params }: Route.ActionArgs) {
-	const actor = await authorizeAgentRequest(request, {
-		scope: AGENT_OPERATION_SCOPES['api-key:create']
-	})
-	if (request.method !== 'POST') {
-		return agentApiError(
-			405,
-			'method_not_allowed',
-			'This route answers GET and POST.',
-			{ headers: { Allow: 'GET, POST' } }
-		)
-	}
-
+export async function action({ request, params, context }: Route.ActionArgs) {
+	const actor = agentActorFrom(context)
 	const { projectId } = await resolveAgentProject(
 		params.projectId,
 		actor,

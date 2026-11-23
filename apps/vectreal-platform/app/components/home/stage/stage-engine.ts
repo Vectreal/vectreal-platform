@@ -1,8 +1,19 @@
+import {
+	applyBakedLights,
+	drawnLightsSignature,
+	ENVIRONMENT_IRRADIANCE,
+	lightDirection,
+	litLights,
+	registerBakedLightmap,
+	resolveEnvironmentFiles,
+	type ResolvedLighting
+} from '@vctrl/core'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { UltraHDRLoader } from 'three/examples/jsm/loaders/UltraHDRLoader.js'
 
 import { createSceneFloor } from './scene-floor'
 import {
@@ -50,8 +61,17 @@ export interface StageOptions {
 	posterMode?: boolean
 	/** Dissolve the model into the page in a band at the stage's top and bottom edges. On by default. */
 	edgeFade?: boolean
+	/** Hand the object to the reader to turn once it is shown. On by default; a stage set inside a picture of something else is looked at, not handled. */
+	turnable?: boolean
 	/** Stand the model on the drafting floor, drawn in the scene, and keep the tilt to a band. The home hero only: a 2D floor behind a freely orbiting model never agreed with its shadow. */
 	floor?: boolean
+	/**
+	 * Light the model as a published scene with this lighting is lit: its
+	 * map, its lights, the light maps baked into the file for them, and the
+	 * viewer's tone mapping. Without it, a room lights the model and one key
+	 * shades it.
+	 */
+	lighting?: ResolvedLighting
 }
 
 /** The sequence's timings, in milliseconds: from poster to a camera in the reader's hands in about three seconds, not six. */
@@ -60,6 +80,8 @@ const TIMING = { sweep: 1400, turn: 1000 }
 /** Drawn square to the sheet, then turned high enough to see the ground its shadow lies on. */
 const ELEVATION = { az: 0.03, el: 0.05 }
 const OBJECT = { az: 0.5, el: 0.3 }
+/** Where a still of the object is baked from: a short orbit short of the object's pose, so the live stage, taking over from it, turns into place and says it can be turned. */
+const STILL = { az: OBJECT.az - 0.35, el: OBJECT.el - 0.06 }
 /*
   How far the reader may tilt the camera over the floor, as elevations in radians.
   The turn is free; the tilt stops hard at a band around the object's pose
@@ -73,7 +95,9 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 		reducedMotion,
 		posterMode = false,
 		edgeFade = true,
-		floor: withFloor = false
+		turnable = true,
+		floor: withFloor = false,
+		lighting
 	} = options
 	const renderer = new THREE.WebGLRenderer({
 		canvas: el.canvas,
@@ -82,16 +106,50 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 		preserveDrawingBuffer: posterMode
 	})
 	renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-	renderer.toneMapping = THREE.AgXToneMapping
-	renderer.toneMappingExposure = 1.05
+	// As the viewer draws a published scene, when the stage stands in for one.
+	renderer.toneMapping = lighting
+		? THREE.NeutralToneMapping
+		: THREE.AgXToneMapping
+	renderer.toneMappingExposure = lighting ? 1 : 1.05
 	renderer.setClearColor(0x000000, 0)
 	renderer.shadowMap.enabled = true
 	renderer.shadowMap.type = THREE.PCFShadowMap // the jittered samples supply the softness
 
 	const scene = new THREE.Scene()
-	const key = new THREE.DirectionalLight(0xffffff, 1.6)
-	key.position.copy(SHADOW.key)
-	scene.add(key)
+	/*
+	  A published scene's lights deliver their intensity times the light its
+	  map gives an up-facing surface; the gain map decodes on the GPU, so that
+	  is the figure measured from its HDR, as the viewer takes it. They shade
+	  only: with the light maps drawn, what they add is their highlights.
+	*/
+	let lightUnit = lighting
+		? ENVIRONMENT_IRRADIANCE[lighting.environment.map] *
+			lighting.environment.intensity
+		: 0
+	const lights = lighting ? litLights(lighting) : []
+	const suns = lights.map((light) => {
+		const sun = new THREE.DirectionalLight(light.color)
+		sun.position.set(...lightDirection(light, lighting!.environment.rotation))
+		scene.add(sun)
+		return sun
+	})
+	const setLightUnit = (unit: number) => {
+		lightUnit = unit
+		suns.forEach((sun, i) => (sun.intensity = lights[i].intensity * unit))
+	}
+	setLightUnit(lightUnit)
+	if (!lighting) {
+		const key = new THREE.DirectionalLight(0xffffff, 1.6)
+		key.position.copy(SHADOW.key)
+		scene.add(key)
+	}
+	// The ground shadow falls from the key, at the reach the stage's own key has.
+	const keyLight = lights.find((light) => light.role === 'key') ?? lights[0]
+	const shadowKey = keyLight
+		? new THREE.Vector3(
+				...lightDirection(keyLight, lighting!.environment.rotation)
+			).setLength(SHADOW.key.length())
+		: SHADOW.key
 
 	// A long lens flattens perspective, so the elevation reads square to the sheet.
 	const camera = new THREE.PerspectiveCamera(20, 4 / 3, 0.01, 100)
@@ -140,7 +198,7 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 		densityPng,
 		warm: warmShadowPasses,
 		dispose: disposeShadowBaker
-	} = createShadowBaker(renderer, scene, passCam)
+	} = createShadowBaker(renderer, scene, passCam, shadowKey)
 
 	const normalMat = new THREE.MeshNormalMaterial()
 	let rtN: THREE.WebGLRenderTarget | null = null
@@ -513,6 +571,7 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 	let side = 0
 	const elevation = () => ({ az: side + ELEVATION.az, el: ELEVATION.el })
 	const object = () => ({ az: side + OBJECT.az, el: OBJECT.el })
+	const still = () => ({ az: side + STILL.az, el: STILL.el })
 
 	let running: { cancel: () => void } | null = null
 	function animate(
@@ -564,6 +623,7 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 	const draco = new DRACOLoader()
 	draco.setDecoderPath('/draco/')
 	loader.setDRACOLoader(draco)
+	registerBakedLightmap(loader)
 
 	const stopObservingTheme = observeTheme(readTheme)
 	readTheme()
@@ -577,6 +637,21 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 	  materials are compiled against that environment, so they wait for it.
 	*/
 	async function prepareEnvironment() {
+		if (!lighting) return prepareRoom()
+		try {
+			await prepareMap(lighting.environment)
+		} catch {
+			/*
+			  As the viewer does when a map will not load: a room lights the
+			  scene, and the lights are measured against a uniform sky of
+			  radiance 1, so the model still shows rather than the still standing
+			  for good.
+			*/
+			setLightUnit(Math.PI * lighting.environment.intensity)
+			await prepareRoom()
+		}
+	}
+	async function prepareRoom() {
 		const room = new RoomEnvironment()
 		await warmPrograms(renderer, room, camera, {
 			offscreen: true,
@@ -589,6 +664,30 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 			pmrem.dispose()
 		}
 		room.dispose()
+	}
+	/* A published scene's map, as the viewer loads it: the hosted file its lighting names. */
+	async function prepareMap(map: ResolvedLighting['environment']) {
+		const texture = await new UltraHDRLoader().loadAsync(
+			resolveEnvironmentFiles({
+				preset: map.map,
+				environmentResolution: map.resolution,
+				environmentQuality: map.quality
+			}) as string
+		)
+		texture.mapping = THREE.EquirectangularReflectionMapping
+		if (!disposed) {
+			const pmrem = new THREE.PMREMGenerator(renderer)
+			environment = pmrem.fromEquirectangular(texture)
+			scene.environment = environment.texture
+			scene.environmentIntensity = map.intensity
+			scene.environmentRotation.set(
+				0,
+				THREE.MathUtils.degToRad(map.rotation),
+				0
+			)
+			pmrem.dispose()
+		}
+		texture.dispose()
 	}
 	let environment: THREE.WebGLRenderTarget | null = null
 	const prepared = Promise.all([
@@ -655,6 +754,49 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 		}
 	}
 
+	/* From `from` into the object's pose, unless motion is reduced: the reader's from the start, so a grab takes over from the turn. */
+	function turnInto(from: { az: number; el: number }) {
+		if (reducedMotion) {
+			pose(object())
+			controls.update()
+			frame()
+			return
+		}
+		const to = object()
+		const run = animate(TIMING.turn, (k) => {
+			const e = 1 - Math.pow(1 - k, 3)
+			pose({
+				az: from.az + (to.az - from.az) * e,
+				el: from.el + (to.el - from.el) * e
+			})
+		})
+		const takeOver = () => {
+			run.cancel()
+			controls.removeEventListener('start', takeOver)
+		}
+		controls.addEventListener('start', takeOver)
+	}
+
+	/* The drawing is done with: the object is the reader's to turn. */
+	function handOver() {
+		turned = true
+		el.dims?.setAttribute('data-gone', '')
+		el.scale?.setAttribute('data-gone', '')
+		controls.target.copy(target)
+		controls.update()
+		controls.enabled = turnable
+	}
+
+	function renderObjectPng() {
+		const reveal = uniforms.uReveal.value
+		uniforms.uReveal.value = 1.02 // past the sweep: nothing inked, nothing erased
+		bakingObject = true
+		frame()
+		bakingObject = false
+		uniforms.uReveal.value = reveal
+		return cropToFrame()
+	}
+
 	return {
 		/** Draws a GLB as its front elevation, framed on its poster when it has one. Its shadow is baked unless one is given. */
 		async show(
@@ -667,6 +809,9 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 			// Parsed before anything on the stage changes, so a file that will not parse leaves the stage as it was.
 			const gltf = await loader.parseAsync(buffer, '')
 			if (!disposed) await prepared
+			// After the environment, which sets how bright a light is; before the programs are built, since drawing the maps changes them.
+			if (lighting)
+				applyBakedLights(gltf.scene, drawnLightsSignature(lighting), lightUnit)
 			if (!disposed) await warmModel(gltf.scene)
 			// Torn down while it parsed or compiled: placing it now would build render targets on a renderer that is gone.
 			if (disposed) {
@@ -695,31 +840,10 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 			return new Promise((resolve) => {
 				const u = uniforms.uReveal
 				const turn = () => {
-					turned = true
-					el.dims?.setAttribute('data-gone', '')
-					el.scale?.setAttribute('data-gone', '')
 					// Yours the moment it is an object: the turn runs, but a grab takes over from it.
-					controls.target.copy(target)
-					controls.update()
-					controls.enabled = true
+					handOver()
 					resolve()
-					if (reducedMotion) {
-						pose(object())
-						controls.update()
-						frame()
-						return
-					}
-					const a = elevation()
-					const b = object()
-					const run = animate(TIMING.turn, (k) => {
-						const e = 1 - Math.pow(1 - k, 3)
-						pose({ az: a.az + (b.az - a.az) * e, el: a.el + (b.el - a.el) * e })
-					})
-					const takeOver = () => {
-						run.cancel()
-						controls.removeEventListener('start', takeOver)
-					}
-					controls.addEventListener('start', takeOver)
+					turnInto(elevation())
 				}
 				if (reducedMotion) {
 					u.value = 1.02
@@ -751,15 +875,23 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 			frame()
 			return cropToFrame()
 		},
-		/** Bake mode only: the rendered object in the drawing's exact framing, so the two can be laid over each other. */
-		objectPng() {
-			const reveal = uniforms.uReveal.value
+		/** Bake mode only: the rendered object from the still's pose, in the same framing: the still `settle` takes over from. */
+		stillPng() {
+			pose(still())
+			const png = renderObjectPng()
+			pose(elevation())
+			return png
+		},
+		/** Takes over from the still: the same frame first, so the swap shows nothing, then a short turn into the object's pose. No drawing, no sweep. */
+		settle() {
+			running?.cancel()
 			uniforms.uReveal.value = 1.02 // past the sweep: nothing inked, nothing erased
-			bakingObject = true
+			handOver()
+			pose(still())
+			controls.update()
 			frame()
-			bakingObject = false
-			uniforms.uReveal.value = reveal
-			return cropToFrame()
+			// Reduced motion keeps the still's pose: turning at once would jump at the swap.
+			if (!reducedMotion) turnInto(still())
 		},
 		dispose() {
 			if (disposed) return

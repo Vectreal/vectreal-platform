@@ -16,6 +16,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { and, count, eq, inArray, sql } from 'drizzle-orm'
+import { RouterContextProvider } from 'react-router'
 import {
 	afterAll,
 	beforeAll,
@@ -27,16 +28,22 @@ import {
 	type Mock
 } from 'vitest'
 
+import { agentActorContext } from '../../app/lib/domain/agent/agent-actor-context'
+
 import type { AgentActor } from '../../app/lib/domain/agent/agent-actor.server'
 
-const { authorizeAgentRequest, storage } = vi.hoisted(() => ({
-	authorizeAgentRequest: vi.fn(),
+const { storage } = vi.hoisted(() => ({
 	storage: { uploaded: [] as string[], removed: [] as string[] }
 }))
 
+// The gate is held to every route by tests/agent-api-routes.spec.ts; a
+// handler here runs on the actor the gate would have put in context.
 vi.mock('../../app/lib/domain/agent/agent-request.server', () => ({
-	authorizeAgentRequest
+	agentGate: vi.fn()
 }))
+
+const contextFor = (actor: unknown) =>
+	new RouterContextProvider(new Map([[agentActorContext, actor]]))
 vi.mock('../../app/lib/domain/agent/agent-audit.server', async (original) => {
 	const actual =
 		await original<
@@ -114,7 +121,6 @@ describe('/api/v1/scenes/:sceneId/publication', () => {
 	}
 
 	async function createScene(project = projectId, actingAs = actor) {
-		authorizeAgentRequest.mockResolvedValue(actingAs)
 		const form = new FormData()
 		form.set('name', 'Box')
 		form.set('file', new Blob([BOX]))
@@ -129,7 +135,7 @@ describe('/api/v1/scenes/:sceneId/publication', () => {
 					}
 				),
 				params: { projectId: project },
-				context: {}
+				context: contextFor(actingAs)
 			} as never)
 		)
 		expect(created.status).toBe(201)
@@ -137,7 +143,6 @@ describe('/api/v1/scenes/:sceneId/publication', () => {
 	}
 
 	function publish(sceneId: string, key: string, glb = ROCKET) {
-		authorizeAgentRequest.mockResolvedValue(actor)
 		const form = new FormData()
 		form.set('file', new Blob([glb]))
 		return answer(
@@ -151,13 +156,12 @@ describe('/api/v1/scenes/:sceneId/publication', () => {
 					}
 				),
 				params: { sceneId },
-				context: {}
+				context: contextFor(actor)
 			} as never)
 		)
 	}
 
 	function unpublish(sceneId: string, key: string) {
-		authorizeAgentRequest.mockResolvedValue(actor)
 		return answer(
 			publicationRoute.action({
 				request: new Request(
@@ -165,7 +169,7 @@ describe('/api/v1/scenes/:sceneId/publication', () => {
 					{ method: 'DELETE', headers: { 'Idempotency-Key': `"${key}"` } }
 				),
 				params: { sceneId },
-				context: {}
+				context: contextFor(actor)
 			} as never)
 		)
 	}

@@ -1,4 +1,5 @@
 import { Button } from '@shared/components/ui/button'
+import { ProgressRing } from '@shared/components/ui/progress-ring'
 import { cn, formatFileSize } from '@shared/utils'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useAtomValue, useSetAtom } from 'jotai/react'
@@ -24,7 +25,6 @@ import {
 } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 
-import { ProgressRing } from './progress-ring'
 import {
 	isProgressFinished as isFinished,
 	isSaveInFlight,

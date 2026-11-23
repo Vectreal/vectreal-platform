@@ -6,6 +6,8 @@
   `constants/product-copy.ts`.
 */
 
+import { parseEmbedUrl, type EmbedSceneRef } from '../embed/embed-scene-ref'
+
 export const MODEL_INTAKE_PATH = '/free-model'
 
 export const MODEL_INTAKE_LOCALES = ['en', 'de'] as const
@@ -123,17 +125,9 @@ export type IntakeSceneKey =
 	typeof MODEL_INTAKE_DEFAULT_SCENE | ModelIntakeShowcase
 
 /** A published scene on this deployment, as its embed URL names it. */
-export interface IntakeSceneRef {
-	projectId: string
-	sceneId: string
-	/** The embed key the URL carries; the embed accepts nothing else. */
-	token: string
-}
+export type IntakeSceneRef = EmbedSceneRef
 
 export type IntakeScenes = Partial<Record<IntakeSceneKey, IntakeSceneRef>>
-
-const EMBED_PATH_PATTERN =
-	/^\/embed\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i
 
 /**
  * `MODEL_INTAKE_SCENES`, as `default=<embed URL>,lamp=<embed URL>,…`: the
@@ -162,16 +156,14 @@ export function parseIntakeScenes(
 				error: `"${entry.trim()}" does not start with ${MODEL_INTAKE_DEFAULT_SCENE} or a showcase (${MODEL_INTAKE_SHOWCASES.join(', ')}) and "=".`
 			}
 		}
-		const url = URL.canParse(value) ? new URL(value) : null
-		const ids = url && EMBED_PATH_PATTERN.exec(url.pathname)
-		const token = url?.searchParams.get('token')?.trim()
-		if (!ids || !token) {
+		const ref = parseEmbedUrl(value)
+		if (!ref) {
 			return {
 				ok: false,
 				error: `The ${key} scene is not an embed URL with a token.`
 			}
 		}
-		scenes[key] = { projectId: ids[1], sceneId: ids[2], token }
+		scenes[key] = ref
 	}
 	return { ok: true, scenes }
 }
@@ -332,10 +324,19 @@ export const MODEL_INTAKE_ATTACHMENT_EXTENSIONS = [
 ] as const
 
 /**
- * The largest attachment, about a 4K minute of video. Supabase's project-wide
- * upload limit applies on top, so production's must be at least this.
+ * The largest attachment, and the one owner of that number: the request card
+ * prints it, the browser and the server refuse above it, and the bucket is set
+ * to it. Supabase's project-wide "Global file size limit" (Storage > Settings,
+ * 50 MB by default on Pro) caps every bucket above whatever a bucket says, so
+ * this must not exceed it. To allow more, raise that setting first, then this.
  */
-export const MODEL_INTAKE_MAX_ATTACHMENT_BYTES = 1024 * 1024 * 1024
+export const MODEL_INTAKE_MAX_ATTACHMENT_BYTES = 50 * 1024 * 1024
+
+/** The limit as a person reads it, for the card and the refusal. */
+export const MODEL_INTAKE_MAX_ATTACHMENT_LABEL = `${MODEL_INTAKE_MAX_ATTACHMENT_BYTES / (1024 * 1024)} MB`
+
+/** What the browser and the server both say to a file above the limit. */
+export const MODEL_INTAKE_ATTACHMENT_TOO_LARGE_MESSAGE = `Files up to ${MODEL_INTAKE_MAX_ATTACHMENT_LABEL} can be attached.`
 
 /** What the file input offers. The server checks the name and size again. */
 export const MODEL_INTAKE_ATTACHMENT_ACCEPT =

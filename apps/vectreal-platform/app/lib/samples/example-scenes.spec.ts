@@ -4,7 +4,7 @@ import {
 	exampleSettingsSnippet,
 	publisherExampleHref
 } from './example-scenes'
-import { HERO_MODEL } from './sample-models'
+import { BALANCED_CAMERA } from './sample-models'
 import {
 	defaultControlsOptions,
 	INTERACTION_FEELS
@@ -20,13 +20,9 @@ describe('example scenes', () => {
 		}
 	})
 
-	it('serves the camera example from the file the hero figures are pinned to', () => {
-		// `sample-models.spec.ts` reads HERO_MODEL back from disk, so this size is a checked claim.
-		expect(exampleSceneById('camera-shadows')?.model).toEqual({
-			url: HERO_MODEL.url,
-			fileName: HERO_MODEL.fileName,
-			bytes: HERO_MODEL.bytes
-		})
+	it('serves the camera example from the Balanced camera, whose size is pinned to its file', () => {
+		// `sample-models.spec.ts` reads BALANCED_CAMERA back from disk, so this size is a checked claim.
+		expect(exampleSceneById('camera-shadows')?.model).toEqual(BALANCED_CAMERA)
 	})
 })
 

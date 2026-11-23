@@ -201,6 +201,7 @@ export default function ForgotPassword() {
 							</div>
 
 							<Button
+								variant="brand"
 								type="submit"
 								className="w-full font-semibold"
 								disabled={isSending}

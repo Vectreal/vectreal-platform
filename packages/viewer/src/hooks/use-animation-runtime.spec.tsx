@@ -17,7 +17,8 @@ const playing = {
 	playing: true,
 	complete: false,
 	activeClipId: 'walk',
-	active: true
+	active: true,
+	posed: true
 }
 
 const arrange = ({
@@ -68,7 +69,8 @@ describe('useAnimationRuntime', () => {
 			type: 'animation_state_changed',
 			playing: true,
 			activeClipId: 'walk',
-			complete: false
+			complete: false,
+			posed: true
 		})
 	})
 
@@ -83,8 +85,32 @@ describe('useAnimationRuntime', () => {
 			type: 'animation_state_changed',
 			playing: false,
 			activeClipId: null,
-			complete: false
+			complete: false,
+			posed: false
 		})
+	})
+
+	// A host that shows a bake in place of the model needs to hear when a
+	// paused clip still holds a pose, though nothing else changed.
+	it('announces a change of pose alone', () => {
+		const { result, onInteractionEvent } = arrange()
+
+		act(() =>
+			result.current.setStatus({ ...playing, playing: false, active: false })
+		)
+		onInteractionEvent.mockClear()
+		act(() =>
+			result.current.setStatus({
+				...playing,
+				playing: false,
+				active: false,
+				posed: false
+			})
+		)
+
+		expect(onInteractionEvent).toHaveBeenCalledWith(
+			expect.objectContaining({ posed: false })
+		)
 	})
 
 	it('stays quiet when a re-registration lands back on the same status', () => {

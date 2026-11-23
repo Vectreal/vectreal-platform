@@ -1,3 +1,4 @@
+import { LoadProgressIndicator } from '@shared/components/ui/load-progress-indicator'
 import { cn } from '@shared/utils'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
@@ -6,7 +7,6 @@ import { useCallback, useMemo, useState } from 'react'
 import AnimationPlaybackBar from '../../components/publisher/animation-playback-bar'
 import { PublisherEditorScene } from '../../components/publisher/publisher-editor-scene'
 import { usePublisherViewerCapture } from '../../components/publisher/publisher-viewer-capture-context'
-import { PublisherLoading } from '../../components/publisher/shell/publisher-loading'
 import { PUBLISHER_LAYER } from '../../components/publisher/shell/shell-layout'
 import { useAutomaticOpeningView } from '../../components/publisher/shell/use-opening-view'
 import { useAnimationReconciliation } from '../../components/publisher/sidebars/compose-sidebar/animation-settings'
@@ -43,6 +43,8 @@ import { toViewerLoadingThumbnail } from '../../lib/viewer/viewer-loading-thumbn
 
 import type { ViewerInteractionEvent } from '@vctrl/viewer'
 import type { ShouldRevalidateFunction } from 'react-router'
+
+const PREPARING = { phase: 'preparing' } as const
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({
 	currentUrl,
@@ -154,12 +156,14 @@ const PublisherPage = () => {
 	// a sequence can run out, and the runtime resets when animation is off.
 	const [animationStatus, setAnimationStatus] = useState({
 		playing: false,
-		complete: false
+		complete: false,
+		posed: false
 	})
 
 	// The same rule the viewer mounts its animation runtime by
 	// (`useAnimationRuntime`): without it nothing can move the model off its
-	// bind pose, so an applied bake can stay on screen in every tool.
+	// bind pose. With it, the bake stays on screen while the viewer reports
+	// the model unposed.
 	const canAnimate =
 		(file?.animations?.length ?? 0) > 0 &&
 		(Boolean(animation?.enabled) ||
@@ -167,7 +171,8 @@ const PublisherPage = () => {
 	const shownBake = useShownBake({
 		isLightingOpen: openComposeTool === 'lighting',
 		canAnimate,
-		isAnimating: animationStatus.playing
+		isAnimating: animationStatus.playing,
+		isPosed: animationStatus.posed
 	})
 	usePlanStudioFinish()
 
@@ -184,7 +189,8 @@ const PublisherPage = () => {
 			if (event.type === 'animation_state_changed') {
 				setAnimationStatus({
 					playing: event.playing,
-					complete: event.complete
+					complete: event.complete,
+					posed: event.posed
 				})
 			}
 			// The viewer's own account of its map, failed or recovered.
@@ -258,7 +264,7 @@ const PublisherPage = () => {
 					  Holding to compare an optimization wins over a bake preview: it
 					  is the more deliberate, shorter act.
 					*/
-					displayedModel={comparedModel?.model ?? shownBake}
+					displayedModel={comparedModel?.model ?? shownBake.model}
 					onViewChange={setViewDirection}
 					animations={file?.animations}
 					animationOptions={animation}
@@ -329,13 +335,23 @@ const PublisherPage = () => {
 					normalizationOptions={normalization}
 					boundsOptions={bounds}
 					loadingThumbnail={loadingThumbnail}
-					loader={<PublisherLoading />}
 					onScreenshotCaptureReady={registerSceneScreenshotCapture}
 					onCameraSnapshotCaptureReady={registerSceneCameraSnapshotCapture}
 					onCommandExecutorReady={registerCommandExecutor}
 					onRawDiagonalComputed={setRawDiagonal}
 					onInteractionEvent={handleInteractionEvent}
-					fallback={<PublisherLoading />}
+					/*
+					  While the viewer's code arrives the model is already here, so
+					  this is preparing; at once, since the stage's own indicator
+					  was on screen until a moment ago.
+					*/
+					fallback={
+						<LoadProgressIndicator
+							progress={PREPARING}
+							delayMs={0}
+							className="h-full"
+						/>
+					}
 				>
 					{file?.model && <PublisherEditorScene />}
 				</ClientVectrealViewer>
@@ -356,6 +372,11 @@ const PublisherPage = () => {
 					}
 					onRestart={() =>
 						commandExecutor.current?.execute({ type: 'restart_animation' })
+					}
+					note={
+						!isPreviewMode && !comparedModel && shownBake.heldByPose
+							? 'The studio finish shows while the model is in its rest pose.'
+							: undefined
 					}
 				/>
 				{/*
