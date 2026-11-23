@@ -7,9 +7,9 @@ import {
 import { RouterContextProvider } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { action, loader } from './projects.$projectId.embed-keys'
 import { agentActorContext } from '../../../lib/domain/agent/agent-actor-context'
 import { QuotaExceededError } from '../../../lib/domain/billing/quota-exceeded-error'
+import { action, loader } from './projects.$projectId.embed-keys'
 
 import type { Route } from './+types/projects.$projectId.embed-keys'
 

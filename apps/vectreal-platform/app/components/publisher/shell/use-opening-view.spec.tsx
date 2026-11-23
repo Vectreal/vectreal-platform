@@ -8,7 +8,6 @@ import { act, renderHook } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { describe, expect, it, vi } from 'vitest'
 
-import { useOpeningViewCapture } from './use-opening-view'
 import { buildThumbnailFrameSignature } from '../../../lib/domain/scene/client/scene-change-detection'
 import {
 	capturedThumbnailFrameAtom,
@@ -20,6 +19,7 @@ import {
 	lightingAtom,
 	normalizationAtom
 } from '../../../lib/stores/scene-settings-store'
+import { useOpeningViewCapture } from './use-opening-view'
 
 import type { ReactNode } from 'react'
 

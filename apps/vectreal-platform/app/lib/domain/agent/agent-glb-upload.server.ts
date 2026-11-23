@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto'
 
-import { agentApiError } from './agent-api-response'
 import { MAX_STORED_FILE_BYTES } from '../../../constants/utility-constants'
 import { GlbFormatError, splitGlb, type SplitGlb } from '../scene/glb-container'
+import { agentApiError } from './agent-api-response'
 
 // The multipart envelope around the file is small; this only stops a body far
 // past the cap from being read into memory before it is refused.

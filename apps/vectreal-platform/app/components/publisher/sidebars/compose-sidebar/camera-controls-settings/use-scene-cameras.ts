@@ -3,16 +3,6 @@ import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
 import { useCallback, useEffect, useMemo } from 'react'
 import { toast } from 'sonner'
 
-import { describeCameraRemoval } from './camera-removal-notice'
-import {
-	applySnapshotToCamera,
-	normalizeCameraState,
-	resolveEditorTargetCameraId,
-	withDefaultCameraFlag,
-	type CameraEntry
-} from './camera-state'
-import { defaultCameraOptions } from './constants'
-import { publishedSceneViewCameras } from './use-camera-switcher-setting'
 import {
 	applySceneCameraMove,
 	isLastSceneCamera,
@@ -38,6 +28,16 @@ import {
 import { usePublisherViewerCapture } from '../../../publisher-viewer-capture-context'
 import { useOpeningViewCapture } from '../../../shell/use-opening-view'
 import { hotspotDisplayName } from '../hotspot-settings/use-hotspot-edits'
+import { describeCameraRemoval } from './camera-removal-notice'
+import {
+	applySnapshotToCamera,
+	normalizeCameraState,
+	resolveEditorTargetCameraId,
+	withDefaultCameraFlag,
+	type CameraEntry
+} from './camera-state'
+import { defaultCameraOptions } from './constants'
+import { publishedSceneViewCameras } from './use-camera-switcher-setting'
 
 /**
  * The scene's cameras, the one being edited, and every edit to them.

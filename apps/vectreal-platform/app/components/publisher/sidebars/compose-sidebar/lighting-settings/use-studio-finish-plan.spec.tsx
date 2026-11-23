@@ -10,14 +10,14 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { studioFinishPlanAtom } from '../../../../../lib/stores/publisher-config-store'
+import { optimizationRuntimeAtom } from '../../../../../lib/stores/scene-optimization-store'
+import { lightingAtom } from '../../../../../lib/stores/scene-settings-store'
 import { usePublishExport } from './use-bake-preview'
 import {
 	usePlanStudioFinish,
 	useStudioFinishPlan
 } from './use-studio-finish-plan'
-import { studioFinishPlanAtom } from '../../../../../lib/stores/publisher-config-store'
-import { optimizationRuntimeAtom } from '../../../../../lib/stores/scene-optimization-store'
-import { lightingAtom } from '../../../../../lib/stores/scene-settings-store'
 
 import type { StudioFinishPlan } from '../../../../../workers/publish-export.worker.types'
 import type { ReactNode } from 'react'

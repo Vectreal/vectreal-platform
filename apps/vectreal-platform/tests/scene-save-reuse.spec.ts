@@ -28,9 +28,9 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { ok, stubSceneApi } from './fixtures/scene-api-stub'
 import { planSceneAssetNameBackfill } from '../app/lib/domain/asset/asset-name-backfill'
 import { executeSceneSaveOrchestrator } from '../app/lib/domain/scene/client/scene-save-orchestrator'
+import { ok, stubSceneApi } from './fixtures/scene-api-stub'
 
 const png = (marker: number) =>
 	new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, marker])

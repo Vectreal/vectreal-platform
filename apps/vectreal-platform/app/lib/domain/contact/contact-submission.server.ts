@@ -2,13 +2,6 @@ import { randomBytes } from 'node:crypto'
 
 import { eq } from 'drizzle-orm'
 
-import {
-	CONTACT_HONEYPOT_FIELD,
-	CONTACT_SOURCE_VALUES,
-	type ContactActionData,
-	type ContactInquiryType,
-	type ContactSource
-} from './contact-shared'
 import { getDbClient } from '../../../db/client'
 import { contactSubmissions } from '../../../db/schema'
 import {
@@ -21,6 +14,13 @@ import {
 	captureServerEvent,
 	type ServerAnalyticsEvent
 } from '../analytics/server-events.server'
+import {
+	CONTACT_HONEYPOT_FIELD,
+	CONTACT_SOURCE_VALUES,
+	type ContactActionData,
+	type ContactInquiryType,
+	type ContactSource
+} from './contact-shared'
 
 import type { PostHogContext } from '../../posthog/posthog-middleware'
 

@@ -9,8 +9,8 @@ import { join } from 'node:path'
 import { drawnLightsSignature, LIGHTMAP_EXTENSION } from '@vctrl/core'
 import { describe, expect, it } from 'vitest'
 
-import { HERO_RESOLVED_LIGHTING } from './hero-lighting'
 import { HERO_MODEL } from '../../../lib/samples/sample-models'
+import { HERO_RESOLVED_LIGHTING } from './hero-lighting'
 
 interface MaterialJson {
 	name: string

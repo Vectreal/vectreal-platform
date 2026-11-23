@@ -4,13 +4,13 @@ import { Play } from 'lucide-react'
 import { lazy, Suspense, useState } from 'react'
 import { Link } from 'react-router'
 
-import { ArrowLink } from './arrow-link'
-import { CameraDrawing } from './camera-drawing'
-import { StageBoundary } from './stage/stage-boundary'
 import {
 	HOME_PAGE_COPY,
 	OPEN_SOURCE_PACKAGES
 } from '../../constants/product-copy'
+import { ArrowLink } from './arrow-link'
+import { CameraDrawing } from './camera-drawing'
+import { StageBoundary } from './stage/stage-boundary'
 
 const COPY = HOME_PAGE_COPY.openSource
 

@@ -18,11 +18,11 @@ import {
 import { memo } from 'react'
 import { Link } from 'react-router'
 
-import { DESTRUCTIVE_MENU_ITEM } from './destructive-menu-item'
 import { formatShortDate } from '../../../constants/limit-format'
 import { useIsClientMounted } from '../../../hooks/use-is-client-mounted'
 import { createCheckboxColumn, SortableHeader } from '../data-table'
 import { SceneStatusTag } from '../scene-status'
+import { DESTRUCTIVE_MENU_ITEM } from './destructive-menu-item'
 
 import type { SceneStatus } from '../../../lib/domain/dashboard/dashboard-confirmation'
 import type { LegacyColumnDef as ColumnDef } from '@tanstack/react-table/legacy'

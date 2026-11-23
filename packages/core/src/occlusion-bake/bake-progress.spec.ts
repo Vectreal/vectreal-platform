@@ -7,10 +7,10 @@
 import { Document } from '@gltf-transform/core'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { bakeOcclusionIntoDocument } from './bake-into-document'
-import { BakeError, bakeWithRecovery } from './bake-outcome'
 import { bakeLightsIntoDocument } from '../light-bake/bake-into-document'
 import { resolveLighting } from '../scene-lighting/resolve-lighting'
+import { bakeOcclusionIntoDocument } from './bake-into-document'
+import { BakeError, bakeWithRecovery } from './bake-outcome'
 
 import type { WebGLRenderer } from 'three'
 

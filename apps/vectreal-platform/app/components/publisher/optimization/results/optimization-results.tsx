@@ -1,11 +1,11 @@
 import { formatFileSize } from '@shared/utils'
 import { motion } from 'framer-motion'
 
-import { BeforeAfter, MetricRow, formatCount } from './metric-row'
 import {
 	describeSizeChange,
 	FileSizeComparison
 } from '../../../layout-components/file-size-comparison'
+import { BeforeAfter, MetricRow, formatCount } from './metric-row'
 
 import type { resolveSceneMetrics } from '../../../../lib/domain/scene'
 import type { PublishedEncoding } from '../../../../types/scene-optimization'

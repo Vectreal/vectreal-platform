@@ -2,8 +2,6 @@ import { ApiResponse } from '@shared/utils'
 import { readGlbExtensionsUsed } from '@vctrl/core/model-loader'
 import { count, eq } from 'drizzle-orm'
 
-import { resolveSceneAndProject } from './scene-operation-context.server'
-import { sceneSettingsService } from './scene-settings-service.server'
 import { isBillingStateReadOnly } from '../../../../constants/plan-config'
 import { getDbClient } from '../../../../db/client'
 import { projects } from '../../../../db/schema/project/projects'
@@ -24,6 +22,8 @@ import {
 	userExists
 } from '../../user/user-repository.server'
 import { STUDIO_FINISH_FILENAME } from '../scene-asset-roles'
+import { resolveSceneAndProject } from './scene-operation-context.server'
+import { sceneSettingsService } from './scene-settings-service.server'
 
 import type { EntitlementKey } from '../../../../constants/plan-config'
 import type { SceneSettingsRequest } from '../../../../types/api'

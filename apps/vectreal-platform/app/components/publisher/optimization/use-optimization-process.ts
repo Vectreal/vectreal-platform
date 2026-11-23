@@ -2,11 +2,6 @@ import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue, useSetAtom, useStore } from 'jotai/react'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 
-import { resolveSimplificationOutcome } from './model/simplification-outcome'
-import { runOptimizationPass } from './run-optimization-pass'
-import { useLatestWins } from './use-latest-wins'
-import { useOptimizationSteps } from './use-optimization-steps'
-import { useSceneSizeCalculator } from './utils'
 import { originalPreset } from '../../../constants/optimizations'
 import {
 	resolveDerivedSettings,
@@ -19,6 +14,11 @@ import {
 	optimizationAtom,
 	optimizationRuntimeAtom
 } from '../../../lib/stores/scene-optimization-store'
+import { resolveSimplificationOutcome } from './model/simplification-outcome'
+import { runOptimizationPass } from './run-optimization-pass'
+import { useLatestWins } from './use-latest-wins'
+import { useOptimizationSteps } from './use-optimization-steps'
+import { useSceneSizeCalculator } from './utils'
 
 import type { SceneSourceRef } from '../../../types/api'
 import type { Optimizations } from '@vctrl/core'

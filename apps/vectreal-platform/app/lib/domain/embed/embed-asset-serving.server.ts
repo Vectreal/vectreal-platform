@@ -1,7 +1,3 @@
-import {
-	getAssetSigningSecret,
-	verifySignedAsset
-} from './embed-asset-signature.server'
 import { assetResponse } from '../../http/asset-response.server'
 import { noStoreHeaders } from '../../http/response-headers.server'
 import { reportServerError } from '../../observability/report-server-error.server'
@@ -20,6 +16,10 @@ import {
 	type PublishedScenePreview
 } from '../scene/server/scene-preview-repository.server'
 import { sceneSettingsService } from '../scene/server/scene-settings-service.server'
+import {
+	getAssetSigningSecret,
+	verifySignedAsset
+} from './embed-asset-signature.server'
 
 /*
   How the asset route answers an embed: a signed URL from a manifest, or an

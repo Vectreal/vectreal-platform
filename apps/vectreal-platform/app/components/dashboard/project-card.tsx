@@ -2,10 +2,10 @@ import { DropdownMenuItem } from '@shared/components/ui/dropdown-menu'
 import { Pencil, Trash2 } from 'lucide-react'
 import { Link, useLocation } from 'react-router'
 
+import { describeDashboardOperationRequirement } from '../../lib/domain/dashboard/dashboard-operations'
 import { EntityCard } from './entity-card'
 import { RelativeTime } from './relative-time'
 import { StatusBreakdown, type SceneStatusCounts } from './status-breakdown'
-import { describeDashboardOperationRequirement } from '../../lib/domain/dashboard/dashboard-operations'
 
 export interface ProjectCardData {
 	id: string

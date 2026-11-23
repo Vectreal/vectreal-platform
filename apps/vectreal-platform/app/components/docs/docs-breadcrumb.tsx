@@ -9,9 +9,9 @@ import {
 import { ChevronDown } from 'lucide-react'
 import { Link } from 'react-router'
 
+import { getDocTrail } from '../../lib/docs/docs-manifest'
 import { DocsMobileNavigation } from './docs-mobile-navigation'
 import { useDocsToc } from './docs-toc-context'
-import { getDocTrail } from '../../lib/docs/docs-manifest'
 
 /**
  * Whether a path is a docs page: the nav is the docs bar there. The pages

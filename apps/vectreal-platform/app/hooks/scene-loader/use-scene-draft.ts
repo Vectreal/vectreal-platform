@@ -4,8 +4,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
-import { usePrepareGltfDocument } from './use-scene-document-export'
-import { useApplySceneSettings } from './use-scene-settings'
 import {
 	inferOptimizationPreset,
 	persistPendingSceneDraftOrchestrator,
@@ -27,6 +25,8 @@ import {
 	optimizationRuntimeAtom
 } from '../../lib/stores/scene-optimization-store'
 import { sceneViewerSettingsAtom } from '../../lib/stores/scene-settings-store'
+import { usePrepareGltfDocument } from './use-scene-document-export'
+import { useApplySceneSettings } from './use-scene-settings'
 
 /**
  * The publisher's IndexedDB side: the draft that survives an auth redirect.

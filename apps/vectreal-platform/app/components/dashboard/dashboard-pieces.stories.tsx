@@ -1,15 +1,15 @@
 import { useState } from 'react'
 import { MemoryRouter } from 'react-router'
 
+import {
+	STORAGE_USAGE_HINT,
+	STORAGE_USAGE_LABEL
+} from '../../constants/product-copy'
 import { InlineEditableMetadataField } from './inline-editable-metadata-field'
 import { ProjectCard } from './project-card'
 import { SceneThumbnail } from './scene-thumbnail'
 import { StatusBreakdown } from './status-breakdown'
 import { UsageMeter } from './usage-meter'
-import {
-	STORAGE_USAGE_HINT,
-	STORAGE_USAGE_LABEL
-} from '../../constants/product-copy'
 
 import type { Meta, StoryObj } from '@storybook/react-vite'
 

@@ -1,4 +1,3 @@
-import { inferOptimizationPreset } from './optimization-inference'
 import { applyOptimizationChange } from '../../../../components/publisher/optimization/model/optimization-settings'
 import {
 	balancedPreset,
@@ -7,6 +6,7 @@ import {
 	qualityPreset,
 	smallestPreset
 } from '../../../../constants/optimizations'
+import { inferOptimizationPreset } from './optimization-inference'
 
 import type { PresetId } from '../../../../types/scene-optimization'
 import type { Optimizations } from '@vctrl/core'

@@ -9,7 +9,6 @@ import { createStore, Provider } from 'jotai'
 import { AnimationClip } from 'three'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { useAnimationReconciliation } from './use-animation-reconciliation'
 import { resolveAnimationDraft } from '../../../../../lib/domain/scene/scene-animation-draft'
 import { lastSavedSettingsAtom } from '../../../../../lib/stores/publisher-config-store'
 import {
@@ -17,6 +16,7 @@ import {
 	animationDriftAtom,
 	hotspotsAtom
 } from '../../../../../lib/stores/scene-settings-store'
+import { useAnimationReconciliation } from './use-animation-reconciliation'
 
 import type { ReactNode } from 'react'
 

@@ -6,8 +6,8 @@
 import { render, screen } from '@testing-library/react'
 import { expect, it } from 'vitest'
 
-import { MissionStatement } from './mission-statement'
 import { HOME_PAGE_COPY } from '../../constants/product-copy'
+import { MissionStatement } from './mission-statement'
 
 const COPY = HOME_PAGE_COPY.mission
 

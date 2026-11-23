@@ -9,9 +9,9 @@ import {
 } from 'drizzle-orm/pg-core'
 import { authenticatedRole } from 'drizzle-orm/supabase'
 
-import { apiKeys } from './api-keys'
 import { projects } from '../project/projects'
 import { canAccessProject, canManageOrgApiKeys } from '../rls'
+import { apiKeys } from './api-keys'
 
 export const apiKeyProjects = pgTable(
 	'api_key_projects',

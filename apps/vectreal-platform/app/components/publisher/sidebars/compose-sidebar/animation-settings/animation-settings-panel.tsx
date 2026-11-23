@@ -20,15 +20,6 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
-	ANIMATION_LOOP_LABELS,
-	ANIMATION_REPETITIONS_FIELD,
-	ANIMATION_SPEED_FIELD,
-	animationStartOffsetField,
-	DEFAULT_FINITE_REPETITIONS,
-	formatClipSeconds
-} from './constants'
-import { useModelClips } from './use-animation-reconciliation'
-import {
 	clipLabel,
 	isForeverCutShort,
 	moveAnimationClip,
@@ -44,6 +35,15 @@ import { usePublisherViewerCapture } from '../../../publisher-viewer-capture-con
 import { DrillDown, DrillDownTrigger, DrillDownView } from '../../drill-down'
 import { FieldSlider } from '../../field-slider'
 import { SettingGroup } from '../../sidebar-section'
+import {
+	ANIMATION_LOOP_LABELS,
+	ANIMATION_REPETITIONS_FIELD,
+	ANIMATION_SPEED_FIELD,
+	animationStartOffsetField,
+	DEFAULT_FINITE_REPETITIONS,
+	formatClipSeconds
+} from './constants'
+import { useModelClips } from './use-animation-reconciliation'
 
 import type {
 	AnimationClipConfig,

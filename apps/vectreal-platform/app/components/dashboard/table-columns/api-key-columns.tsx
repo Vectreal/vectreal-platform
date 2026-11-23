@@ -22,6 +22,14 @@ import {
 } from 'lucide-react'
 import { memo } from 'react'
 
+import { useClipboardCopy } from '../../../hooks/use-clipboard-copy'
+import { useIsClientMounted } from '../../../hooks/use-is-client-mounted'
+import {
+	isApiKeyExpiringSoon,
+	resolveApiKeyState
+} from '../../../lib/domain/auth/api-key-lifecycle'
+import { SortableHeader } from '../data-table'
+import { RelativeTime } from '../relative-time'
 import {
 	formatRelativeDeadline,
 	getApiKeyStatus,
@@ -32,14 +40,6 @@ import {
 	type ApiKeyRow
 } from './api-key-status'
 import { DESTRUCTIVE_MENU_ITEM } from './destructive-menu-item'
-import { useClipboardCopy } from '../../../hooks/use-clipboard-copy'
-import { useIsClientMounted } from '../../../hooks/use-is-client-mounted'
-import {
-	isApiKeyExpiringSoon,
-	resolveApiKeyState
-} from '../../../lib/domain/auth/api-key-lifecycle'
-import { SortableHeader } from '../data-table'
-import { RelativeTime } from '../relative-time'
 
 import type { LegacyColumnDef as ColumnDef } from '@tanstack/react-table/legacy'
 

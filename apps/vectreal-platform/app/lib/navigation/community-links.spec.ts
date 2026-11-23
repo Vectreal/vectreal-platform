@@ -15,8 +15,8 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 
-import { COMMUNITY } from './site-map'
 import { GITHUB_REPO } from '../docs/docs-manifest'
+import { COMMUNITY } from './site-map'
 
 const APP_DIR = join(dirname(fileURLToPath(import.meta.url)), '../..')
 

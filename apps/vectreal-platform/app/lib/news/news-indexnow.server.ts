@@ -1,6 +1,6 @@
+import { SITE_URL } from '../seo'
 import { getPublishedNewsArticles } from './news-manifest.server'
 import { resolvePublishedAt } from './news-schedule'
-import { SITE_URL } from '../seo'
 
 /*
   Tells search engines when a newsroom article goes live, over IndexNow

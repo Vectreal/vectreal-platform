@@ -1,5 +1,5 @@
-import { SceneSettingsParser } from './scene-settings.parser.server'
 import { buildHotspotArtworkUrl } from '../hotspot-artwork'
+import { SceneSettingsParser } from './scene-settings.parser.server'
 
 /**
  * Uploaded marker artwork on a commit: the thumbnail's rule for a hotspot's

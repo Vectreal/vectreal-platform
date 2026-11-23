@@ -14,7 +14,6 @@ import { renderHook } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { describe, expect, it } from 'vitest'
 
-import { useApplySceneSettings, useResetSceneState } from './use-scene-settings'
 import { lastSavedSettingsAtom } from '../../lib/stores/publisher-config-store'
 import {
 	animationAtom,
@@ -22,6 +21,7 @@ import {
 	hotspotsAtom,
 	lightingAtom
 } from '../../lib/stores/scene-settings-store'
+import { useApplySceneSettings, useResetSceneState } from './use-scene-settings'
 
 import type {
 	AnimationSettings,

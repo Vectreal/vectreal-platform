@@ -15,6 +15,10 @@ import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { UltraHDRLoader } from 'three/examples/jsm/loaders/UltraHDRLoader.js'
 
+import {
+	createCssColorProbe,
+	observeTheme
+} from '../../../lib/theme/theme-probe'
 import { createSceneFloor } from './scene-floor'
 import {
 	groundFragment,
@@ -24,10 +28,6 @@ import {
 } from './stage-shaders'
 import { SHADOW, createShadowBaker } from './stage-shadow'
 import { pageHidden, warmPrograms, withMaterial } from './warm-programs'
-import {
-	createCssColorProbe,
-	observeTheme
-} from '../../../lib/theme/theme-probe'
 
 /**
  * The hero's stage: a model drawn as a technical drawing, swept into its

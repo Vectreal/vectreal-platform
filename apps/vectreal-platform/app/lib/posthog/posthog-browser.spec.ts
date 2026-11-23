@@ -4,7 +4,6 @@ import { join, relative, resolve } from 'node:path'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { DEAD_CLICKS_CONFIG, RAGECLICK_CONFIG } from './frustration-signals'
 import {
 	isDynamicImport,
 	sourceFiles,
@@ -15,6 +14,7 @@ import {
 	CONSENT_POLICY_VERSION,
 	encodeConsentCookieValue
 } from '../consent/consent-cookie'
+import { DEAD_CLICKS_CONFIG, RAGECLICK_CONFIG } from './frustration-signals'
 
 /**
  * posthog-js is about 75 KB, and a page that never starts PostHog must not

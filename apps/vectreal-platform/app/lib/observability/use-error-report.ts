@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { useLocation } from 'react-router'
 
-import { buildErrorReport, type ErrorSource } from './error-report'
 import { usePostHog } from '../posthog/posthog-react'
+import { buildErrorReport, type ErrorSource } from './error-report'
 
 /**
  * The one path by which a rendered error leaves the browser.

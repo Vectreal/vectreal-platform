@@ -4,8 +4,8 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 
-import { isModuleGuarded } from './critical-path-guard'
 import { CRITICAL_FLOWS } from '../app/lib/observability/critical-flows'
+import { isModuleGuarded } from './critical-path-guard'
 
 /**
  * The funnel this product exists to serve, and a ratchet that keeps it guarded.

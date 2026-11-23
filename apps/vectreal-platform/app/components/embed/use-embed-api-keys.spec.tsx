@@ -15,8 +15,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useEmbedApiKeys } from './use-embed-api-keys'
 
-import type { EmbedApiKeysApi } from './use-embed-api-keys'
 import type { EmbedApiKeyOption } from '../../lib/domain/embed/embed-key-options'
+import type { EmbedApiKeysApi } from './use-embed-api-keys'
 
 const { load, submit, setUpgradeModal, fetchers } = vi.hoisted(() => ({
 	load: vi.fn(),

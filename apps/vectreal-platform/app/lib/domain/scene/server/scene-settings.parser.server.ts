@@ -1,5 +1,7 @@
 import { ApiResponse } from '@shared/utils'
 
+import { UUID_REGEX } from '../../../../constants/utility-constants'
+import { normalizePresentationSettings } from '../scene-presentation'
 import {
 	parseGltfJson,
 	parseInitialSceneBytes,
@@ -17,8 +19,6 @@ import {
 } from './scene-settings-fields.parser.server'
 import { checkHotspotArtwork } from './scene-settings-hotspots.parser.server'
 import { parseSettingsData } from './scene-settings-payload.parser.server'
-import { UUID_REGEX } from '../../../../constants/utility-constants'
-import { normalizePresentationSettings } from '../scene-presentation'
 
 import type { SceneSettingsRequest } from '../../../../types/api'
 import type { ScenePresentationSettings } from '@vctrl/core'

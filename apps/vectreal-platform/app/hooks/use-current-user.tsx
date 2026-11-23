@@ -7,8 +7,8 @@ import {
 } from 'react'
 import { useFetcher, useLocation } from 'react-router'
 
-import { useOnResume } from './use-on-resume'
 import { hasClientSupabaseAuthCookie } from '../lib/sessions/supabase-auth-cookie'
+import { useOnResume } from './use-on-resume'
 
 import type { User } from '@supabase/supabase-js'
 

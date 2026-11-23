@@ -21,12 +21,6 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import {
-	TRANSITION_EASING_OPTIONS,
-	TRANSITION_TYPE_OPTIONS
-} from './camera-state'
-import { useCameraSwitcherSetting } from './use-camera-switcher-setting'
-import { useSceneTransition } from './use-scene-transition'
 import { canEditCameraSettingsAtom } from '../../../../../lib/stores/publisher-config-store'
 import { DrillDownTrigger } from '../../drill-down'
 import { SettingGroup, SettingRow } from '../../sidebar-section'
@@ -37,6 +31,12 @@ import {
 	useReorderDraft,
 	type ReorderOutcome
 } from '../reorder-list'
+import {
+	TRANSITION_EASING_OPTIONS,
+	TRANSITION_TYPE_OPTIONS
+} from './camera-state'
+import { useCameraSwitcherSetting } from './use-camera-switcher-setting'
+import { useSceneTransition } from './use-scene-transition'
 
 import type { SceneCameras } from './use-scene-cameras'
 import type { CameraTransitionEasing, CameraTransitionType } from '@vctrl/core'

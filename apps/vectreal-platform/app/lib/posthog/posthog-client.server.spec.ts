@@ -5,8 +5,8 @@ import { fileURLToPath } from 'node:url'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { isPosthogEnabled } from './posthog-enabled'
 import { sourceFiles, valueReferences } from '../../../tests/module-references'
+import { isPosthogEnabled } from './posthog-enabled'
 
 /**
  * There is one PostHog project, and a machine holding its token reported into

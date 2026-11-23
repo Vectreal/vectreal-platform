@@ -6,16 +6,6 @@ import { useAtomValue } from 'jotai/react'
 import { Eye, LoaderCircle, SlidersHorizontal } from 'lucide-react'
 import { useEffect, useMemo, useState, type FC } from 'react'
 
-import { OptimizeButton } from './optimize-button'
-import { AdvancedPanel } from './panels/advanced-panel'
-import { PRESET_META, PresetPanel } from './panels/preset-panel'
-import { OptimizationProgress } from './progress/optimization-progress'
-import { OptimizationResults } from './results/optimization-results'
-import { PreOptimizationSummary } from './results/pre-optimization-summary'
-import { SceneNormalizationNotice } from './scene-normalization-notice'
-import { COMPARE_HOLD_KEY, useHoldToCompare } from './use-hold-to-compare'
-import { useOptimizationProcess } from './use-optimization-process'
-import { useOptimizationSettings } from './use-optimization-settings'
 import { originalPreset } from '../../../constants/optimizations'
 import {
 	canCompareWithSource,
@@ -36,6 +26,16 @@ import {
 	DrillDownView
 } from '../sidebars/drill-down'
 import { DynamicSidebar } from '../sidebars/dynamic-sidebar'
+import { OptimizeButton } from './optimize-button'
+import { AdvancedPanel } from './panels/advanced-panel'
+import { PRESET_META, PresetPanel } from './panels/preset-panel'
+import { OptimizationProgress } from './progress/optimization-progress'
+import { OptimizationResults } from './results/optimization-results'
+import { PreOptimizationSummary } from './results/pre-optimization-summary'
+import { SceneNormalizationNotice } from './scene-normalization-notice'
+import { COMPARE_HOLD_KEY, useHoldToCompare } from './use-hold-to-compare'
+import { useOptimizationProcess } from './use-optimization-process'
+import { useOptimizationSettings } from './use-optimization-settings'
 
 interface OptimizationDrawerProps {
 	open: boolean

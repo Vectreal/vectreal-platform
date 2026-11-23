@@ -2,13 +2,13 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { de } from '../locales/de'
+import { en } from '../locales/en'
 import {
 	TapToActivateButton,
 	TapToDeactivateButton,
 	tapToActivateWords
 } from './tap-to-activate'
-import { de } from '../locales/de'
-import { en } from '../locales/en'
 
 afterEach(() => vi.unstubAllGlobals())
 

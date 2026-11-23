@@ -25,7 +25,6 @@ import {
 } from './limit-format'
 import { ALL_PLANS, PLAN_ENTITLEMENTS, PLAN_LIMITS } from './plan-config'
 
-import type { EntitlementKey, LimitKey, PaidPlan, Plan } from './plan-config'
 import type {
 	ModelIntakeFieldErrorCode,
 	ModelIntakeFormErrorCode,
@@ -33,6 +32,7 @@ import type {
 	ModelIntakeProductType,
 	ModelIntakeSizeField
 } from '../lib/domain/model-intake/model-intake-shared'
+import type { EntitlementKey, LimitKey, PaidPlan, Plan } from './plan-config'
 
 // ---------------------------------------------------------------------------
 // Platform description strings

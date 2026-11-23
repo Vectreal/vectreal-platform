@@ -17,7 +17,6 @@ import {
 	useAuthenticityToken
 } from 'remix-utils/csrf/react'
 
-import { Route } from './+types/intake'
 import {
 	DetailPanelSection,
 	EmptyState
@@ -60,6 +59,7 @@ import {
 } from '../../lib/domain/model-intake/model-intake-storage.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import { decryptSensitiveValue } from '../../lib/security/pii-encryption.server'
+import { Route } from './+types/intake'
 
 import type { DashboardConfirmationPlan } from '../../lib/domain/dashboard/dashboard-confirmation'
 

@@ -2,10 +2,10 @@ import { Button } from '@shared/components/ui/button'
 import { ImageUp } from 'lucide-react'
 import { useRef, useState } from 'react'
 
-import { useHotspotEdits } from './use-hotspot-edits'
 import { HOTSPOT_ARTWORK_MAX_BYTES } from '../../../../../lib/domain/scene/hotspot-artwork'
 import { HOTSPOT_IMAGE_MEDIA_TYPES } from '../../../../../lib/domain/scene/hotspot-urls'
 import { SettingGroup } from '../../sidebar-section'
+import { useHotspotEdits } from './use-hotspot-edits'
 
 import type { HotspotDefinition } from '@vctrl/core'
 

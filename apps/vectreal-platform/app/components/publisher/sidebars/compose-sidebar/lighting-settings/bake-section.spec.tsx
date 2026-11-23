@@ -6,12 +6,12 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-import { BakeSection } from './bake-section'
 import {
 	BAKE_RECOVERY_NOTES,
 	BAKE_SKIP_REASONS,
 	STUDIO_FINISH_FAILURES
 } from '../../../../../lib/domain/scene/client/studio-finish-reasons'
+import { BakeSection } from './bake-section'
 
 import type { BakePreview } from '../../../../../lib/stores/publisher-config-store'
 

@@ -10,14 +10,14 @@ import {
 } from 'drizzle-orm/pg-core'
 import { authenticatedRole } from 'drizzle-orm/supabase'
 
-import { projects } from './projects'
-import { sceneFolders } from './scene-folders'
 import {
 	canAccessProject,
 	canAccessScene,
 	canManageScene,
 	canAccessSceneFolder
 } from '../rls'
+import { projects } from './projects'
+import { sceneFolders } from './scene-folders'
 
 export const sceneStatusEnum = pgEnum('scene_status', [
 	'draft',

@@ -3,7 +3,6 @@ import { useLoadModel, useLoadProgress } from '@vctrl/hooks/use-load-model'
 import { useCallback, useMemo } from 'react'
 import { data, useNavigate } from 'react-router'
 
-import { Route } from './+types/scene'
 import {
 	InlineEditableMetadataField,
 	SceneAside,
@@ -54,6 +53,7 @@ import { getPublishedScenePreview } from '../../../lib/domain/scene/server/scene
 import { sceneSettingsService } from '../../../lib/domain/scene/server/scene-settings-service.server'
 import { shouldRevalidateForRouteParams } from '../../../lib/navigation/dashboard-route-behavior'
 import { toViewerLoadingThumbnail } from '../../../lib/viewer/viewer-loading-thumbnail'
+import { Route } from './+types/scene'
 
 import type {
 	SceneAdditionalMetrics,

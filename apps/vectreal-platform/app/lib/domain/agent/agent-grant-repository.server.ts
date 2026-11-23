@@ -5,8 +5,8 @@ import { agentGrants } from '../../../db/schema/auth/agent-grants'
 import { organizationMemberships } from '../../../db/schema/core/organization-memberships'
 import { organizations } from '../../../db/schema/core/organizations'
 
-import type { AgentScope } from './agent-scopes'
 import type { MembershipRole } from '../dashboard/dashboard-operations'
+import type { AgentScope } from './agent-scopes'
 
 const db = getDbClient()
 

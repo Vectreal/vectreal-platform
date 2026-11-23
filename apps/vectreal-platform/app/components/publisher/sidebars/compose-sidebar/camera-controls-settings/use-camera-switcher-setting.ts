@@ -5,12 +5,12 @@ import {
 import { useAtom, useAtomValue } from 'jotai/react'
 import { useCallback, useMemo } from 'react'
 
-import { normalizeCameraState, withDefaultCameraFlag } from './camera-state'
 import { redactSettingsForEmbed } from '../../../../../lib/domain/scene/embed-settings-policy'
 import {
 	cameraAtom,
 	hotspotsAtom
 } from '../../../../../lib/stores/scene-settings-store'
+import { normalizeCameraState, withDefaultCameraFlag } from './camera-state'
 
 import type { CameraProps, HotspotDefinition } from '@vctrl/core'
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { WorkerRunError } from '../../../../workers/run-worker'
 import {
 	BAKE_SKIP_REASONS,
 	failureMessage,
@@ -15,7 +16,6 @@ import {
 	StudioFinishError,
 	studioFinishFailure
 } from './studio-finish-reasons'
-import { WorkerRunError } from '../../../../workers/run-worker'
 
 describe('studioFinishFailure', () => {
 	it('keeps the reason a step already gave its failure', async () => {

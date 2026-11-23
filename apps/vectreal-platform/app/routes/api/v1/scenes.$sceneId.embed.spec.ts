@@ -6,8 +6,8 @@ import {
 import { RouterContextProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { loader } from './scenes.$sceneId.embed'
 import { agentActorContext } from '../../../lib/domain/agent/agent-actor-context'
+import { loader } from './scenes.$sceneId.embed'
 
 import type { Route } from './+types/scenes.$sceneId.embed'
 

@@ -8,10 +8,10 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { ok, stubSceneApi } from './fixtures/scene-api-stub'
 import { executeSceneSaveOrchestrator } from '../app/lib/domain/scene/client/scene-save-orchestrator'
 import { buildHotspotArtworkUrl } from '../app/lib/domain/scene/hotspot-artwork'
 import { MAX_HOTSPOT_URL_LENGTH } from '../app/lib/domain/scene/hotspot-urls'
+import { ok, stubSceneApi } from './fixtures/scene-api-stub'
 
 import type { HotspotDefinition, SceneSettings } from '@vctrl/core'
 

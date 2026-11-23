@@ -14,7 +14,6 @@ import { useState } from 'react'
 import { Form, Link } from 'react-router'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
-import { PhotoSlots } from './photo-slots'
 import { MODEL_INTAKE_CLIENT_CONSENT_COPY } from '../../constants/model-intake-client-consent-copy'
 import { MODEL_INTAKE_COPY } from '../../constants/product-copy'
 import {
@@ -32,6 +31,7 @@ import {
 } from '../../lib/domain/model-intake/model-intake-shared'
 import { InlineNotice } from '../layout-components'
 import { TurnstileWidget } from '../turnstile-widget'
+import { PhotoSlots } from './photo-slots'
 
 interface ModelIntakeFormProps {
 	locale: ModelIntakeLocale

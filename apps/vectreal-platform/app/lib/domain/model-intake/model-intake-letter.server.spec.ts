@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { __resetRateLimitsForTest } from '../../http/rate-limit.server'
 import {
 	followIntakeShortLink,
 	intakeLetterDeps,
@@ -7,7 +8,6 @@ import {
 	resolveIntakeLetter,
 	type IntakeLetterDeps
 } from './model-intake-letter.server'
-import { __resetRateLimitsForTest } from '../../http/rate-limit.server'
 
 import type { ModelIntakeLetter } from './model-intake-repository.server'
 

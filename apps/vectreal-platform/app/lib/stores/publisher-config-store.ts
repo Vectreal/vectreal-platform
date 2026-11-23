@@ -6,6 +6,7 @@ import {
 import { atom } from 'jotai'
 import { selectAtom } from 'jotai/utils'
 
+import { resolveDefaultSceneCameraId } from '../domain/scene/scene-camera'
 import {
 	activeHotspotIdAtom,
 	cameraAtom,
@@ -15,7 +16,6 @@ import {
 	selectCameraAtom,
 	selectedCameraIdAtom
 } from './scene-settings-store'
-import { resolveDefaultSceneCameraId } from '../domain/scene/scene-camera'
 
 import type { SceneCurrentLocation } from '../../types/api'
 import type {

@@ -7,11 +7,11 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
+import { de } from '../locales/de'
+import { en } from '../locales/en'
 import { InfoPopoverHowToMove } from './info-popover-how-to-move'
 import { ViewerKeysContext } from './viewer-keys-context'
 import { ViewerMessagesContext } from './viewer-messages'
-import { de } from '../locales/de'
-import { en } from '../locales/en'
 
 import type { ViewerKeys } from './scene/viewer-keys'
 

@@ -8,7 +8,6 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { describe, expect, it, vi } from 'vitest'
 
-import { KeepOriginalToggle } from './keep-original-toggle'
 import {
 	originalPreset,
 	smallestPreset
@@ -18,6 +17,7 @@ import {
 	keptOriginalAtom,
 	optimizationAtom
 } from '../../../../lib/stores/scene-optimization-store'
+import { KeepOriginalToggle } from './keep-original-toggle'
 
 const SOURCE = new Uint8Array(2_000_000)
 const optimizerSource = vi.hoisted(() => ({

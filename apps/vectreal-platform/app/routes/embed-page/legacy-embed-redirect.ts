@@ -1,7 +1,7 @@
 import { redirect } from 'react-router'
 
-import { Route } from './+types/legacy-embed-redirect'
 import { buildEmbedPath } from '../../lib/domain/embed/embed-snippet'
+import { Route } from './+types/legacy-embed-redirect'
 
 /**
  * `/preview/fullscreen/:projectId/:sceneId` was the embed URL before external

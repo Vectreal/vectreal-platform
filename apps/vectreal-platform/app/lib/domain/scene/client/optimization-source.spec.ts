@@ -3,10 +3,6 @@
  * pin the three places that decide them without a pass: choosing the original,
  * reopening a saved scene, and restoring a draft.
  */
-import { resolveDerivedSettings } from './optimization-inference'
-import { inferOptimizationPreset } from './optimization-inference'
-import { resolveRestoredDraftOptimization } from './scene-draft-persistence'
-import { executeOptimizationStateHydration } from './scene-optimization-hydration'
 import {
 	balancedPreset,
 	originalPreset,
@@ -16,6 +12,10 @@ import {
 	optimizationInitialState,
 	optimizationRuntimeInitialState
 } from '../../../stores/scene-optimization-store'
+import { resolveDerivedSettings } from './optimization-inference'
+import { inferOptimizationPreset } from './optimization-inference'
+import { resolveRestoredDraftOptimization } from './scene-draft-persistence'
+import { executeOptimizationStateHydration } from './scene-optimization-hydration'
 
 import type { SceneManifestResponse } from '../../../../types/api'
 import type {

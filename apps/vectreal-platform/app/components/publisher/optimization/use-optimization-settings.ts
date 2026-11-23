@@ -1,12 +1,12 @@
 import { useAtom } from 'jotai/react'
 import { useCallback, useMemo } from 'react'
 
-import { applyOptimizationChange } from './model/optimization-settings'
 import { inferOptimizationPreset } from '../../../lib/domain/scene/client/optimization-inference'
 import { optimizationAtom } from '../../../lib/stores/scene-optimization-store'
+import { applyOptimizationChange } from './model/optimization-settings'
 
-import type { OptimizationKey } from './model'
 import type { PresetId } from '../../../types/scene-optimization'
+import type { OptimizationKey } from './model'
 import type { Optimizations } from '@vctrl/core'
 
 /**

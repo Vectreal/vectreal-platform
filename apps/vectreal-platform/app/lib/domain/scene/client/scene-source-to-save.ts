@@ -1,10 +1,10 @@
-import { optimizationsMatch } from './optimization-inference'
 import { originalPreset } from '../../../../constants/optimizations'
 import { MAX_STORED_FILE_BYTES } from '../../../../constants/utility-constants'
+import { optimizationsMatch } from './optimization-inference'
 
-import type { KeptOriginalRef } from './scene-save-orchestrator'
 import type { SceneSourceRef } from '../../../../types/api'
 import type { KeptOriginalState } from '../../../../types/scene-optimization'
+import type { KeptOriginalRef } from './scene-save-orchestrator'
 import type { Optimizations } from '@vctrl/core'
 
 /** What a save does with the scene's original. */

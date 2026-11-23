@@ -1,6 +1,6 @@
+import type { HotspotArtworkRewrite } from '../lib/domain/scene/client/hotspot-artwork-save'
 import type { SceneStatsData } from './api'
 import type { SceneMetaState } from './publisher-config'
-import type { HotspotArtworkRewrite } from '../lib/domain/scene/client/hotspot-artwork-save'
 
 export interface SaveSceneResult {
 	sceneId?: string

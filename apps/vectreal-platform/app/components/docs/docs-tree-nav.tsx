@@ -1,11 +1,11 @@
 import { Link } from 'react-router'
 
-import { docsNavItemClasses } from './docs-nav-item'
 import {
 	DOC_AUDIENCES,
 	DOC_CATEGORY_LABELS,
 	getDocsByCategory
 } from '../../lib/docs/docs-manifest'
+import { docsNavItemClasses } from './docs-nav-item'
 
 interface DocsTreeNavProps {
 	pathname: string

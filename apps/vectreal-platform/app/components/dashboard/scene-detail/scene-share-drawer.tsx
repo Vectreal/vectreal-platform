@@ -1,8 +1,8 @@
-import { SceneLoadingThumbnailSetting } from './scene-loading-thumbnail-setting'
-import { SceneSurfaceDrawer } from './scene-surface-drawer'
 import { EmbedOptionsPanel } from '../../embed/embed-options-panel'
 import { DetailPanelSection } from '../../layout-components'
 import { ScenePublishStateControl } from '../../publishing/scene-publish-state-control'
+import { SceneLoadingThumbnailSetting } from './scene-loading-thumbnail-setting'
+import { SceneSurfaceDrawer } from './scene-surface-drawer'
 
 import type { ScenePublishStateResponse } from '../../../types/api'
 import type { ScenePresentationSettings } from '@vctrl/core'

@@ -1,5 +1,8 @@
 import { isValidElement } from 'react'
 
+import { isCanonicalDeployment } from '../deployment-origin'
+import { COMMUNITY } from '../navigation/site-map'
+import { normalizeSlug } from '../utils/slug'
 import { AGENT_CTA_PROMPT_MAX_LENGTH, resolveArticleCta } from './article-cta'
 import { isArticleBodyChunkPath, newsBodyId } from './news-body-chunks'
 import { articleMediaPaths } from './news-media-paths'
@@ -10,9 +13,6 @@ import {
 	normalizeRequestPath,
 	resolvePublishedAt
 } from './news-schedule'
-import { isCanonicalDeployment } from '../deployment-origin'
-import { COMMUNITY } from '../navigation/site-map'
-import { normalizeSlug } from '../utils/slug'
 
 import type { NewsArticle, NewsArticleFrontmatter } from './news-article'
 import type { ComponentType, ReactNode } from 'react'

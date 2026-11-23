@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
+import { loader as robotsLoader } from '../routes/robots[.]txt'
+import { loader as sitemapLoader } from '../routes/sitemap[.]xml'
 import {
 	isCanonicalDeployment,
 	resolveDeploymentOrigin
 } from './deployment-origin'
 import { SITE_URL, toCanonicalUrl } from './seo'
-import { loader as robotsLoader } from '../routes/robots[.]txt'
-import { loader as sitemapLoader } from '../routes/sitemap[.]xml'
 
 /**
  * A page has one address, and every surface that names it has to agree.

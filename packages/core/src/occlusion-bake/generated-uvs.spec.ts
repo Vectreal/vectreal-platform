@@ -8,6 +8,7 @@ import { Document, type Material, type Primitive } from '@gltf-transform/core'
 import { KHRMaterialsUnlit } from '@gltf-transform/extensions'
 import { describe, expect, it, vi } from 'vitest'
 
+import { planBakeUvsFor } from '../light-bake/bake-into-document'
 import {
 	planBakeUvs,
 	withoutBakeUvs,
@@ -16,7 +17,6 @@ import {
 } from './generated-uvs'
 import { planOcclusionBake, readUvs } from './plan'
 import { triangleIndices } from './scene-primitives'
-import { planBakeUvsFor } from '../light-bake/bake-into-document'
 
 /** The six faces of a unit cube, each with its own corners, and UVs that repeat. */
 function box(document: Document, material: Material, extraSets = 0) {

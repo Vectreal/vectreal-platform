@@ -10,11 +10,11 @@ import { createStore, Provider } from 'jotai'
 import { AnimationClip } from 'three'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import AnimationSettingsPanel from './animation-settings-panel'
 import {
 	animationAtom,
 	animationDriftAtom
 } from '../../../../../lib/stores/scene-settings-store'
+import AnimationSettingsPanel from './animation-settings-panel'
 
 import type { AnimationSettings } from '@vctrl/core'
 import type { ViewerCommand } from '@vctrl/viewer'

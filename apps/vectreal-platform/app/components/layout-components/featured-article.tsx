@@ -2,10 +2,10 @@ import { Card } from '@shared/components/ui/card'
 import { cn } from '@shared/utils'
 import { Link } from 'react-router'
 
-import { ScheduledLabel } from './scheduled-label'
 import { newsroomMorphNames } from '../../lib/news/article-view-transition'
 import { formatNewsDate } from '../../lib/news/news-article'
 import { SCENE_SURFACE } from '../../lib/newsroom-thumbnail/palette'
+import { ScheduledLabel } from './scheduled-label'
 
 import type { NewsArticle } from '../../lib/news/news-article'
 

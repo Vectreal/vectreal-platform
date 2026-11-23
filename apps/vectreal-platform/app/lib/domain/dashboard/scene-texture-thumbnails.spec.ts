@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs'
 import { SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
 import { describe, expect, it } from 'vitest'
 
-import { buildTextureThumbnailUrls } from './scene-texture-thumbnails'
 import { hotspotArtworkFileName } from '../scene/hotspot-artwork'
+import { buildTextureThumbnailUrls } from './scene-texture-thumbnails'
 
 const url = (assetId: string) => `/assets/${assetId}`
 

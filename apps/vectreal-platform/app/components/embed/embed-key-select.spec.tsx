@@ -17,13 +17,13 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { describeKeyOption, EmbedKeySelect } from './embed-key-select'
 import { DASHBOARD_OPERATION_ROLES } from '../../lib/domain/dashboard/dashboard-operations'
 import { isEmbedKeyUsable } from '../../lib/domain/embed/embed-key-options'
 import { EMBED_COPY } from '../../lib/domain/embed/embed-snippet'
+import { describeKeyOption, EmbedKeySelect } from './embed-key-select'
 
-import type { EmbedApiKeysApi } from './use-embed-api-keys'
 import type { EmbedApiKeyOption } from '../../lib/domain/embed/embed-key-options'
+import type { EmbedApiKeysApi } from './use-embed-api-keys'
 
 /*
   Radix needs three browser APIs jsdom does not ship before a `Select` will

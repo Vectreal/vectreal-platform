@@ -6,12 +6,12 @@
 import { createStore } from 'jotai'
 import { describe, expect, it } from 'vitest'
 
+import { balancedPreset, smallestPreset } from '../../constants/optimizations'
 import {
 	documentOptimizationsAtom,
 	optimizationAtom,
 	optimizationInitialState
 } from './scene-optimization-store'
-import { balancedPreset, smallestPreset } from '../../constants/optimizations'
 
 describe('documentOptimizationsAtom', () => {
 	it('is what the document was derived from, not what the panel shows', () => {

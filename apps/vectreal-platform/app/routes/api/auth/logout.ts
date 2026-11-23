@@ -1,9 +1,9 @@
 import { ApiResponse } from '@shared/utils'
 import { redirect } from 'react-router'
 
-import { Route } from './+types/logout'
 import { ensureSameOriginMutation } from '../../../lib/http/csrf.server'
 import { createSupabaseClient } from '../../../lib/supabase.server'
+import { Route } from './+types/logout'
 
 export async function loader() {
 	return ApiResponse.methodNotAllowed()

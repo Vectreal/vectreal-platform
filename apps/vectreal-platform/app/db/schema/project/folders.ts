@@ -8,8 +8,8 @@ import {
 } from 'drizzle-orm/pg-core'
 import { authenticatedRole } from 'drizzle-orm/supabase'
 
-import { projects } from './projects'
 import { canAccessFolder, canManageFolder, canManageProject } from '../rls'
+import { projects } from './projects'
 
 export const folders = pgTable(
 	'folders',

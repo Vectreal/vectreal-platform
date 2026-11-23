@@ -8,12 +8,12 @@ import { act, renderHook } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { describe, expect, it, vi } from 'vitest'
 
-import { useHotspotEdits } from './use-hotspot-edits'
 import {
 	cameraAtom,
 	hotspotsAtom,
 	interactionsAtom
 } from '../../../../../lib/stores/scene-settings-store'
+import { useHotspotEdits } from './use-hotspot-edits'
 
 import type { SceneInteractionDefinition } from '@vctrl/core'
 import type { ReactNode } from 'react'

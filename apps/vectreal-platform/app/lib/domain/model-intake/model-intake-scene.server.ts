@@ -1,13 +1,13 @@
 import {
-	intakeSceneFor,
-	type ModelIntakeShowcase,
-	parseIntakeScenes
-} from './model-intake-shared'
-import {
 	publishedEmbedSceneDeps,
 	resolvePublishedEmbedScene,
 	type PublishedEmbedScene
 } from '../embed/published-embed-scene.server'
+import {
+	intakeSceneFor,
+	type ModelIntakeShowcase,
+	parseIntakeScenes
+} from './model-intake-shared'
 
 // A product turning in a hero, not a viewer to work: it turns whatever the
 // scene's own setting says, and draws no switcher, markers or hint.

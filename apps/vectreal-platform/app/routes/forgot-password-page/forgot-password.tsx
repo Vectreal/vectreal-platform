@@ -19,7 +19,6 @@ import {
 } from 'react-router'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
-import { Route } from './+types/forgot-password'
 import { AuthErrorBoundary } from '../../components/errors'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import { recordRateLimitAttempt } from '../../lib/http/rate-limit.server'
@@ -30,6 +29,7 @@ import {
 } from '../../lib/motion/motion-tokens'
 import { buildMeta } from '../../lib/seo'
 import { createSupabaseClient } from '../../lib/supabase.server'
+import { Route } from './+types/forgot-password'
 
 export { AuthErrorBoundary as ErrorBoundary }
 

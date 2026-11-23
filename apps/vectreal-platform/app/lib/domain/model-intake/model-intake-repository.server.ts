@@ -14,6 +14,12 @@ import {
 	sql
 } from 'drizzle-orm'
 
+import { getDbClient } from '../../../db/client'
+import {
+	modelIntakeLetterScans,
+	modelIntakeLetters,
+	modelIntakeSubmissions
+} from '../../../db/schema'
 import {
 	addRetentionDays,
 	cleanupMinutesBetween,
@@ -24,12 +30,6 @@ import {
 	type ModelIntakeProductType,
 	type ModelIntakeShowcase
 } from './model-intake-shared'
-import { getDbClient } from '../../../db/client'
-import {
-	modelIntakeLetterScans,
-	modelIntakeLetters,
-	modelIntakeSubmissions
-} from '../../../db/schema'
 
 export type ModelIntakeLetter = Omit<
 	typeof modelIntakeLetters.$inferSelect,

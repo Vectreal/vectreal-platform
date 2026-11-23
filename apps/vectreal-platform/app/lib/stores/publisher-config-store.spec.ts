@@ -12,6 +12,7 @@ import { resolveEnvironmentFiles } from '@vctrl/core'
 import { createStore } from 'jotai'
 import { describe, expect, it } from 'vitest'
 
+import { defaultEnvOptions } from '../../constants/viewer-defaults'
 import {
 	enterPreviewModeAtom,
 	environmentLoadFailedAtom,
@@ -38,7 +39,6 @@ import {
 	lightingAtom,
 	selectedCameraIdAtom
 } from './scene-settings-store'
-import { defaultEnvOptions } from '../../constants/viewer-defaults'
 
 import type { ProcessState } from '../../types/publisher-config'
 

@@ -1,10 +1,10 @@
 import { isRouteErrorResponse } from 'react-router'
 
-import { criticalFlowsForPathname } from './critical-flows'
 import {
 	redactUrlSecrets,
 	redactUrlSecretsFromProperties
 } from '../posthog/redact-url-secrets'
+import { criticalFlowsForPathname } from './critical-flows'
 
 /**
  * Everything both reporting sinks agree on, with no PostHog import on either

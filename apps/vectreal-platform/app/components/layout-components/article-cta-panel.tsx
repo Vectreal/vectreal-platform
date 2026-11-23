@@ -3,8 +3,6 @@ import { formatFileSize } from '@shared/utils'
 import { ArrowRight, MessageSquareCode } from 'lucide-react'
 import { Link } from 'react-router'
 
-import { CtaPanel } from './cta-panel'
-import { ModelLinkRow } from './model-link-row'
 import { HOME_PAGE_COPY, MODEL_INTAKE_COPY } from '../../constants/product-copy'
 import { buildTaskPrompt } from '../../lib/ai-handoff/ai-handoff-targets'
 import { CONVERT_INDEX_COPY } from '../../lib/convert/convert-pairs'
@@ -18,6 +16,8 @@ import {
 	requireSampleModel
 } from '../../lib/samples/sample-models'
 import { AiHandoffActions } from '../ai-handoff/ai-handoff-menu'
+import { CtaPanel } from './cta-panel'
+import { ModelLinkRow } from './model-link-row'
 
 import type { ArticleCta, ArticleCtaShortcut } from '../../lib/news/article-cta'
 import type { FC } from 'react'

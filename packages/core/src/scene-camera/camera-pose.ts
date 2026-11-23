@@ -1,5 +1,6 @@
 import { Euler, Vector3, type Vector3Tuple } from 'three'
 
+import { isCameraFov } from '../camera-schema/camera-rules'
 import { DEFAULT_CAMERA, isSceneCamera } from './camera-settings'
 import { withOpeningPose } from './opening-pose'
 import {
@@ -7,11 +8,10 @@ import {
 	resolveFramingAspect,
 	scaleOrbitOffset
 } from './viewport-framing'
-import { isCameraFov } from '../camera-schema/camera-rules'
 
+import type { CameraProps } from '../types'
 import type { OpeningPose } from './opening-pose'
 import type { ViewportFraming } from './viewport-framing'
-import type { CameraProps } from '../types'
 
 /**
  * Where a stored camera puts the view.

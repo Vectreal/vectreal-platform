@@ -11,7 +11,6 @@ import { ExternalLink, Eye, EyeOff } from 'lucide-react'
 import { memo, useCallback, useId } from 'react'
 import { useParams } from 'react-router'
 
-import { PUBLISHER_EDGE_INSET, PUBLISHER_LAYER } from './shell-layout'
 import { buildInternalPreviewPath } from '../../../lib/domain/embed/embed-snippet'
 import { duration, ease } from '../../../lib/motion/motion-tokens'
 import {
@@ -24,6 +23,7 @@ import {
 	processAtom
 } from '../../../lib/stores/publisher-config-store'
 import { COMPOSE_TOOL_DEFINITIONS } from '../sidebars/compose-sidebar/compose-tools'
+import { PUBLISHER_EDGE_INSET, PUBLISHER_LAYER } from './shell-layout'
 
 import type { ComposeTool } from '../../../types/publisher-config'
 

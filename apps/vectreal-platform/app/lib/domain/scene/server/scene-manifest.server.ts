@@ -1,7 +1,5 @@
 import { toLegacyLighting } from '@vctrl/core'
 
-import { shouldShowLoadingThumbnail } from '../scene-presentation'
-import { sceneSettingsService } from './scene-settings-service.server'
 import {
 	buildEmbedAssetRefs,
 	buildPublishedModelRef,
@@ -10,6 +8,8 @@ import {
 } from '../embed-asset-policy'
 import { redactSettingsForEmbed } from '../embed-settings-policy'
 import { isUrlServedSceneAsset } from '../scene-asset-roles'
+import { shouldShowLoadingThumbnail } from '../scene-presentation'
+import { sceneSettingsService } from './scene-settings-service.server'
 
 import type {
 	SceneAssetRecord,

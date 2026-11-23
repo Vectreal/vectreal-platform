@@ -13,7 +13,6 @@ import { CheckIcon } from 'lucide-react'
 import { Form, redirect, useNavigation, type MetaFunction } from 'react-router'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
-import { Route } from './+types/oauth-consent-page'
 import { AuthErrorBoundary } from '../../components/errors'
 import {
 	listAgentGrants,
@@ -37,6 +36,7 @@ import { getUserOrganizations } from '../../lib/domain/user/user-repository.serv
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import { buildMeta } from '../../lib/seo'
 import { createSupabaseClient } from '../../lib/supabase.server'
+import { Route } from './+types/oauth-consent-page'
 
 import type { ReactNode } from 'react'
 

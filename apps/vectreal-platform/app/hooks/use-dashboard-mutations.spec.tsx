@@ -20,11 +20,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useDashboardMutations } from './use-dashboard-mutations'
 
-import type { DashboardMutationsApi } from './use-dashboard-mutations'
 import type {
 	DashboardMutationRequest,
 	DashboardMutationResponse
 } from '../lib/domain/dashboard/dashboard-mutations'
+import type { DashboardMutationsApi } from './use-dashboard-mutations'
 
 const router = vi.hoisted(() => ({
 	fetcher: { state: 'idle', data: undefined as unknown },

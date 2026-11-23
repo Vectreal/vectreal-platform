@@ -11,6 +11,12 @@ import {
 } from '@gltf-transform/extensions'
 import { describe, expect, it, vi } from 'vitest'
 
+import { IO_EXTENSIONS } from '../io-extensions'
+import {
+	bakedLightsSignature,
+	LIGHTMAP_EXTENSION
+} from '../scene-lighting/baked-lights'
+import { resolveLighting } from '../scene-lighting/resolve-lighting'
 import {
 	bakeLightsIntoDocument,
 	planLightBake,
@@ -18,12 +24,6 @@ import {
 } from './bake-into-document'
 import { lightmapScale } from './bake-lights'
 import { type Lightmap } from './extension'
-import { IO_EXTENSIONS } from '../io-extensions'
-import {
-	bakedLightsSignature,
-	LIGHTMAP_EXTENSION
-} from '../scene-lighting/baked-lights'
-import { resolveLighting } from '../scene-lighting/resolve-lighting'
 
 const image = new Uint8Array([137, 80, 78, 71, 1, 2, 3])
 

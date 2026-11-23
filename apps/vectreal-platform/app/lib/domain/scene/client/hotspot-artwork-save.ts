@@ -1,4 +1,3 @@
-import { createFileFromDataUrl } from './scene-draft-serialization'
 import {
 	buildHotspotArtworkUrl,
 	canUploadHotspotArtwork,
@@ -7,6 +6,7 @@ import {
 	isHotspotArtworkPath
 } from '../hotspot-artwork'
 import { isAllowedHotspotPayloadUrl } from '../hotspot-urls'
+import { createFileFromDataUrl } from './scene-draft-serialization'
 
 import type { HotspotDefinition } from '@vctrl/core'
 

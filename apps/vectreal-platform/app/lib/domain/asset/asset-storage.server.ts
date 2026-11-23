@@ -14,7 +14,6 @@ import {
 	sql
 } from 'drizzle-orm'
 
-import { assetObjectPath } from './asset-object-path'
 import { MAX_STORED_FILE_BYTES } from '../../../constants/utility-constants'
 import { getDbClient } from '../../../db/client'
 import {
@@ -27,6 +26,7 @@ import {
 } from '../../../db/schema'
 import { reportServerError } from '../../observability/report-server-error.server'
 import { assertWithinQuota } from '../billing/quota-enforcement.server'
+import { assetObjectPath } from './asset-object-path'
 
 import type { SceneAssetBinaryDataMap } from '../../../types/api'
 

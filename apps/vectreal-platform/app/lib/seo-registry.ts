@@ -1,5 +1,3 @@
-import { SITE_URL, type SeoPageDefinition } from './seo'
-import { normalizeSlug } from './utils/slug'
 import {
 	PLAN_OFFER_DESCRIPTIONS,
 	PLATFORM_FEATURE_LIST,
@@ -7,6 +5,8 @@ import {
 	PLATFORM_TAGLINE,
 	PRICING_PAGE_COPY
 } from '../constants/product-copy'
+import { SITE_URL, type SeoPageDefinition } from './seo'
+import { normalizeSlug } from './utils/slug'
 
 interface NewsArticleStructuredDataInput {
 	title: string

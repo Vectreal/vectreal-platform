@@ -4,7 +4,6 @@ import { getDefaultStore } from 'jotai'
 import { useEffect, useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { useSceneSaveFlow } from './use-scene-save-flow'
 import { defaultBoundsOptions } from '../../constants/viewer-defaults'
 import {
 	capturedThumbnailFrameAtom,
@@ -17,11 +16,12 @@ import {
 	hotspotsAtom,
 	lightingAtom
 } from '../../lib/stores/scene-settings-store'
+import { useSceneSaveFlow } from './use-scene-save-flow'
 
-import type { ScenePersistenceState } from './contracts'
 import type { SceneMetaState } from '../../types/publisher-config'
 import type { SaveSceneResult } from '../../types/publisher-scene'
 import type { SceneOptimizationRuntimeState } from '../../types/scene-optimization'
+import type { ScenePersistenceState } from './contracts'
 import type { HotspotDefinition, SceneSettings } from '@vctrl/core'
 import type { MockInstance } from 'vitest'
 

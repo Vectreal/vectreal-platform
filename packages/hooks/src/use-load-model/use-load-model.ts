@@ -42,8 +42,8 @@ import {
 	UseLoadModelReturn
 } from './types'
 
-import type { LoadContext } from './load-context'
 import type { useOptimizeModel } from '../use-optimize-model'
+import type { LoadContext } from './load-context'
 import type { ByteProgress, OperationProgress } from '@vctrl/core'
 
 /** How far a download of unknown size moves before the state shows it again. */

@@ -10,11 +10,6 @@ import { createElement, type ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
-	usePublishedFileIsCurrent,
-	usePublishSizeProjection,
-	useSizeExcludesTextureEncoding
-} from './use-publish-size-projection'
-import {
 	balancedPreset,
 	originalPreset
 } from '../../../constants/optimizations'
@@ -31,6 +26,11 @@ import {
 	lightingAtom,
 	presentationAtom
 } from '../../../lib/stores/scene-settings-store'
+import {
+	usePublishedFileIsCurrent,
+	usePublishSizeProjection,
+	useSizeExcludesTextureEncoding
+} from './use-publish-size-projection'
 
 import type {
 	PublishedEncoding,

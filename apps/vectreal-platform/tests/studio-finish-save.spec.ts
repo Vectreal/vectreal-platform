@@ -4,9 +4,9 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { ok, stubSceneApi } from './fixtures/scene-api-stub'
 import { executeSceneSaveOrchestrator } from '../app/lib/domain/scene/client/scene-save-orchestrator'
 import { STUDIO_FINISH_FILENAME } from '../app/lib/domain/scene/scene-asset-roles'
+import { ok, stubSceneApi } from './fixtures/scene-api-stub'
 
 import type { StudioFinishToSave } from '../app/lib/domain/scene/studio-finish'
 

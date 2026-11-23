@@ -23,7 +23,6 @@ import { getDefaultStore } from 'jotai'
 import { AnimationClip } from 'three'
 import { afterEach, describe, expect, it, beforeEach, vi } from 'vitest'
 
-import HotspotsSettingsPanel from './hotspots-settings-panel'
 import { HOTSPOT_ARTWORK_MAX_BYTES } from '../../../../../lib/domain/scene/hotspot-artwork'
 import {
 	MAX_HOTSPOT_BODY_LENGTH,
@@ -43,6 +42,7 @@ import {
 	hotspotsAtom
 } from '../../../../../lib/stores/scene-settings-store'
 import { DynamicSidebar } from '../../dynamic-sidebar'
+import HotspotsSettingsPanel from './hotspots-settings-panel'
 
 import type { HotspotDefinition } from '@vctrl/core'
 

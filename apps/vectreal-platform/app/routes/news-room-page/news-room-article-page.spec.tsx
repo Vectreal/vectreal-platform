@@ -3,12 +3,12 @@ import { act, cleanup, fireEvent, render } from '@testing-library/react'
 import { createRoutesStub } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import NewsRoomArticlePage, { loader } from './news-room-article-page'
 import {
 	getNewsArticles,
 	getRelatedNewsArticles
 } from '../../lib/news/news-manifest.server'
 import { PostHogProvider } from '../../lib/posthog/posthog-react'
+import NewsRoomArticlePage, { loader } from './news-room-article-page'
 
 const capture = vi.fn()
 // One client, as the real hook returns: a fresh object would re-run every effect.

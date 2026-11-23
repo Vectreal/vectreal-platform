@@ -6,25 +6,6 @@ import { useCallback, useMemo, type ReactNode } from 'react'
 import { useNavigate, useNavigation, useSubmit } from 'react-router'
 import { toast } from 'sonner'
 
-import OptimizationDrawer from './optimization/optimization-drawer'
-import {
-	useEnvironmentMapBytes,
-	usePublishSizeProjection,
-	useSizeExcludesTextureEncoding
-} from './optimization/use-publish-size-projection'
-import { SaveProgressPanel } from './save-progress/save-progress-panel'
-import { EmptyStage } from './shell/empty-stage'
-import { PublishCard } from './shell/publish-card'
-import { PublisherHeader } from './shell/publisher-header'
-import { PublisherSurfaceFallback } from './shell/publisher-surface-fallback'
-import { PUBLISHER_EDGE_INSET, PUBLISHER_LAYER } from './shell/shell-layout'
-import { ToolBar } from './shell/tool-bar'
-import { DynamicSidebar } from './sidebars/dynamic-sidebar'
-import PublishSidebarContent from './sidebars/publish-sidebar/publish-sidebar-content'
-import { PublishSidebarProvider } from './sidebars/publish-sidebar/publish-sidebar-context'
-import { buildPublishSidebarViewModel } from './sidebars/publish-sidebar/publish-sidebar-view-model'
-import { ToolSidebar } from './sidebars/tool-sidebar'
-import { useSceneSizeInitializer } from './sidebars/use-scene-size-initializer'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
 import { useFirstOpenFill } from '../../hooks/scene-loader/use-first-open-fill'
 import { useOpenExampleScene } from '../../hooks/scene-loader/use-open-example-scene'
@@ -48,6 +29,25 @@ import {
 } from '../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../lib/stores/scene-optimization-store'
 import { PublisherLoaderData } from '../../types/api'
+import OptimizationDrawer from './optimization/optimization-drawer'
+import {
+	useEnvironmentMapBytes,
+	usePublishSizeProjection,
+	useSizeExcludesTextureEncoding
+} from './optimization/use-publish-size-projection'
+import { SaveProgressPanel } from './save-progress/save-progress-panel'
+import { EmptyStage } from './shell/empty-stage'
+import { PublishCard } from './shell/publish-card'
+import { PublisherHeader } from './shell/publisher-header'
+import { PublisherSurfaceFallback } from './shell/publisher-surface-fallback'
+import { PUBLISHER_EDGE_INSET, PUBLISHER_LAYER } from './shell/shell-layout'
+import { ToolBar } from './shell/tool-bar'
+import { DynamicSidebar } from './sidebars/dynamic-sidebar'
+import PublishSidebarContent from './sidebars/publish-sidebar/publish-sidebar-content'
+import { PublishSidebarProvider } from './sidebars/publish-sidebar/publish-sidebar-context'
+import { buildPublishSidebarViewModel } from './sidebars/publish-sidebar/publish-sidebar-view-model'
+import { ToolSidebar } from './sidebars/tool-sidebar'
+import { useSceneSizeInitializer } from './sidebars/use-scene-size-initializer'
 
 /**
  * The publisher shell: a three-row grid of header, canvas stage, and footer.

@@ -1,8 +1,8 @@
 import { litLights } from './light-direction'
 import { resolveLighting } from './resolve-lighting'
 
-import type { ResolvedLighting, ResolvedSceneLight } from './resolve-lighting'
 import type { BakeBasis, SceneSettings } from '../types/scene-types'
+import type { ResolvedLighting, ResolvedSceneLight } from './resolve-lighting'
 
 /**
  * The ground bake's own inputs that a signature covers, apart from the

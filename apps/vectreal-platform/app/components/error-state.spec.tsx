@@ -3,12 +3,12 @@ import { render, screen } from '@testing-library/react'
 import { createRoutesStub } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
 
-import { ErrorState } from './error-state'
-import { EmbedErrorState } from './scene-embed/embed-error-state'
 import {
 	EMBED_ERROR_COPY,
 	type EmbedErrorKind
 } from '../lib/errors/error-state-copy'
+import { ErrorState } from './error-state'
+import { EmbedErrorState } from './scene-embed/embed-error-state'
 
 describe('ErrorState', () => {
 	it('owns the main landmark at page size', () => {

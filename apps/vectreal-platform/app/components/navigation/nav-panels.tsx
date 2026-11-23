@@ -11,9 +11,9 @@ import {
 } from 'react'
 import { Link, useLocation } from 'react-router'
 
-import { isNavItemActive } from './nav-items'
 import { fadeIn, prefersReducedMotion } from '../../lib/motion/motion-tokens'
 import { entersFunnel, isNavSection } from '../../lib/navigation/site-map'
+import { isNavItemActive } from './nav-items'
 
 import type {
 	NavItem,

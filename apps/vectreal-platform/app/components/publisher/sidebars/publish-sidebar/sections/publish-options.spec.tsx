@@ -16,7 +16,6 @@ import {
 import { createStore, Provider } from 'jotai'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { PublishOptions } from './publish-options'
 import {
 	balancedPreset,
 	originalPreset
@@ -42,6 +41,7 @@ import {
 	lightingAtom,
 	presentationAtom
 } from '../../../../../lib/stores/scene-settings-store'
+import { PublishOptions } from './publish-options'
 
 import type { BakePassOutcome } from '../../../../../workers/publish-export.worker.types'
 import type { Optimizations } from '@vctrl/core'

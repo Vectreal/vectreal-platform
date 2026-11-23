@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
+import { useThumbnailEdgeBands } from '../hooks/use-thumbnail-edge-bands'
 import { cn, withHostClasses } from './class-names'
 import { useViewerMessages } from './viewer-messages'
-import { useThumbnailEdgeBands } from '../hooks/use-thumbnail-edge-bands'
 
 import type { ViewerLoadingThumbnail } from '../types/viewer-types'
 

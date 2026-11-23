@@ -4,7 +4,6 @@ import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue, useStore } from 'jotai/react'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 
-import { useStudioFinishPlan } from './use-studio-finish-plan'
 import {
 	resolvePublishGeometryOptions,
 	runPublishExportInWorker
@@ -35,6 +34,7 @@ import {
 import { lightingAtom } from '../../../../../lib/stores/scene-settings-store'
 import { disposeModel } from '../../../optimization/use-hold-to-compare'
 import { useCompressesTexturesForGpu } from '../../../optimization/use-publish-size-projection'
+import { useStudioFinishPlan } from './use-studio-finish-plan'
 
 import type { StudioFinishToSave } from '../../../../../lib/domain/scene/studio-finish'
 import type { SavedFinishRef } from '../../../../../types/api'

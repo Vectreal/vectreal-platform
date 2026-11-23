@@ -3,8 +3,8 @@ import { cleanup, render } from '@testing-library/react'
 import { renderToString } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { ScheduledLabel } from './scheduled-label'
 import { resolvePublishedAt } from '../../lib/news/news-schedule'
+import { ScheduledLabel } from './scheduled-label'
 
 const PUBLISHED_AT = '2026-11-03T09:00'
 

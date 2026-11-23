@@ -5,8 +5,8 @@
 import { Texture, type MeshStandardMaterialParameters } from 'three'
 import { describe, expect, it } from 'vitest'
 
-import { registerBakedLightmap } from './baked-lightmap-plugin'
 import { BAKED_LIGHTMAP_USER_DATA } from '../scene-lighting/baked-lights'
+import { registerBakedLightmap } from './baked-lightmap-plugin'
 
 import type {
 	GLTFLoader,

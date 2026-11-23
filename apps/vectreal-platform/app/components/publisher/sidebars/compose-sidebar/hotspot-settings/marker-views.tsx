@@ -27,15 +27,6 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo } from 'react'
 
-import { AXES, AxisField } from './axis-field'
-import { MarkerArtworkField } from './marker-artwork-field'
-import {
-	describeOcclusionBehavior,
-	OCCLUSION_VISIBILITY_OPTIONS,
-	occlusionBehaviorOf,
-	occlusionPatch
-} from './occlusion-behavior'
-import { useHotspotEdits } from './use-hotspot-edits'
 import {
 	isAllowedHotspotLinkUrl,
 	MAX_HOTSPOT_BODY_LENGTH
@@ -54,6 +45,15 @@ import { DrillDownTrigger } from '../../drill-down'
 import { useSidebarCoversCanvas } from '../../dynamic-sidebar'
 import { SettingGroup } from '../../sidebar-section'
 import { useModelClips } from '../animation-settings/use-animation-reconciliation'
+import { AXES, AxisField } from './axis-field'
+import { MarkerArtworkField } from './marker-artwork-field'
+import {
+	describeOcclusionBehavior,
+	OCCLUSION_VISIBILITY_OPTIONS,
+	occlusionBehaviorOf,
+	occlusionPatch
+} from './occlusion-behavior'
+import { useHotspotEdits } from './use-hotspot-edits'
 
 import type { HotspotDefinition, HotspotStylePreset } from '@vctrl/core'
 

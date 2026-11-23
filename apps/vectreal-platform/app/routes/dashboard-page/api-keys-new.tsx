@@ -42,7 +42,6 @@ import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 import { toast } from 'sonner'
 import { z, ZodError } from 'zod'
 
-import { Route } from './+types/api-keys-new'
 import { OneTimeKeyDialog } from '../../components/api-keys/one-time-key-dialog'
 import {
 	ProjectMultiSelect,
@@ -66,6 +65,7 @@ import {
 	buildUpgradeModalState,
 	upgradeModalAtom
 } from '../../lib/stores/upgrade-modal-store'
+import { Route } from './+types/api-keys-new'
 
 const apiKeyFormSchema = z.object({
 	name: z
