@@ -1,6 +1,9 @@
 import { DASHBOARD_LOCALE } from '../../../constants/limit-format'
 import { type PaidPlan } from '../../../constants/plan-config'
-import { PLAN_FALLBACK_PRICES } from '../../../constants/product-copy'
+import {
+	PLAN_FALLBACK_PRICES,
+	PLAN_PRICE_CURRENCY
+} from '../../../constants/product-copy'
 
 import type { BillingCheckoutOptions } from '../dashboard/dashboard-types'
 
@@ -23,9 +26,9 @@ import type { BillingCheckoutOptions } from '../dashboard/dashboard-types'
 export type BillingPeriod = 'monthly' | 'annual'
 
 export interface PlanPrice {
-	/** Per month, whichever period is billed: `$29` or `$23`. */
+	/** Per month, whichever period is billed: `€19` or `€14`. */
 	perMonthLabel: string
-	/** How it is billed, when that is not simply monthly: `$276 billed yearly`. */
+	/** How it is billed, when that is not simply monthly: `€168 billed yearly`. */
 	billedLabel: string | null
 	/** What checkout needs. `null` when there is no live price to sell. */
 	priceId: string | null
@@ -36,6 +39,12 @@ export interface PlanPrice {
 	 */
 	perMonthCents: number
 	currency: string
+	/**
+	 * The period this price is billed in, which is what checkout must be sent
+	 * with the id. A plan with no yearly price is billed monthly on either
+	 * toggle.
+	 */
+	period: BillingPeriod
 }
 
 /*
@@ -61,8 +70,9 @@ export interface PlanPrice {
 	CLDR and are still sent multiplied by 100, which the derived version got
 	wrong in the opposite direction and by a factor of a hundred. Getting both
 	right needs Stripe's own table of special cases, and there is no second
-	currency here to justify carrying one: the fallback prices are USD and the
-	live prices come from one account that sells in USD.
+	currency here to justify carrying one: the fallback prices are in
+	`PLAN_PRICE_CURRENCY` and the live prices come from the one account that
+	sells in it.
 */
 export function formatPrice(
 	amountCents: number,
@@ -79,12 +89,44 @@ export function formatPrice(
 	}).format(amountCents / 100)
 }
 
+/**
+ * Whether a plan is sold yearly. Stripe's list decides whenever it priced the
+ * plan at all; only a plan it gave no price for falls back to the documented
+ * one. Stripe sells Business monthly only, so on the yearly toggle it shows
+ * and sells its monthly price rather than a yearly figure nobody can be
+ * charged.
+ */
+function isSoldYearly(
+	plan: PaidPlan,
+	options: BillingCheckoutOptions | null
+): boolean {
+	const live = options?.[plan]
+	if (live?.monthly || live?.annual) return live.annual !== null
+	return PLAN_FALLBACK_PRICES[plan].annualMonthly !== null
+}
+
+/**
+ * The currency the plans are priced in: Stripe's when it gave any price, else
+ * the fallbacks'. Free costs nothing in any currency, so it takes this one and
+ * never reads "$0" beside euro prices.
+ */
+export function resolvePlanCurrency(
+	options: BillingCheckoutOptions | null
+): string {
+	const live = Object.values(options ?? {})
+		.flatMap(({ monthly, annual }) => [monthly, annual])
+		.find((price) => price !== null)
+	return live?.currency ?? PLAN_PRICE_CURRENCY
+}
+
 export function resolvePlanPrice(
 	plan: PaidPlan,
-	period: BillingPeriod,
-	options: BillingCheckoutOptions
+	requested: BillingPeriod,
+	options: BillingCheckoutOptions | null
 ): PlanPrice {
-	const live = options[plan][period]
+	const period =
+		requested === 'annual' && isSoldYearly(plan, options) ? 'annual' : 'monthly'
+	const live = options?.[plan][period] ?? null
 
 	if (live) {
 		const perMonthCents =
@@ -100,31 +142,27 @@ export function resolvePlanPrice(
 					: `${formatPrice(live.amountCents, live.currency)} billed yearly`,
 			priceId: live.priceId,
 			perMonthCents,
-			currency: live.currency
+			currency: live.currency,
+			period
 		}
 	}
 
-	/*
-	  The record is `Partial` only because Free and Enterprise have no price; both
-	  plans this accepts carry one, and `product-copy.spec.ts` pins them.
-	*/
-	const fallback = PLAN_FALLBACK_PRICES[plan] as {
-		monthly: number
-		annualMonthly: number
-	}
-
+	const fallback = PLAN_FALLBACK_PRICES[plan]
 	const perMonthCents =
-		(period === 'monthly' ? fallback.monthly : fallback.annualMonthly) * 100
+		(period === 'annual'
+			? (fallback.annualMonthly ?? fallback.monthly)
+			: fallback.monthly) * 100
 
 	return {
-		perMonthLabel: formatPrice(perMonthCents, 'usd'),
+		perMonthLabel: formatPrice(perMonthCents, PLAN_PRICE_CURRENCY),
 		billedLabel:
 			period === 'monthly'
 				? null
-				: `${formatPrice(perMonthCents * 12, 'usd')} billed yearly`,
+				: `${formatPrice(perMonthCents * 12, PLAN_PRICE_CURRENCY)} billed yearly`,
 		priceId: null,
 		perMonthCents,
-		currency: 'usd'
+		currency: PLAN_PRICE_CURRENCY,
+		period
 	}
 }
 
@@ -146,7 +184,7 @@ export function resolvePlanPrice(
  */
 export function describeAnnualSaving(
 	plan: PaidPlan,
-	options: BillingCheckoutOptions
+	options: BillingCheckoutOptions | null
 ): string | null {
 	const monthly = resolvePlanPrice(plan, 'monthly', options)
 	const annual = resolvePlanPrice(plan, 'annual', options)

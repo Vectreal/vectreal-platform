@@ -42,11 +42,14 @@ import {
 	PLAN_CTA,
 	PLAN_CTA_HREF,
 	PLAN_DISPLAY_NAMES,
-	PLAN_FALLBACK_PRICES,
 	PLAN_HIGHLIGHTED,
 	PLAN_TAGLINES
 } from '../../constants/product-copy'
-import { formatPrice } from '../../lib/domain/billing/plan-price'
+import {
+	formatPrice,
+	resolvePlanCurrency,
+	resolvePlanPrice
+} from '../../lib/domain/billing/plan-price'
 
 import type { BillingCheckoutOptions } from '../../lib/domain/dashboard/dashboard-types'
 
@@ -93,7 +96,6 @@ function PlanCell({
 	const cta = PLAN_CTA[plan]
 	const ctaHref = PLAN_CTA_HREF[plan]
 	const highlighted = PLAN_HIGHLIGHTED[plan]
-	const fallbackPrices = isPaidPlan(plan) ? PLAN_FALLBACK_PRICES[plan] : null
 
 	const isFree = plan === 'free'
 	const isPaid = isPaidPlan(plan)
@@ -106,15 +108,7 @@ function PlanCell({
 	const livePricing = isPaid && prices ? prices[plan] : null
 	const liveMonthlyAmountCents = livePricing?.monthly?.amountCents ?? null
 	const liveAnnualAmountCents = livePricing?.annual?.amountCents ?? null
-	const liveCurrency =
-		livePricing?.monthly?.currency ?? livePricing?.annual?.currency ?? 'usd'
-
-	const displayAmountCents =
-		period === 'monthly'
-			? liveMonthlyAmountCents
-			: liveAnnualAmountCents !== null
-				? Math.round(liveAnnualAmountCents / 12)
-				: null
+	const price = isPaidPlan(plan) ? resolvePlanPrice(plan, period, prices) : null
 
 	const savingsPct =
 		liveMonthlyAmountCents !== null &&
@@ -124,9 +118,6 @@ function PlanCell({
 					(1 - liveAnnualAmountCents / 12 / liveMonthlyAmountCents) * 100
 				)
 			: null
-
-	const staticMonthlyPrice = fallbackPrices?.monthly ?? null
-	const staticAnnualMonthlyPrice = fallbackPrices?.annualMonthly ?? null
 
 	// In select mode, this plan is clickable as a selector
 	const isSelectMode = onSelectPlan !== undefined
@@ -201,56 +192,43 @@ function PlanCell({
 				<div className="pt-2">
 					{isFree ? (
 						<div>
-							<span className="text-h2">$0</span>
+							<span className="text-h2">
+								{formatPrice(
+									0,
+									resolvePlanCurrency(prices),
+									PUBLISHED_COPY_LOCALE
+								)}
+							</span>
 							<span className="text-muted-foreground text-body-sm ml-1">
 								/month
 							</span>
 						</div>
-					) : (
+					) : price ? (
 						<div>
-							{displayAmountCents !== null ? (
-								<div className="flex items-end gap-2">
-									<span className="text-h2">
-										{formatPrice(
-											displayAmountCents,
-											liveCurrency,
-											PUBLISHED_COPY_LOCALE
-										)}
-									</span>
-									<span className="text-muted-foreground text-body-sm mb-1">
-										/month
-									</span>
-									{period === 'annual' && savingsPct && savingsPct > 0 && (
-										<Badge variant="secondary" className="mb-1">
-											Save {savingsPct}%
-										</Badge>
-									)}
-								</div>
-							) : (
-								<div className="flex items-end gap-2">
-									<span className="text-h2">
-										$
-										{period === 'annual'
-											? (staticAnnualMonthlyPrice ?? staticMonthlyPrice)
-											: staticMonthlyPrice}
-									</span>
-									<span className="text-muted-foreground text-body-sm mb-1">
-										/month
-									</span>
-								</div>
-							)}
-							{period === 'annual' && liveAnnualAmountCents !== null && (
+							<div className="flex items-end gap-2">
+								<span className="text-h2">{price.perMonthLabel}</span>
+								<span className="text-muted-foreground text-body-sm mb-1">
+									/month
+								</span>
+								{price.period === 'annual' && savingsPct && savingsPct > 0 && (
+									<Badge variant="secondary" className="mb-1">
+										Save {savingsPct}%
+									</Badge>
+								)}
+							</div>
+							{/*
+							  A plan sold monthly only keeps its monthly price on the
+							  yearly toggle, and says so, so the missing saving reads
+							  as how the plan is sold rather than as a mistake.
+							*/}
+							{(price.billedLabel ||
+								(period === 'annual' && price.period === 'monthly')) && (
 								<p className="text-muted-foreground text-label-xs mt-1">
-									{formatPrice(
-										liveAnnualAmountCents,
-										liveCurrency,
-										PUBLISHED_COPY_LOCALE
-									)}{' '}
-									billed annually
+									{price.billedLabel ?? 'billed monthly'}
 								</p>
 							)}
 						</div>
-					)}
+					) : null}
 				</div>
 			</CardHeader>
 

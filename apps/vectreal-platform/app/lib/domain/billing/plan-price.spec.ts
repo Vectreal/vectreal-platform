@@ -45,31 +45,49 @@ const LIVE: BillingCheckoutOptions = {
 describe('without a live Stripe price', () => {
 	it('still shows what the plan costs', () => {
 		expect(resolvePlanPrice('pro', 'monthly', NO_LIVE_PRICES)).toEqual({
-			perMonthLabel: '$29',
+			perMonthLabel: '€19',
 			billedLabel: null,
 			priceId: null,
-			perMonthCents: 2900,
-			currency: 'usd'
+			perMonthCents: 1900,
+			currency: 'eur',
+			period: 'monthly'
 		})
 	})
 
 	it('shows the annual figure the way it is billed', () => {
-		expect(resolvePlanPrice('business', 'annual', NO_LIVE_PRICES)).toEqual({
-			perMonthLabel: '$63',
-			billedLabel: '$756 billed yearly',
+		expect(resolvePlanPrice('pro', 'annual', NO_LIVE_PRICES)).toEqual({
+			perMonthLabel: '€14',
+			billedLabel: '€168 billed yearly',
 			priceId: null,
-			perMonthCents: 6300,
-			currency: 'usd'
+			perMonthCents: 1400,
+			currency: 'eur',
+			period: 'annual'
 		})
+	})
+
+	it('shows a plan with no yearly price at its monthly price, billed monthly', () => {
+		/*
+		  Stripe sells Business monthly only. The yearly toggle used to show a
+		  yearly Business figure nobody could be charged.
+		*/
+		expect(resolvePlanPrice('business', 'annual', NO_LIVE_PRICES)).toEqual({
+			perMonthLabel: '€62',
+			billedLabel: null,
+			priceId: null,
+			perMonthCents: 6200,
+			currency: 'eur',
+			period: 'monthly'
+		})
+		expect(describeAnnualSaving('business', NO_LIVE_PRICES)).toBeNull()
 	})
 
 	it('still names the yearly saving, from the prices it shows', () => {
 		/*
 		  The saving used to read live prices only, so a page showing the fallback
-		  $29 offered no saving beside it. Business: $79 against $63 a month, a
-		  year of it.
+		  price offered no saving beside it. Pro: €19 against €14 a month, a year
+		  of it.
 		*/
-		expect(describeAnnualSaving('business', NO_LIVE_PRICES)).toBe('$192')
+		expect(describeAnnualSaving('pro', NO_LIVE_PRICES)).toBe('€60')
 	})
 
 	it('offers nothing to buy', () => {
@@ -88,7 +106,8 @@ describe('with a live Stripe price', () => {
 			billedLabel: '$276 billed yearly',
 			priceId: 'price_pro_y',
 			perMonthCents: 2300,
-			currency: 'usd'
+			currency: 'usd',
+			period: 'annual'
 		})
 	})
 
@@ -101,6 +120,49 @@ describe('with a live Stripe price', () => {
 	it('shows cents when the price has them, and not when it does not', () => {
 		expect(formatPrice(2999, 'usd')).toBe('$29.99')
 		expect(formatPrice(2900, 'usd')).toBe('$29')
+	})
+
+	it('sells a plan with a live monthly price and no yearly one monthly, on either toggle', () => {
+		/*
+		  Stripe sells Business monthly only. The yearly toggle showed the
+		  documented figure instead of the live one, and the upgrade page offered
+		  nothing to buy and no way back to monthly. Checkout refuses a monthly id
+		  sent as yearly, so the period travels with the price.
+		*/
+		const monthlyOnly: BillingCheckoutOptions = {
+			pro: LIVE.pro,
+			business: {
+				monthly: {
+					priceId: 'price_business_m',
+					amountCents: 6500,
+					currency: 'eur',
+					interval: 'month',
+					intervalCount: 1,
+					productName: 'Business'
+				},
+				annual: null
+			}
+		}
+		expect(resolvePlanPrice('business', 'annual', monthlyOnly)).toEqual({
+			perMonthLabel: '€65',
+			billedLabel: null,
+			priceId: 'price_business_m',
+			perMonthCents: 6500,
+			currency: 'eur',
+			period: 'monthly'
+		})
+		expect(describeAnnualSaving('business', monthlyOnly)).toBeNull()
+	})
+
+	it('lets the live list decide, even where a yearly fallback exists', () => {
+		const proMonthlyOnly: BillingCheckoutOptions = {
+			pro: { monthly: LIVE.pro.monthly, annual: null },
+			business: { monthly: null, annual: null }
+		}
+		expect(resolvePlanPrice('pro', 'annual', proMonthlyOnly)).toMatchObject({
+			priceId: 'price_pro_m',
+			period: 'monthly'
+		})
 	})
 
 	it('names the yearly saving from the live figures', () => {

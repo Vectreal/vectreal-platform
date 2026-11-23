@@ -66,13 +66,13 @@ describe('claims the copy makes about the plans', () => {
 		  the derivation keeps the badge honest automatically, and this keeps the
 		  change visible.
 		*/
-		expect(ANNUAL_DISCOUNT_CLAIM).toBe('Save up to 21%')
+		expect(ANNUAL_DISCOUNT_CLAIM).toBe('Save up to 26%')
 	})
 
 	it('never claims less than a plan actually saves', () => {
 		/*
 		  "up to" has to be an upper bound. The old hand-written "20%" was not:
-		  Pro saves 21%, so the badge understated its own best case.
+		  Pro saved 21%, so the badge understated its own best case.
 
 		  The bound is checked against the same literal the test above pins, not
 		  against ANNUAL_DISCOUNT_CLAIM. Reading the number back out of the claim
@@ -81,12 +81,15 @@ describe('claims the copy makes about the plans', () => {
 		  comment above describes, and it grew back here.
 		*/
 		const best = Math.max(
-			...Object.values(PLAN_FALLBACK_PRICES).map(({ monthly, annualMonthly }) =>
-				Math.round((1 - annualMonthly / monthly) * 100)
+			...Object.values(PLAN_FALLBACK_PRICES).map(
+				({ monthly, annualMonthly }) =>
+					annualMonthly === null
+						? 0
+						: Math.round((1 - annualMonthly / monthly) * 100)
 			)
 		)
 
-		expect(21).toBeGreaterThanOrEqual(best)
+		expect(26).toBeGreaterThanOrEqual(best)
 	})
 
 	it('shows every entitlement in the comparison grid', () => {
