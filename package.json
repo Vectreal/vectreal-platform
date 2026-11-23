@@ -64,7 +64,7 @@
 		"morgan": "^1.12.0",
 		"next-themes": "^0.4.6",
 		"postcss": "^8.5.33",
-		"postgres": "^3.4.9",
+		"postgres": "^4.1.0",
 		"posthog-js": "^1.447.15",
 		"posthog-node": "^5.74.0",
 		"postprocessing": "catalog:",
