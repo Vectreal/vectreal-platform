@@ -4,6 +4,7 @@ import {
 	getDashboardSceneLoadErrorMessage,
 	getUploadLoadErrorMessage,
 	listFileNames,
+	missingTexturesNotice,
 	uploadLoadErrorLink
 } from './scene-load-error-messages'
 
@@ -162,5 +163,33 @@ describe('listFileNames', () => {
 		[['a', 'b', 'c', 'd', 'e'], 'a, b, c and 2 more']
 	])('lists %j as %s', (names, sentence) => {
 		expect(listFileNames(names)).toBe(sentence)
+	})
+})
+
+describe('missingTexturesNotice', () => {
+	const file = (missingTextures?: string[]) => ({
+		name: 'scene.gltf',
+		missingTextures
+	})
+
+	it('names the images a dropped glTF opened without, and the folder to bring', () => {
+		expect(
+			missingTexturesNotice(file(['textures/wood.png', 'textures/metal.png']), {
+				fromDisk: true
+			})
+		).toBe(
+			'scene.gltf opened without textures/wood.png and textures/metal.png, which did not come with it, so those surfaces show their plain color. To see them textured, drop the whole folder it lives in.'
+		)
+	})
+
+	it('sends a model opened from a URL to no folder', () => {
+		expect(missingTexturesNotice(file(['wood.png']), { fromDisk: false })).toBe(
+			'scene.gltf opened without wood.png, which did not come with it, so those surfaces show their plain color.'
+		)
+	})
+
+	it('says nothing when nothing was missing', () => {
+		expect(missingTexturesNotice(file(), { fromDisk: true })).toBeNull()
+		expect(missingTexturesNotice(file([]), { fromDisk: true })).toBeNull()
 	})
 })

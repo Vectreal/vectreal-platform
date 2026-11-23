@@ -244,27 +244,179 @@ describe('each URI resolves to the file it names', () => {
 	})
 })
 
-describe('a reference it cannot resolve is refused, and named', () => {
-	it('names the image that is missing', async () => {
-		await expect(
-			load(
-				gltfReferencing('body/diffuse.png'),
-				new Map([['chair/body/normal.png', png(1)]]),
-				'chair/chair.gltf'
-			)
-		).rejects.toThrow(/Missing required image files[\s\S]*body\/diffuse\.png/)
+describe('a missing image loads without its texture, and is named', () => {
+	/*
+	  The way an OBJ or an FBX without its images already loads: correct but
+	  grey. Refusing a glTF whose geometry arrived whole, for want of a
+	  picture, sent the visitor away with nothing on screen.
+	*/
+	async function loadResult(
+		gltf: Uint8Array,
+		assets: Map<string, Uint8Array>,
+		modelPath: string
+	) {
+		return new ModelLoader().loadGLTFWithAssets(
+			gltf,
+			assets,
+			modelPath.split('/').pop() ?? modelPath,
+			false,
+			modelPath
+		)
+	}
+
+	it('loads the model, without the texture, and says which image it went without', async () => {
+		const result = await loadResult(
+			gltfReferencing('body/diffuse.png', 'body/normal.png'),
+			new Map([['chair/body/normal.png', png(1)]]),
+			'chair/chair.gltf'
+		)
+
+		const root = result.data.getRoot()
+		expect(root.listTextures().map((t) => markerOf(t.getImage()))).toEqual([1])
+		expect(
+			root
+				.listMaterials()
+				.map((material) => material.getBaseColorTexture() !== null)
+		).toEqual([false, true])
+		expect(result.missingTextures).toEqual(['body/diffuse.png'])
 	})
 
-	it('carries the missing files as names a reader knows', async () => {
-		const refusal = await load(
-			gltfReferencing('body/wood%20grain.png'),
+	it('names the missing images as a reader knows them, each once', async () => {
+		const result = await loadResult(
+			gltfReferencing('body/wood%20grain.png', 'body/wood%20grain.png'),
 			new Map(),
 			'chair/chair.gltf'
-		).catch((error: unknown) => error)
+		)
 
-		expect(missingFilesOf(refusal)).toEqual(['body/wood grain.png'])
+		expect(result.missingTextures).toEqual(['body/wood grain.png'])
 	})
 
+	it('says nothing is missing when nothing is', async () => {
+		const result = await loadResult(
+			gltfReferencing('body/diffuse.png'),
+			new Map([['chair/body/diffuse.png', png(1)]]),
+			'chair/chair.gltf'
+		)
+
+		expect(result.missingTextures).toBeUndefined()
+	})
+
+	it('goes without the image rather than guessing between two of one name', async () => {
+		/*
+		  A glTF that names `diffuse.png` while the selection holds two of them
+		  at the same depth has not said which one it means. Picking whichever
+		  was written last textured both materials from one file and reported
+		  success; going without names the file, which the visitor can act on.
+		*/
+		const result = await loadResult(
+			gltfReferencing('diffuse.png'),
+			new Map([
+				['chair/body/diffuse.png', png(1)],
+				['chair/wheels/diffuse.png', png(2)]
+			]),
+			'chair/chair.gltf'
+		)
+
+		expect(result.data.getRoot().listTextures()).toEqual([])
+		expect(result.missingTextures).toEqual(['diffuse.png'])
+	})
+
+	it('does not reach into a second folder dropped alongside', async () => {
+		/*
+		  Two exports in one gesture. Answering chairA's reference with chairB's
+		  file is the cross-folder mix-up, and it needs the model's own path to
+		  be refused - which is why `modelPath` is passed rather than inferred.
+		*/
+		const result = await loadResult(
+			gltfReferencing('body/diffuse.png'),
+			new Map([['chairB/body/diffuse.png', png(2)]]),
+			'chairA/chairA.gltf'
+		)
+
+		expect(result.data.getRoot().listTextures()).toEqual([])
+		expect(result.missingTextures).toEqual(['body/diffuse.png'])
+	})
+})
+
+describe('only a surface that lost its picture is named', () => {
+	/** One material on a texture with a PNG `source` and a WebP alternative. */
+	const webpTextured = new TextEncoder().encode(
+		JSON.stringify({
+			asset: { version: '2.0' },
+			extensionsUsed: ['EXT_texture_webp'],
+			images: [{ uri: 'wood.png' }, { uri: 'wood.webp' }],
+			textures: [
+				{ source: 0, extensions: { EXT_texture_webp: { source: 1 } } }
+			],
+			materials: [{ pbrMetallicRoughness: { baseColorTexture: { index: 0 } } }]
+		})
+	)
+
+	const loadWith = (gltf: Uint8Array, assets: Map<string, Uint8Array>) =>
+		new ModelLoader().loadGLTFWithAssets(gltf, assets, 'chair.gltf')
+
+	it('reads the fallback that came when the WebP did not', async () => {
+		const result = await loadWith(webpTextured, new Map([['wood.png', png(1)]]))
+
+		const material = result.data.getRoot().listMaterials()[0]
+		expect(markerOf(material.getBaseColorTexture()?.getImage() ?? null)).toBe(1)
+		expect(result.missingTextures).toBeUndefined()
+	})
+
+	it('does not name a fallback the texture did not need', async () => {
+		const result = await loadWith(
+			webpTextured,
+			new Map([['wood.webp', png(2)]])
+		)
+
+		const material = result.data.getRoot().listMaterials()[0]
+		expect(markerOf(material.getBaseColorTexture()?.getImage() ?? null)).toBe(2)
+		expect(result.missingTextures).toBeUndefined()
+	})
+
+	it('does not name an image no surface uses', async () => {
+		const gltf = new TextEncoder().encode(
+			JSON.stringify({
+				asset: { version: '2.0' },
+				images: [{ uri: 'spare.png' }]
+			})
+		)
+
+		const result = await loadWith(gltf, new Map())
+
+		expect(result.missingTextures).toBeUndefined()
+	})
+})
+
+describe('the names reach the scene the page shows', () => {
+	it('carries them through the three.js conversion', async () => {
+		/*
+		  The pages read `missingTextures` off the three.js result, not off the
+		  document load, so the hand-over between the two is the wiring.
+		*/
+		const loader = new ModelLoader()
+		;(
+			loader as unknown as { createThreeLoader: () => unknown }
+		).createThreeLoader = async () => ({
+			parse: (
+				_buffer: ArrayBuffer,
+				_path: string,
+				done: (gltf: { scene: object; animations: [] }) => void
+			) => done({ scene: {}, animations: [] })
+		})
+		const result = await loader.loadGLTFWithAssets(
+			gltfReferencing('wood.png'),
+			new Map(),
+			'chair.gltf'
+		)
+
+		const three = await loader.documentToThreeJS(result.data, result)
+
+		expect(three.missingTextures).toEqual(['wood.png'])
+	})
+})
+
+describe('a missing buffer is refused, and named', () => {
 	it('names a missing buffer beside the missing images, each once', async () => {
 		const gltf = new TextEncoder().encode(
 			JSON.stringify({
@@ -279,42 +431,8 @@ describe('a reference it cannot resolve is refused, and named', () => {
 			.loadGLTFWithAssets(gltf, new Map(), 'chair.gltf')
 			.catch((error: unknown) => error)
 
+		expect(String(refusal)).toMatch(/Missing required image files/)
 		expect(missingFilesOf(refusal)).toEqual(['wood.png', 'scene.bin'])
-	})
-
-	it('refuses a genuine tie rather than texturing twice from one file', async () => {
-		/*
-		  WHERE THIS GOT STRICTER, DELIBERATELY. A glTF that names `diffuse.png`
-		  while the selection holds two of them at the same depth has not said
-		  which one it means. Loading it picked whichever was written last and
-		  reported success; refusing leaves the visitor a message naming the
-		  file, which is the outcome they can act on.
-		*/
-		await expect(
-			load(
-				gltfReferencing('diffuse.png'),
-				new Map([
-					['chair/body/diffuse.png', png(1)],
-					['chair/wheels/diffuse.png', png(2)]
-				]),
-				'chair/chair.gltf'
-			)
-		).rejects.toThrow(/Missing required image files/)
-	})
-
-	it('does not reach into a second folder dropped alongside', async () => {
-		/*
-		  Two exports in one gesture. Answering chairA's reference with chairB's
-		  file is the cross-folder mix-up, and it needs the model's own path to
-		  be refused - which is why `modelPath` is passed rather than inferred.
-		*/
-		await expect(
-			load(
-				gltfReferencing('body/diffuse.png'),
-				new Map([['chairB/body/diffuse.png', png(2)]]),
-				'chairA/chairA.gltf'
-			)
-		).rejects.toThrow(/Missing required image files/)
 	})
 
 	it('names the buffer that is missing, rather than failing to parse', async () => {
@@ -428,10 +546,20 @@ describe('a reference it cannot resolve is refused, and named', () => {
 	})
 
 	it('lists what it did have, so the message can be acted on', async () => {
+		const gltf = new TextEncoder().encode(
+			JSON.stringify({
+				asset: { version: '2.0' },
+				buffers: [{ uri: 'scene.bin', byteLength: 4 }],
+				bufferViews: [{ buffer: 0, byteOffset: 0, byteLength: 4 }]
+			})
+		)
+
 		await expect(
-			load(
-				gltfReferencing('body/diffuse.png'),
+			new ModelLoader().loadGLTFWithAssets(
+				gltf,
 				new Map([['chair/body/normal.png', png(1)]]),
+				'chair.gltf',
+				false,
 				'chair/chair.gltf'
 			)
 		).rejects.toThrow(/chair\/body\/normal\.png/)

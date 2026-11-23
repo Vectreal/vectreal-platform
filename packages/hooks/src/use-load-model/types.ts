@@ -68,6 +68,12 @@ export interface ModelFile {
 	sourcePackageBytes?: number
 	/** Byte size of referenced texture assets from source package */
 	sourceTextureBytes?: number
+	/**
+	 * Images a dropped glTF names that did not come with it. The model is on
+	 * screen without those textures, so a page can say which ones to bring.
+	 * Absent when nothing was missing.
+	 */
+	missingTextures?: readonly string[]
 }
 
 /**

@@ -41,6 +41,26 @@ export function listFileNames(names: readonly string[], max = 3): string {
 }
 
 /**
+ * What the publisher says when a glTF opened without some of its images: the
+ * model is on screen, grey where those textures were, and the files it went
+ * without are named. Null when nothing was missing. Only a model dropped from
+ * disk has a folder to bring, so a model opened from a URL is told what is
+ * missing and nothing more.
+ */
+export function missingTexturesNotice(
+	file: { readonly name: string; readonly missingTextures?: readonly string[] },
+	{ fromDisk }: { readonly fromDisk: boolean }
+): string | null {
+	const missing = file.missingTextures ?? []
+	if (missing.length === 0) return null
+
+	const opened = `${file.name} opened without ${listFileNames(missing)}, which did not come with it, so those surfaces show their plain color.`
+	return fromDisk
+		? `${opened} To see them textured, drop the whole folder it lives in.`
+		: opened
+}
+
+/**
  * What the publisher says when a model the user just picked will not load.
  *
  * Keyed on the error code rather than the loader's raw message so the copy stays

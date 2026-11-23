@@ -9,6 +9,7 @@ import { buildSceneUploadFailedAnalyticsProps } from '../../lib/domain/analytics
 import { getSceneNameFromFileName } from '../../lib/domain/scene'
 import {
 	getUploadLoadErrorMessage,
+	missingTexturesNotice,
 	uploadLoadErrorLink
 } from '../../lib/domain/scene/scene-load-error-messages'
 import { clearPendingSceneDraft } from '../../lib/persistence/pending-scene-idb'
@@ -143,7 +144,16 @@ export function useSceneUpload() {
 				name: getSceneNameFromFileName(result.file.name)
 			})
 
-			toast.success(`Loaded ${result.file.name}`)
+			/*
+			  One toast either way. A glTF that opened without some of its
+			  images is loaded, so it is not an error, but "Loaded" alone would
+			  leave the grey surfaces unexplained.
+			*/
+			const notice = missingTexturesNotice(result.file, {
+				fromDisk: source.kind === 'files'
+			})
+			if (notice) toast.warning(notice)
+			else toast.success(`Loaded ${result.file.name}`)
 
 			if (consent?.analytics) {
 				posthog?.capture('scene_upload_succeeded', {

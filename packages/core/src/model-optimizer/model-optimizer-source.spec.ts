@@ -864,3 +864,80 @@ describe('ModelOptimizer texture names at load', () => {
 		expect(loaded.getURI()).toBe('Wood_baseColor.png')
 	})
 })
+
+describe('a glTF dropped without some of its images', () => {
+	/*
+	  The loader puts such a model on screen grey; the optimizer ingests the
+	  same JSON with no bytes for the image. Without dropping that texture the
+	  re-encode below has nothing to write for it, and the model on screen
+	  could not be optimized or saved.
+	*/
+	it('ingests without the texture whose image never arrived', async () => {
+		const optimizer = new ModelOptimizer()
+		const gltf = new TextEncoder().encode(
+			JSON.stringify({
+				asset: { version: '2.0' },
+				buffers: [{ uri: 'scene.bin', byteLength: 4 }],
+				bufferViews: [{ buffer: 0, byteOffset: 0, byteLength: 4 }],
+				accessors: [
+					{ bufferView: 0, componentType: 5126, count: 1, type: 'SCALAR' }
+				],
+				images: [{ uri: 'wood.png' }, { uri: 'normal.png' }],
+				textures: [{ source: 0 }, { source: 1 }],
+				materials: [
+					{
+						pbrMetallicRoughness: { baseColorTexture: { index: 0 } },
+						normalTexture: { index: 1 }
+					}
+				]
+			})
+		)
+
+		await optimizer.loadFromGLTFWithAssets(
+			gltf,
+			new Map([
+				['scene.bin', new Uint8Array(4)],
+				['normal.png', ONE_PIXEL_PNG]
+			])
+		)
+
+		const root = optimizer.document?.getRoot()
+		expect(root?.listTextures()).toHaveLength(1)
+		expect(root?.listMaterials()[0].getBaseColorTexture()).toBeNull()
+		expect(root?.listMaterials()[0].getNormalTexture()).not.toBeNull()
+	})
+
+	it('reads the fallback that came when the WebP did not, as the loader does', async () => {
+		const optimizer = new ModelOptimizer()
+		const gltf = new TextEncoder().encode(
+			JSON.stringify({
+				asset: { version: '2.0' },
+				extensionsUsed: ['EXT_texture_webp'],
+				buffers: [{ uri: 'scene.bin', byteLength: 4 }],
+				bufferViews: [{ buffer: 0, byteOffset: 0, byteLength: 4 }],
+				accessors: [
+					{ bufferView: 0, componentType: 5126, count: 1, type: 'SCALAR' }
+				],
+				images: [{ uri: 'wood.png' }, { uri: 'wood.webp' }],
+				textures: [
+					{ source: 0, extensions: { EXT_texture_webp: { source: 1 } } }
+				],
+				materials: [
+					{ pbrMetallicRoughness: { baseColorTexture: { index: 0 } } }
+				]
+			})
+		)
+
+		await optimizer.loadFromGLTFWithAssets(
+			gltf,
+			new Map([
+				['scene.bin', new Uint8Array(4)],
+				['wood.png', ONE_PIXEL_PNG]
+			])
+		)
+
+		expect(
+			optimizer.document?.getRoot().listMaterials()[0].getBaseColorTexture()
+		).not.toBeNull()
+	})
+})

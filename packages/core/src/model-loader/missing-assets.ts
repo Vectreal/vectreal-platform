@@ -14,6 +14,10 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
+import { PropertyType } from '@gltf-transform/core'
+
+import type { Document, JSONDocument } from '@gltf-transform/core'
+
 /**
  * "The model names files that did not come with it", as a fact rather than a
  * sentence.
@@ -89,4 +93,75 @@ function missingAssetsIn(
 	}
 
 	return null
+}
+
+/**
+ * Points each texture at an image that arrived, where it names two.
+ *
+ * `EXT_texture_webp`, `EXT_texture_avif` and `KHR_texture_basisu` give a
+ * texture a second image, which the reader prefers over `source`. When that
+ * one did not come and the fallback did, the reader would pick the missing one
+ * and the surface would go grey with a usable picture in hand; so the
+ * extension comes off and the texture reads its fallback.
+ *
+ * Run on the JSON before it is read, by both readers of a dropped glTF.
+ */
+export function preferArrivedImages({ json, resources }: JSONDocument): void {
+	const images = json.images ?? []
+	const arrived = (index: unknown): boolean => {
+		if (typeof index !== 'number') return false
+		const image = images[index]
+		if (!image) return false
+		if (typeof image.bufferView === 'number') return true
+		if (typeof image.uri !== 'string') return false
+		return image.uri.startsWith('data:') || Boolean(resources[image.uri])
+	}
+
+	for (const texture of json.textures ?? []) {
+		if (!texture.extensions || !arrived(texture.source)) continue
+
+		for (const [name, extension] of Object.entries(texture.extensions)) {
+			const source = (extension as { source?: unknown }).source
+			if (source !== undefined && !arrived(source)) {
+				delete texture.extensions[name]
+			}
+		}
+	}
+}
+
+/**
+ * Takes off every texture whose image never arrived, and says which ones a
+ * surface lost.
+ *
+ * A glTF that brought its geometry but not its pictures loads the way an OBJ
+ * or an FBX without its images already does: correct but grey, each material
+ * keeping its own color. The reader leaves such a texture holding no image,
+ * and the exporter that turns the document into a GLB has nothing to write for
+ * it, so the texture goes rather than the load. Disposing it also unhooks it
+ * from every material slot that pointed at it.
+ *
+ * Only a texture something used is named: an image nothing points at, or a
+ * fallback the texture did not need, changes no surface, and naming it would
+ * say a surface is plain when it is not.
+ *
+ * Both readers of a dropped glTF call this - the loader that puts it on screen
+ * and the optimizer that ingests it - so the scene on screen and the one that
+ * gets optimized and saved are the same scene.
+ *
+ * @returns the URIs of the used textures it took off, as the glTF wrote them.
+ */
+export function dropTexturesWithoutImage(document: Document): string[] {
+	const lost: string[] = []
+
+	for (const texture of document.getRoot().listTextures()) {
+		if (texture.getImage()) continue
+
+		const used = texture
+			.listParents()
+			.some((parent) => parent.propertyType !== PropertyType.ROOT)
+		if (used && texture.getURI()) lost.push(texture.getURI())
+		texture.dispose()
+	}
+
+	return lost
 }

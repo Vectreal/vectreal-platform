@@ -188,5 +188,20 @@ export function refusalMessage(
 	}
 }
 
+/**
+ * The converter's line under a glTF that converted without some of its
+ * images: which files it went without, and that those surfaces are plain
+ * color in the model and in what it converts to. Null when nothing was missing.
+ */
+export function missingTexturesNote(file: {
+	readonly name: string
+	readonly missingTextures?: readonly string[]
+}): string | null {
+	const missing = file.missingTextures ?? []
+	if (missing.length === 0) return null
+
+	return `${listFileNames(missing)} did not come with ${file.name}, so those surfaces show their plain color. Drop the folder it lives in to keep them textured.`
+}
+
 /** How many conversions to keep; `storeConversion` says why it is bounded. */
 export const KEPT_CONVERSIONS = 3

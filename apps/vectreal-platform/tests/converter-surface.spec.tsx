@@ -88,6 +88,7 @@ interface LoaderFile {
 	type: string
 	sourcePackageBytes?: number
 	sourceTextureBytes?: number
+	missingTextures?: readonly string[]
 }
 
 interface Pending {
@@ -601,6 +602,30 @@ beforeEach(() => {
 	consentState.analytics = false
 	writableFormats.add('webp')
 	resetContext()
+})
+
+describe('a glTF that came without some of its images', () => {
+	it('names them beside the file, and nothing does for a whole one', async () => {
+		render(<ConverterSurface pair={gltfToGlb} />)
+		drop([gltfFile('chair.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		await settle(
+			0,
+			loadedFile({ name: 'chair.gltf', missingTextures: ['textures/wood.png'] })
+		)
+
+		expect(
+			await screen.findByText(
+				'textures/wood.png did not come with chair.gltf, so those surfaces show their plain color. Drop the folder it lives in to keep them textured.'
+			)
+		).toBeTruthy()
+	})
+
+	it('says nothing beside a glTF that brought every image', async () => {
+		await modelOnStage()
+
+		expect(screen.queryByText(/did not come with/)).toBeNull()
+	})
 })
 
 describe('an option the browser cannot carry out is not offered', () => {

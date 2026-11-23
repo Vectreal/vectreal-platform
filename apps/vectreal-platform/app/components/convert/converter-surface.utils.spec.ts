@@ -5,6 +5,7 @@ import { convertPairBySlug } from '../../lib/convert/convert-pairs'
 import {
 	downloadContainer,
 	measuredBytes,
+	missingTexturesNote,
 	refusalMessage
 } from './converter-surface.utils'
 
@@ -148,5 +149,22 @@ describe('refusalMessage', () => {
 		expect(refusalMessage(null, glb, null)).toBe(
 			`Check it is a valid ${glb.fromLabel}.`
 		)
+	})
+})
+
+describe('missingTexturesNote', () => {
+	it('names the images a glTF converts without', () => {
+		expect(
+			missingTexturesNote({
+				name: 'scene.gltf',
+				missingTextures: ['textures/wood.png']
+			})
+		).toBe(
+			'textures/wood.png did not come with scene.gltf, so those surfaces show their plain color. Drop the folder it lives in to keep them textured.'
+		)
+	})
+
+	it('says nothing when nothing was missing', () => {
+		expect(missingTexturesNote({ name: 'chair.glb' })).toBeNull()
 	})
 })

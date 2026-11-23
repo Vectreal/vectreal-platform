@@ -58,6 +58,12 @@ export interface ModelLoadResult {
 	 * STL and gets a magic-bytes error on a model that is already on screen.
 	 */
 	glbBytes?: Uint8Array
+	/**
+	 * The images a glTF names that did not come with it, as the file names a
+	 * visitor knows. The model loaded without those textures, so the surfaces
+	 * they covered show their plain color. Absent when nothing was missing.
+	 */
+	missingTextures?: readonly string[]
 }
 
 export interface ThreeJSModelResult extends Omit<ModelLoadResult, 'data'> {
