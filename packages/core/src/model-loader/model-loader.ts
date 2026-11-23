@@ -383,11 +383,19 @@ export class ModelLoader {
 			*/
 			const bytesFor = (uri: string) => referenceIn(assets, uri, modelPath)
 
+			/*
+			  Every reference that found no file, images and buffers both, so
+			  the refusal names all of them at once. Throwing at the images
+			  first named only the textures of a glTF missing its `.bin` too,
+			  and the visitor who brought them was refused a second time for a
+			  file the first answer never mentioned.
+			*/
+			const missingImages: string[] = []
+			const missingBuffers: string[] = []
+			const missingFiles: string[] = []
+
 			// Validate that referenced images exist in assets
 			if (gltfJson.images) {
-				const missingImages: string[] = []
-				const missingImageFiles: string[] = []
-
 				gltfJson.images.forEach((image, index: number) => {
 					// Check if image has a URI reference
 					if (image.uri) {
@@ -396,7 +404,7 @@ export class ModelLoader {
 
 						if (!bytesFor(image.uri)) {
 							missingImages.push(`Image ${index}: ${image.uri}`)
-							missingImageFiles.push(fileNameOf(image.uri))
+							missingFiles.push(fileNameOf(image.uri))
 						}
 					} else if (
 						typeof image.bufferView !== 'number' ||
@@ -406,14 +414,6 @@ export class ModelLoader {
 						missingImages.push(`Image ${index}: (no URI or bufferView)`)
 					}
 				})
-
-				if (missingImages.length > 0) {
-					const availableAssets = Array.from(assets.keys()).join(', ')
-					throw missingAssetsError(
-						`Missing required image files:\n${missingImages.join('\n')}\n\nAvailable assets: ${availableAssets || '(none)'}`,
-						missingImageFiles
-					)
-				}
 			}
 
 			/*
@@ -428,9 +428,6 @@ export class ModelLoader {
 			  go looking for, the same way an image with a `bufferView` has none.
 			*/
 			if (gltfJson.buffers) {
-				const missingBuffers: string[] = []
-				const missingBufferFiles: string[] = []
-
 				/*
 				  ONLY THE BUFFERS THE DOCUMENT ACTUALLY READS. Checking every
 				  declaration refused documents that load perfectly well: an
@@ -450,17 +447,23 @@ export class ModelLoader {
 
 					if (!bytesFor(buffer.uri)) {
 						missingBuffers.push(`Buffer ${index}: ${buffer.uri}`)
-						missingBufferFiles.push(fileNameOf(buffer.uri))
+						missingFiles.push(fileNameOf(buffer.uri))
 					}
 				})
+			}
 
-				if (missingBuffers.length > 0) {
-					const availableAssets = Array.from(assets.keys()).join(', ')
-					throw missingAssetsError(
-						`Missing required buffer files:\n${missingBuffers.join('\n')}\n\nAvailable assets: ${availableAssets || '(none)'}`,
-						missingBufferFiles
-					)
-				}
+			if (missingImages.length > 0 || missingBuffers.length > 0) {
+				const availableAssets = Array.from(assets.keys()).join(', ')
+				const sections = [
+					missingImages.length > 0 &&
+						`Missing required image files:\n${missingImages.join('\n')}`,
+					missingBuffers.length > 0 &&
+						`Missing required buffer files:\n${missingBuffers.join('\n')}`
+				].filter(Boolean)
+				throw missingAssetsError(
+					`${sections.join('\n\n')}\n\nAvailable assets: ${availableAssets || '(none)'}`,
+					missingFiles
+				)
 			}
 
 			/*

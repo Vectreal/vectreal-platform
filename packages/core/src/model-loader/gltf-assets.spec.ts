@@ -265,6 +265,23 @@ describe('a reference it cannot resolve is refused, and named', () => {
 		expect(missingFilesOf(refusal)).toEqual(['body/wood grain.png'])
 	})
 
+	it('names a missing buffer beside the missing images, each once', async () => {
+		const gltf = new TextEncoder().encode(
+			JSON.stringify({
+				asset: { version: '2.0' },
+				images: [{ uri: 'wood.png' }, { uri: 'wood.png' }],
+				buffers: [{ uri: 'scene.bin', byteLength: 4 }],
+				bufferViews: [{ buffer: 0, byteOffset: 0, byteLength: 4 }]
+			})
+		)
+
+		const refusal = await new ModelLoader()
+			.loadGLTFWithAssets(gltf, new Map(), 'chair.gltf')
+			.catch((error: unknown) => error)
+
+		expect(missingFilesOf(refusal)).toEqual(['wood.png', 'scene.bin'])
+	})
+
 	it('refuses a genuine tie rather than texturing twice from one file', async () => {
 		/*
 		  WHERE THIS GOT STRICTER, DELIBERATELY. A glTF that names `diffuse.png`

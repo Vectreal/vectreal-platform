@@ -142,6 +142,12 @@ describe('an upload refusal names the files it is about', () => {
 		expect(getUploadLoadErrorMessage(refusal('missing_assets', {}))).toMatch(
 			/^Model references missing assets/
 		)
+		// Opened by URL: names the files, but there is no folder to drop.
+		expect(
+			getUploadLoadErrorMessage(
+				refusal('missing_assets', { missingFiles: ['wood.png'] })
+			)
+		).toMatch(/^Model references missing assets/)
 		expect(getUploadLoadErrorMessage(refusal('multiple_models', {}))).toBe(
 			'Multiple models found. Upload one model at a time.'
 		)

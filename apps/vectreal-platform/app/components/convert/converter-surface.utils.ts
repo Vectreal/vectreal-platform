@@ -153,8 +153,9 @@ export function refusalMessage(
 
 		case 'missing_assets': {
 			const { model, missing } = refusalFileNames(error)
-			if (missing.length > 0) {
-				return `${model ?? 'That model'} needs ${listFileNames(missing)}, which did not come with it. Drop the folder it lives in.`
+			// A sample opened by URL has no folder to drop; see the publisher's copy.
+			if (model && missing.length > 0) {
+				return `${model} needs ${listFileNames(missing)}, which did not come with it. Drop the folder it lives in.`
 			}
 			return (
 				bundleCopy?.refusal ??

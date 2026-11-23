@@ -109,6 +109,16 @@ describe('refusalMessage', () => {
 		expect(refusalMessage(error, fbx, null)).toBe(
 			'That selection holds chair.gltf and chair.fbx. Drop just chair.fbx.'
 		)
+		expect(
+			refusalMessage(
+				{
+					code: 'multiple_models',
+					context: { fileNames: ['chair.fbx', 'chair.stl'] }
+				} as never,
+				glb,
+				null
+			)
+		).toBe('That selection holds chair.fbx and chair.stl. Drop just chair.fbx.')
 	})
 
 	it('names the files a model did not get', () => {
@@ -120,6 +130,17 @@ describe('refusalMessage', () => {
 		expect(refusalMessage(error, gltf, gltfCopy)).toBe(
 			'chair.gltf needs textures/wood.png, which did not come with it. Drop the folder it lives in.'
 		)
+		// A sample opened by URL names no file, and has no folder to drop.
+		expect(
+			refusalMessage(
+				{
+					code: 'missing_assets',
+					context: { missingFiles: ['textures/wood.png'] }
+				} as never,
+				gltf,
+				gltfCopy
+			)
+		).toBe(gltfCopy!.refusal)
 	})
 
 	it('falls back to the bundle refusal, then to the format sentence', () => {

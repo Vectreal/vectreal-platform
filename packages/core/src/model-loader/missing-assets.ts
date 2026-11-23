@@ -53,7 +53,8 @@ export function missingAssetsError(
 		missingFiles: readonly string[]
 	}
 	error.name = MISSING_ASSETS
-	error.missingFiles = missingFiles
+	/* Once each: two images naming one file are one file to bring. */
+	error.missingFiles = [...new Set(missingFiles)]
 	return error
 }
 

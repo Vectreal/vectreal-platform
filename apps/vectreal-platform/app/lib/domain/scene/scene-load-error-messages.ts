@@ -52,8 +52,13 @@ export function getUploadLoadErrorMessage(
 	switch (error?.code) {
 		case 'missing_assets': {
 			const { model, missing } = refusalFileNames(error)
-			if (missing.length > 0) {
-				return `${model ?? 'The model'} needs ${listFileNames(missing)}, which did not come with it. Drop the whole folder it lives in, or export it as one GLB.`
+			/*
+			  Only a model dropped from disk has a folder to bring: a model
+			  opened from a URL carries no file name, and keeps the general
+			  sentence.
+			*/
+			if (model && missing.length > 0) {
+				return `${model} needs ${listFileNames(missing)}, which did not come with it. Drop the whole folder it lives in, or export it as one GLB.`
 			}
 			return 'Model references missing assets. Upload the full model folder (including textures/buffers) and retry.'
 		}

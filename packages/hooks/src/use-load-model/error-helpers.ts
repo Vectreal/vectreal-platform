@@ -72,12 +72,9 @@ export const normalizeLocalLoadError = (
 		cause: error,
 		/*
 		  The files the model named and did not get, so the refusal can name
-		  them. Read with `missingFilesOf` from the copy side.
+		  them; empty for any other failure. Read through `refusalFileNames`.
 		*/
-		context:
-			derivedCode === 'missing_assets'
-				? { ...context, missingFiles: missingFilesOf(error) }
-				: context
+		context: { ...context, missingFiles: missingFilesOf(error) }
 	})
 }
 

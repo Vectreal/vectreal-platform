@@ -287,6 +287,13 @@ describe('a selection that is not one model is refused, and says why', () => {
 		expect(loaded.file.name).toBe('one.glb')
 	})
 
+	it('names the models in the order the owner declares, a glTF first', async () => {
+		const error = await loadError([file('chair.fbx'), file('chair.gltf')])
+
+		expect(error.code).toBe('multiple_models')
+		expect(error.context?.fileNames).toEqual(['chair.gltf', 'chair.fbx'])
+	})
+
 	it('counts an upper-case model among the multiple', async () => {
 		// The same defect from the other side: before the fix this loaded
 		// `one.gltf` silently and ignored the GLB the visitor also selected.
