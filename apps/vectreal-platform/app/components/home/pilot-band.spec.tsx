@@ -9,8 +9,8 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
-import { PilotBand } from './pilot-band'
 import { HOME_PAGE_COPY } from '../../constants/product-copy'
+import { PilotBand } from './pilot-band'
 
 const COPY = HOME_PAGE_COPY.pilot
 

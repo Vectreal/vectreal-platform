@@ -1,6 +1,13 @@
 import { ApiResponse } from '@shared/utils'
 import { SerializedSceneAssetDataMap, SceneSettings } from '@vctrl/core'
 
+import { reportServerError } from '../../../observability/report-server-error.server'
+import {
+	reclaimStaleProjectAssets,
+	reclaimUploadBatch
+} from '../../asset/asset-reclaim.server'
+import { getProject } from '../../project/project-repository.server'
+import { userExists } from '../../user/user-repository.server'
 import { getScene, getSceneFolder } from './scene-folder-repository.server'
 import {
 	assertParsed,
@@ -10,13 +17,6 @@ import {
 	SceneSaveRefusedError,
 	sceneSettingsService
 } from './scene-settings-service.server'
-import { reportServerError } from '../../../observability/report-server-error.server'
-import {
-	reclaimStaleProjectAssets,
-	reclaimUploadBatch
-} from '../../asset/asset-reclaim.server'
-import { getProject } from '../../project/project-repository.server'
-import { userExists } from '../../user/user-repository.server'
 
 import type { SceneSettingsRequest } from '../../../../types/api'
 import type { SceneMetaState } from '../../../../types/publisher-config'

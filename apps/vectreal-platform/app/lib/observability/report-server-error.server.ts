@@ -1,8 +1,8 @@
-import { buildErrorReport } from './error-report'
 import {
 	distinctIdFromRequest,
 	getPosthogClient
 } from '../posthog/posthog-client.server'
+import { buildErrorReport } from './error-report'
 
 import type { ErrorProperties } from './error-report'
 

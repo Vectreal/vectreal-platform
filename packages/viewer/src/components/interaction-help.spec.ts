@@ -4,9 +4,9 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { describeHowToMove, describeInteraction } from './interaction-help'
 import { de } from '../locales/de'
 import { en } from '../locales/en'
+import { describeHowToMove, describeInteraction } from './interaction-help'
 
 const ALL = { rotate: true, zoom: true, pan: true }
 const NONE = { rotate: false, zoom: false, pan: false }

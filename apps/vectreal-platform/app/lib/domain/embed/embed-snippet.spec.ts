@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 
+import { AI_HANDOFF_TARGETS } from '../../ai-handoff/ai-handoff-targets'
+import { docsPages } from '../../docs/docs-manifest'
 import {
 	buildEmbedAgentPrompt,
 	buildEmbedPath,
@@ -17,8 +19,6 @@ import {
 	EMBED_SDK_DOCS_PATH,
 	escapeHtmlAttributeValue
 } from './embed-snippet'
-import { AI_HANDOFF_TARGETS } from '../../ai-handoff/ai-handoff-targets'
-import { docsPages } from '../../docs/docs-manifest'
 
 const ORIGIN = 'https://vectreal.com'
 const PROJECT_ID = '08db6be1-f87b-4278-abfc-d80ef549e3a7'

@@ -1,8 +1,8 @@
 import { cn } from '@shared/utils'
 import { Link } from 'react-router'
 
-import { ArticleMeta } from './article-meta'
 import { formatNewsDate } from '../../lib/news/news-article'
+import { ArticleMeta } from './article-meta'
 
 import type { NewsArticle } from '../../lib/news/news-article'
 

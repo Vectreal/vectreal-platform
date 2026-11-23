@@ -20,9 +20,9 @@ import {
 	MODEL_SYNC_TIMEOUT_MS
 } from './utils'
 
+import type { SceneOptimizationRuntimeState } from '../../../types/scene-optimization'
 import type { OptimizationStepsController } from './use-optimization-steps'
 import type { GeometryOptimizationResult } from './utils'
-import type { SceneOptimizationRuntimeState } from '../../../types/scene-optimization'
 import type { DracoCompressionReport, Optimizations } from '@vctrl/core'
 
 /**

@@ -10,9 +10,6 @@ import {
 	TorusKnotGeometry
 } from 'three'
 
-import { BakeSection } from './bake-section'
-import LightingSettings from './lighting-settings-panel'
-import { finishStatus, StudioFinishCard } from './studio-finish-card'
 import { nothingCaption } from '../../../../../lib/domain/scene/client/studio-finish-reasons'
 import {
 	studioFinishPlanAtom,
@@ -20,6 +17,9 @@ import {
 } from '../../../../../lib/stores/publisher-config-store'
 import { lightingAtom } from '../../../../../lib/stores/scene-settings-store'
 import { DrillDown, DrillDownView } from '../../drill-down'
+import { BakeSection } from './bake-section'
+import LightingSettings from './lighting-settings-panel'
+import { finishStatus, StudioFinishCard } from './studio-finish-card'
 
 import type { StudioFinishPlan } from '../../../../../workers/publish-export.worker.types'
 import type { Meta, StoryObj } from '@storybook/react-vite'

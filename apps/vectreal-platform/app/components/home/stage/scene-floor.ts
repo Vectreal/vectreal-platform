@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 
-import { warmPrograms } from './warm-programs'
 import { DRAFTING_LINE } from '../../layout-components/drafting-line'
+import { warmPrograms } from './warm-programs'
 
 /** The swell's drift, in noise units a second: the drafting terrain's idle rate. */
 const DRIFT = 0.03

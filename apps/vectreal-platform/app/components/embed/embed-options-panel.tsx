@@ -5,9 +5,6 @@ import { ExternalLink, MessageSquareCode } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type FC } from 'react'
 import { Link } from 'react-router'
 
-import { EmbedKeySelect } from './embed-key-select'
-import { EmbedSnippetCard } from './embed-snippet-card'
-import { useEmbedApiKeys } from './use-embed-api-keys'
 import {
 	buildEmbedAgentPrompt,
 	buildEmbedUrl,
@@ -19,6 +16,9 @@ import {
 import { duration } from '../../lib/motion/motion-tokens'
 import { AiHandoffMenu } from '../ai-handoff/ai-handoff-menu'
 import { DetailPanelSection, InlineNotice } from '../layout-components'
+import { EmbedKeySelect } from './embed-key-select'
+import { EmbedSnippetCard } from './embed-snippet-card'
+import { useEmbedApiKeys } from './use-embed-api-keys'
 
 import type { AiHandoffKind } from '../../lib/ai-handoff/ai-handoff-targets'
 

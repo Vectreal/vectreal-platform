@@ -3,9 +3,9 @@ import {
 	ToggleGroupItem
 } from '@shared/components/ui/toggle-group'
 
-import { StepBlock, StepToggle } from './optimization-step'
 import { PanelCaption, SettingGroup } from '../../../sidebars/sidebar-section'
 import { useOptimizationSettings } from '../../use-optimization-settings'
+import { StepBlock, StepToggle } from './optimization-step'
 
 import type { FC } from 'react'
 

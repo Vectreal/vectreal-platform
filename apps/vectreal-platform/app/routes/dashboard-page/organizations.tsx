@@ -3,12 +3,12 @@ import { Building, Building2 } from 'lucide-react'
 import { useMemo } from 'react'
 import { data, Outlet, useLoaderData, useLocation } from 'react-router'
 
-import { Route } from './+types/organizations'
 import { DashboardCard } from '../../components/dashboard'
 import { EmptyState } from '../../components/layout-components'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
 import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
+import { Route } from './+types/organizations'
 
 import type { ShouldRevalidateFunction } from 'react-router'
 

@@ -21,18 +21,6 @@ import { useDropzone } from 'react-dropzone'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
-import { ConversionOptions } from './conversion-options'
-import { ConversionResult } from './conversion-result'
-import { ConverterEmptyStage } from './converter-empty-stage'
-import {
-	downloadContainer,
-	KEPT_CONVERSIONS,
-	DESTRUCTIVE_OPTIONS,
-	measuredBytes,
-	refusalMessage,
-	type Conversion
-} from './converter-surface.utils'
-import { INGESTED_RECIPE, useStageSource } from './use-stage-source'
 import { usePrepareGltfDocument } from '../../hooks/scene-loader/use-scene-document-export'
 import { useTrackedHeight } from '../../hooks/use-tracked-height'
 import {
@@ -65,6 +53,18 @@ import {
 import { sceneViewerSettingsAtom } from '../../lib/stores/scene-settings-store'
 import { useConsent } from '../consent/consent-context'
 import { ClientVectrealViewer } from '../viewer/client-vectreal-viewer'
+import { ConversionOptions } from './conversion-options'
+import { ConversionResult } from './conversion-result'
+import { ConverterEmptyStage } from './converter-empty-stage'
+import {
+	downloadContainer,
+	KEPT_CONVERSIONS,
+	DESTRUCTIVE_OPTIONS,
+	measuredBytes,
+	refusalMessage,
+	type Conversion
+} from './converter-surface.utils'
+import { INGESTED_RECIPE, useStageSource } from './use-stage-source'
 
 import type { AddedModelSource } from '../../hooks/scene-loader/use-scene-upload'
 import type { ArrivedFile } from '../../lib/domain/analytics/convert-events'

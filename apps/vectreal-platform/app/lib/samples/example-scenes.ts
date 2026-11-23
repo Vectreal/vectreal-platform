@@ -1,9 +1,9 @@
-import { BALANCED_CAMERA } from './sample-models'
 import cameraHeroPreviewUrl from '../../assets/models/camera-hero-preview.webp?url'
 import cameraTelephotoPreviewUrl from '../../assets/models/camera-telephoto-preview.webp?url'
 import cameraWidePreviewUrl from '../../assets/models/camera-wide-preview.webp?url'
 import sheenChairPreviewUrl from '../../assets/models/sheen-chair-preview.webp?url'
 import sheenChairUrl from '../../assets/models/sheen-chair.glb?url'
+import { BALANCED_CAMERA } from './sample-models'
 
 import type { SampleModel } from './sample-models'
 import type {

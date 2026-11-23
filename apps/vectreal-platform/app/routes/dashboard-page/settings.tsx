@@ -34,7 +34,6 @@ import {
 import { toast } from 'sonner'
 import { z, ZodError } from 'zod'
 
-import { Route } from './+types/settings'
 import { useConsent } from '../../components/consent/consent-context'
 import {
 	DestructiveAction,
@@ -59,6 +58,7 @@ import {
 	buildThemeSetCookie,
 	parseThemeCookieHeader
 } from '../../lib/theme/theme-cookie'
+import { Route } from './+types/settings'
 
 import type { DashboardConfirmationPlan } from '../../lib/domain/dashboard/dashboard-confirmation'
 import type { SettingsLoaderData } from '../../lib/domain/dashboard/dashboard-types'

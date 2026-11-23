@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { loader } from './news-room-page'
 import { getNewsArticles } from '../../lib/news/news-manifest.server'
+import { loader } from './news-room-page'
 
 import type { Route } from './+types/news-room-page'
 

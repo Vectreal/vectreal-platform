@@ -4,10 +4,10 @@ import { cn } from '@shared/utils'
 import { LayoutDashboard } from 'lucide-react'
 import { useLocation, Link } from 'react-router'
 
-import { NavPanels } from './nav-panels'
 import { NAV, entersFunnel } from '../../lib/navigation/site-map'
 import { DocsBreadcrumb, isDocsPath } from '../docs/docs-breadcrumb'
 import { UserMenu } from '../user-menu'
+import { NavPanels } from './nav-panels'
 
 import type { User } from '@supabase/supabase-js'
 

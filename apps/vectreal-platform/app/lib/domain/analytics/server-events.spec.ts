@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { captureServerEvent } from './server-events.server'
 import { CONSENT_POLICY_VERSION } from '../../../constants/consent-policy'
+import { captureServerEvent } from './server-events.server'
 
 import type { PostHog } from 'posthog-node'
 

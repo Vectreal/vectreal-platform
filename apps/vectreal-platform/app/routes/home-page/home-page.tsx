@@ -1,4 +1,3 @@
-import { Route } from './+types/home-page'
 import { FormatStrip } from '../../components/home/format-strip'
 import { HeroSheet } from '../../components/home/hero/hero-sheet'
 import { MissionStatement } from '../../components/home/mission-statement'
@@ -12,6 +11,7 @@ import {
 } from '../../components/layout-components'
 import { buildPageMeta } from '../../lib/seo'
 import { PUBLIC_SEO_PAGES } from '../../lib/seo-registry'
+import { Route } from './+types/home-page'
 
 export function meta(_: Route.MetaArgs) {
 	// The Organization node this used to pass is rendered across the public site

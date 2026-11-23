@@ -14,13 +14,13 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { getDefaultStore } from 'jotai'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { SceneNormalizationNotice } from './scene-normalization-notice'
 import {
 	cameraAtom,
 	hotspotsAtom,
 	normalizationAtom,
 	rawModelDiagonalAtom
 } from '../../../lib/stores/scene-settings-store'
+import { SceneNormalizationNotice } from './scene-normalization-notice'
 
 import type { CameraConfig, HotspotDefinition } from '@vctrl/core'
 

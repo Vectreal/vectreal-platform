@@ -1,4 +1,3 @@
-import { createEmbedAssetUrls } from './embed-asset-signature.server'
 import { reportServerError } from '../../observability/report-server-error.server'
 import { extensionsUsedFromMetadata } from '../scene/embed-asset-policy'
 import {
@@ -9,6 +8,7 @@ import {
 	toPublishedModelRow,
 	type PublishedScenePreview
 } from '../scene/server/scene-preview-repository.server'
+import { createEmbedAssetUrls } from './embed-asset-signature.server'
 
 import type {
 	SceneAssetRecord,

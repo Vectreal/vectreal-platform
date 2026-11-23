@@ -3,11 +3,6 @@ import { useAtom, useAtomValue, useSetAtom, useStore } from 'jotai/react'
 import { useCallback } from 'react'
 import { useRevalidator, useSearchParams } from 'react-router'
 
-import { usePrepareGltfDocument } from './scene-loader/use-scene-document-export'
-import { useSceneDraft } from './scene-loader/use-scene-draft'
-import { useSceneSaveFlow } from './scene-loader/use-scene-save-flow'
-import { useSceneSource } from './scene-loader/use-scene-source'
-import { useSceneUpload } from './scene-loader/use-scene-upload'
 import { usePublisherViewerCapture } from '../components/publisher/publisher-viewer-capture-context'
 import { OPENING_VIEW_CAPTURE_OPTIONS } from '../components/publisher/shell/use-opening-view'
 import { useFinishForSave } from '../components/publisher/sidebars/compose-sidebar/lighting-settings/use-bake-preview'
@@ -34,6 +29,11 @@ import {
 	optimizationRuntimeAtom
 } from '../lib/stores/scene-optimization-store'
 import { sceneViewerSettingsAtom } from '../lib/stores/scene-settings-store'
+import { usePrepareGltfDocument } from './scene-loader/use-scene-document-export'
+import { useSceneDraft } from './scene-loader/use-scene-draft'
+import { useSceneSaveFlow } from './scene-loader/use-scene-save-flow'
+import { useSceneSource } from './scene-loader/use-scene-source'
+import { useSceneUpload } from './scene-loader/use-scene-upload'
 
 import type { KeptOriginalRef } from '../lib/domain/scene/client/scene-save-orchestrator'
 import type { SceneManifestResponse } from '../types/api'

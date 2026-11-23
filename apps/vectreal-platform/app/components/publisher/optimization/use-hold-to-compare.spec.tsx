@@ -10,8 +10,8 @@ import { act, renderHook } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { COMPARE_HOLD_KEY, useHoldToCompare } from './use-hold-to-compare'
 import { comparedModelAtom } from '../../../lib/stores/scene-optimization-store'
+import { COMPARE_HOLD_KEY, useHoldToCompare } from './use-hold-to-compare'
 
 import type { ReactNode } from 'react'
 

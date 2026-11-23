@@ -9,11 +9,11 @@ import {
 import { cn } from '@shared/utils'
 import { Link, useLocation } from 'react-router'
 
-import { PUBLISHER_LAYER } from './shell-layout'
 import { UserMenu } from '../../user-menu'
 import { CopyExampleSettingsButton } from '../copy-example-settings-button'
 import SaveButton from '../save-button'
 import { SceneNameAndLocation } from '../scene-name-and-location'
+import { PUBLISHER_LAYER } from './shell-layout'
 
 import type { SaveAvailabilityState } from '../../../lib/domain/scene/client/scene-save-state'
 import type {

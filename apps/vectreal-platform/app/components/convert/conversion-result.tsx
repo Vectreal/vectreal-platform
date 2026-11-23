@@ -3,8 +3,8 @@ import {
 	FileSizeComparison
 } from '../layout-components/file-size-comparison'
 
-import type { Conversion } from './converter-surface.utils'
 import type { ConvertPair } from '../../lib/convert/convert-pairs'
+import type { Conversion } from './converter-surface.utils'
 
 interface Props {
 	pair: ConvertPair

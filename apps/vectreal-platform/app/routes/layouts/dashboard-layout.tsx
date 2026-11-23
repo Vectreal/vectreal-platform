@@ -20,7 +20,6 @@ import {
 	type MetaFunction
 } from 'react-router'
 
-import { Route } from './+types/dashboard-layout'
 import { useConsent } from '../../components/consent/consent-context'
 import { PostHogIdentify } from '../../components/consent/posthog-identify'
 import {
@@ -40,6 +39,7 @@ import { getUserOrganizations } from '../../lib/domain/user/user-repository.serv
 import { shouldRevalidateWithinScope } from '../../lib/navigation/dashboard-route-behavior'
 import { usePostHog } from '../../lib/posthog/posthog-react'
 import { buildMeta } from '../../lib/seo'
+import { Route } from './+types/dashboard-layout'
 
 import type { DashboardActor } from '../../lib/domain/dashboard/dashboard-types'
 import type { ShouldRevalidateFunction } from 'react-router'

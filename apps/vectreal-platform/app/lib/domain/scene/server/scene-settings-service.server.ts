@@ -1,24 +1,5 @@
 import { and, eq, inArray } from 'drizzle-orm'
 
-import {
-	sceneMetadataPatch,
-	updateSceneMetadata
-} from './scene-folder-repository.server'
-import { compareAssetIds } from './scene-settings-assets.server'
-import { findNewRemoteArtwork } from '../hotspot-artwork'
-import { isUrlServedSceneAsset } from '../scene-asset-roles'
-import {
-	findHotspotIdsOwnedElsewhere,
-	getHotspotsBySceneSettingsId,
-	getSceneAssetLinks,
-	getSceneSettingsBySceneId,
-	getSceneSettingsWithAssetsRow,
-	replaceHotspots,
-	replaceSceneAssets,
-	rowToSceneSettings,
-	type SceneSettingsTransaction,
-	upsertSceneSettings
-} from './scene-settings-repository.server'
 import { getDbClient, type DbExecutor } from '../../../../db/client'
 import {
 	assets,
@@ -49,13 +30,32 @@ import {
 	selectUnreferencedAssetIds
 } from '../../asset/asset-storage.server'
 import { optimizationsMatch } from '../client/optimization-inference'
+import { findNewRemoteArtwork } from '../hotspot-artwork'
 import {
 	describeFinishSource,
 	describePublishSource,
 	publishSourceMatches,
 	storedFinishSource
 } from '../publish-source'
+import { isUrlServedSceneAsset } from '../scene-asset-roles'
 import { haveSceneSettingsChanged } from '../scene-settings-comparison'
+import {
+	sceneMetadataPatch,
+	updateSceneMetadata
+} from './scene-folder-repository.server'
+import { compareAssetIds } from './scene-settings-assets.server'
+import {
+	findHotspotIdsOwnedElsewhere,
+	getHotspotsBySceneSettingsId,
+	getSceneAssetLinks,
+	getSceneSettingsBySceneId,
+	getSceneSettingsWithAssetsRow,
+	replaceHotspots,
+	replaceSceneAssets,
+	rowToSceneSettings,
+	type SceneSettingsTransaction,
+	upsertSceneSettings
+} from './scene-settings-repository.server'
 
 import type { SceneMetaState } from '../../../../types/publisher-config'
 import type {

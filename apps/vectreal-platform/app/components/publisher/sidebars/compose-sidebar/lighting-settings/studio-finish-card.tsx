@@ -3,9 +3,9 @@ import { Toggle } from '@shared/components/ui/toggle'
 import { ChevronRight, Loader2 } from 'lucide-react'
 import { useId } from 'react'
 
-import { bakedAnything, drawingLabel } from './use-bake-preview'
 import { useDrillDownNavigation } from '../../drill-down'
 import { PanelCaption } from '../../sidebar-section'
+import { bakedAnything, drawingLabel } from './use-bake-preview'
 
 import type { BakePreview } from '../../../../../lib/stores/publisher-config-store'
 

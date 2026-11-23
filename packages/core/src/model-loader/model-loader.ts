@@ -16,17 +16,21 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 import { Document, GLTF, WebIO } from '@gltf-transform/core'
 
+import { stripDecodedDracoExtension } from '../draco/strip-decoded-draco-extension'
 import { GeometryCodecs } from '../geometry-codecs/geometry-codecs'
 import { IO_EXTENSIONS } from '../io-extensions'
+import {
+	loadMeshoptDecoder,
+	stripDecodedMeshoptExtension
+} from '../meshopt/meshopt-codec'
 import { modelFormatForFileName, type ModelFormat } from '../model-formats'
-import { registerBakedLightmap } from './baked-lightmap-plugin'
-import { referenceIn, selectionKey } from './dropped-selection'
-import { missingAssetsError } from './missing-assets'
 import { OperationProgress } from '../types'
+import { registerBakedLightmap } from './baked-lightmap-plugin'
 import {
 	getThreeDracoLoader,
 	prepareThreeDracoDecoder
 } from './draco-three-loader'
+import { referenceIn, selectionKey } from './dropped-selection'
 import {
 	KTX2_EXTENSION,
 	MESHOPT_EXTENSION,
@@ -36,16 +40,12 @@ import {
 	getThreeKtx2Loader,
 	prepareThreeKtx2Transcoder
 } from './ktx2-three-loader'
+import { missingAssetsError } from './missing-assets'
 import { registerNonColorVertexColors } from './non-color-vertex-colors'
 import { referencedAssetNames, referencedUris } from './referenced-assets'
 import { resolveModifiedUrl } from './resolve-modified-url'
 import { threeSourceBridge } from './three-source-bridges'
 import { ModelFileTypes, ModelLoadResult, ThreeJSModelResult } from './types'
-import { stripDecodedDracoExtension } from '../draco/strip-decoded-draco-extension'
-import {
-	loadMeshoptDecoder,
-	stripDecodedMeshoptExtension
-} from '../meshopt/meshopt-codec'
 
 import type { ModelSiblings } from './three-source-bridges'
 import type { AnimationClip, LoadingManager, Object3D } from 'three'

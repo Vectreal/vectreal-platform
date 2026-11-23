@@ -3,10 +3,10 @@ import { cn, formatFileSize } from '@shared/utils'
 import { ExternalLink, Rocket } from 'lucide-react'
 import { Link } from 'react-router'
 
-import { SceneShareDrawer } from './scene-share-drawer'
 import { sceneDownloadBytes } from '../../../lib/domain/scene/scene-environment-bytes'
 import { DetailPanelSection } from '../../layout-components'
 import { SCENE_STATUS_DOT } from '../scene-status'
+import { SceneShareDrawer } from './scene-share-drawer'
 
 import type { ScenePublishStateResponse } from '../../../types/api'
 import type { ScenePresentationSettings } from '@vctrl/core'

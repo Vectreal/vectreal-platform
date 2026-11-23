@@ -1,5 +1,6 @@
 import { isSceneCamera } from '@vctrl/core'
 
+import { defaultCameraOptions } from '../../../constants/viewer-defaults'
 import {
 	applyDefaultCameraFlag,
 	applySceneCameraMove,
@@ -10,7 +11,6 @@ import {
 	withSceneCameraKinds,
 	resolveDefaultSceneCameraId
 } from './scene-camera'
-import { defaultCameraOptions } from '../../../constants/viewer-defaults'
 
 import type { CameraLike } from './scene-camera'
 

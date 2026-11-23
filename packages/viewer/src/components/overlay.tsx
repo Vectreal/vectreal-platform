@@ -1,9 +1,9 @@
+import { VIEWER_LOADING_FADE_DURATION_MS } from '../hooks/viewer-loading.constants'
 import { CHROME_PLACEMENT } from './chrome-classes'
 import { cn } from './class-names'
 import LoadingShadowPlane from './loading-shadow-plane'
 import LoadingThumbnailBackdrop from './loading-thumbnail-backdrop'
 import { isViewerChromeVisible } from './overlay-chrome-visibility'
-import { VIEWER_LOADING_FADE_DURATION_MS } from '../hooks/viewer-loading.constants'
 
 import type { LoadingState } from '../hooks/use-viewer-loading'
 import type { ViewerLoadingThumbnail } from '../types/viewer-types'

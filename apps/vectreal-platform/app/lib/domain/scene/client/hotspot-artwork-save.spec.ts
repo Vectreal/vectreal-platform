@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import { buildHotspotArtworkUrl } from '../hotspot-artwork'
+import { MAX_HOTSPOT_URL_LENGTH } from '../hotspot-urls'
 import {
 	applyHotspotArtworkRewrites,
 	persistHotspotArtwork
 } from './hotspot-artwork-save'
-import { buildHotspotArtworkUrl } from '../hotspot-artwork'
-import { MAX_HOTSPOT_URL_LENGTH } from '../hotspot-urls'
 
 import type { HotspotDefinition } from '@vctrl/core'
 

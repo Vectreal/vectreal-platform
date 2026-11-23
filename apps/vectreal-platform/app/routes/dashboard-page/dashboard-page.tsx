@@ -1,7 +1,6 @@
 import { useSetAtom } from 'jotai/react'
 import { data, Link } from 'react-router'
 
-import { Route } from './+types/dashboard-page'
 import {
 	DashboardOverview,
 	NewSceneTile,
@@ -19,6 +18,7 @@ import {
 	deleteDialogAtom,
 	moveDialogAtom
 } from '../../lib/stores/dashboard-management-store'
+import { Route } from './+types/dashboard-page'
 
 import type { ShouldRevalidateFunction } from 'react-router'
 

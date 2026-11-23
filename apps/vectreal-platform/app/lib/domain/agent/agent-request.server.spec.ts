@@ -2,6 +2,7 @@ import { apiFailureSchema } from '@vctrl/sdk'
 import { RouterContextProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { __resetRateLimitsForTest } from '../../http/rate-limit.server'
 import { agentActorFrom } from './agent-actor-context'
 import {
 	AGENT_API_RATE_LIMIT,
@@ -9,7 +10,6 @@ import {
 	agentGate,
 	authorizeAgentRequest
 } from './agent-request.server'
-import { __resetRateLimitsForTest } from '../../http/rate-limit.server'
 
 import type { AgentActor } from './agent-actor.server'
 

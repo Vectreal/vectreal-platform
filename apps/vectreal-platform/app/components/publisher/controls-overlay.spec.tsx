@@ -14,8 +14,8 @@ import { getDefaultStore } from 'jotai'
 import { createRoutesStub } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import OverlayControls from './controls-overlay'
 import { optimizationRuntimeAtom } from '../../lib/stores/scene-optimization-store'
+import OverlayControls from './controls-overlay'
 
 import type { PublisherLoaderData } from '../../types/api'
 

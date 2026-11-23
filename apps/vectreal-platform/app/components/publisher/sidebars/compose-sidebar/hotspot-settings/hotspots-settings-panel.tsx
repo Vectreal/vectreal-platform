@@ -1,6 +1,14 @@
 import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
 import { memo, useCallback, useEffect, useState } from 'react'
 
+import { isClickToPlaceActiveAtom } from '../../../../../lib/stores/publisher-config-store'
+import {
+	activeHotspotIdAtom,
+	hotspotsAtom
+} from '../../../../../lib/stores/scene-settings-store'
+import { DrillDown, DrillDownView } from '../../drill-down'
+import { useSidebarCoversCanvas } from '../../dynamic-sidebar'
+import { useAnnouncer } from '../reorder-list'
 import { hotspotViewId, REORDER_HINT_ID } from './hotspot-row'
 import { MarkerList } from './marker-list'
 import {
@@ -10,14 +18,6 @@ import {
 	MarkerPosition
 } from './marker-views'
 import { hotspotDisplayName } from './use-hotspot-edits'
-import { isClickToPlaceActiveAtom } from '../../../../../lib/stores/publisher-config-store'
-import {
-	activeHotspotIdAtom,
-	hotspotsAtom
-} from '../../../../../lib/stores/scene-settings-store'
-import { DrillDown, DrillDownView } from '../../drill-down'
-import { useSidebarCoversCanvas } from '../../dynamic-sidebar'
-import { useAnnouncer } from '../reorder-list'
 
 /*
   The first level of the drill-down is not this panel's state: it is

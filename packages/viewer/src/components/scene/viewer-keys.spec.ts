@@ -5,6 +5,8 @@
 import { PerspectiveCamera, Vector3 } from 'three'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { de } from '../../locales/de'
+import { en } from '../../locales/en'
 import {
 	applyViewerKey,
 	describeViewerKeys,
@@ -14,8 +16,6 @@ import {
 	ZOOM_STEP,
 	type ViewerKeys
 } from './viewer-keys'
-import { de } from '../../locales/de'
-import { en } from '../../locales/en'
 
 const ALL: ViewerKeys = { rotate: true, zoom: true, pan: true, home: true }
 const NONE: ViewerKeys = { rotate: false, zoom: false, pan: false, home: false }

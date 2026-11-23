@@ -3,9 +3,9 @@ import { motion } from 'framer-motion'
 import { Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import { StepRow } from './step-row'
 import { duration } from '../../../../lib/motion/motion-tokens'
 import { getOptimizationDefinition } from '../model'
+import { StepRow } from './step-row'
 
 import type { OptimizationStepsState } from '../use-optimization-steps'
 import type { FC } from 'react'

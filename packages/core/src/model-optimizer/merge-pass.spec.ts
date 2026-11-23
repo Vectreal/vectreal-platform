@@ -13,11 +13,11 @@ import {
 } from '@gltf-transform/extensions'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { ModelOptimizer } from './model-optimizer'
-import { placeStillParts } from './transform-passes'
 import { IO_EXTENSIONS } from '../io-extensions'
 import { Lightmap, VectrealLightmap } from '../light-bake/extension'
 import { LIGHTMAP_EXTENSION } from '../scene-lighting/baked-lights'
+import { ModelOptimizer } from './model-optimizer'
+import { placeStillParts } from './transform-passes'
 
 import type { MockInstance } from 'vitest'
 

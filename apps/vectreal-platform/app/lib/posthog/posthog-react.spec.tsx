@@ -4,14 +4,14 @@ import { createRoutesStub } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
 
 import {
+	ConsentProvider,
+	useConsent
+} from '../../components/consent/consent-context'
+import {
 	deferPostHog,
 	PostHogProvider,
 	useFeatureFlagEnabled
 } from './posthog-react'
-import {
-	ConsentProvider,
-	useConsent
-} from '../../components/consent/consent-context'
 
 import type { PostHog } from 'posthog-js'
 

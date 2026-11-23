@@ -1,9 +1,9 @@
 import { render } from '@react-email/render'
 import { describe, expect, it } from 'vitest'
 
+import { MODEL_INTAKE_COPY } from '../../../constants/product-copy'
 import { ModelIntakeConfirmationEmail } from './model-intake-confirmation'
 import { ModelIntakeInternalEmail } from './model-intake-internal'
-import { MODEL_INTAKE_COPY } from '../../../constants/product-copy'
 
 describe('model intake emails', () => {
 	it.each(['en', 'de'] as const)(

@@ -1,8 +1,8 @@
 import { ApiResponse } from '@shared/utils'
 
+import { isBillingStateReadOnly } from '../../../constants/plan-config'
 import { EntitlementRequiredError } from './entitlement-required-error'
 import { QuotaExceededError } from './quota-exceeded-error'
-import { isBillingStateReadOnly } from '../../../constants/plan-config'
 
 /**
  * A quota refusal with the fields the upgrade prompt reads. Four routes built

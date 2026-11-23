@@ -2,39 +2,39 @@ import { formatFileSize } from '@shared/utils'
 import { PERSISTED_BAKE_FILENAME, SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
 import { toast } from 'sonner'
 
-import { persistHotspotArtwork } from './hotspot-artwork-save'
-import { postFormWithProgress } from './post-form-with-progress'
-import { buildThumbnailFrameSignature } from './scene-change-detection'
-import { createFileFromDataUrl } from './scene-draft-serialization'
-import { planThumbnailForSave } from './scene-thumbnail-save'
 import {
 	BillingLimitError,
 	createBillingLimitErrorFromResponse,
 	isBillingLimitError
 } from '../../billing/client/billing-limit-error'
 import {
-	buildSceneThumbnailUrl,
-	thumbnailAssetIdFromUrl
-} from '../scene-thumbnail-url'
-import {
-	buildImageMimeLookup,
-	buildSceneUploadFileDescriptor
-} from './scene-upload-manifest'
-import {
 	SOURCE_MODEL_FILENAME,
 	STUDIO_FINISH_FILENAME
 } from '../scene-asset-roles'
 import { resolveDefaultSceneCameraId } from '../scene-camera'
+import {
+	buildSceneThumbnailUrl,
+	thumbnailAssetIdFromUrl
+} from '../scene-thumbnail-url'
+import { persistHotspotArtwork } from './hotspot-artwork-save'
+import { postFormWithProgress } from './post-form-with-progress'
+import { buildThumbnailFrameSignature } from './scene-change-detection'
+import { createFileFromDataUrl } from './scene-draft-serialization'
+import { planThumbnailForSave } from './scene-thumbnail-save'
+import {
+	buildImageMimeLookup,
+	buildSceneUploadFileDescriptor
+} from './scene-upload-manifest'
 
-import type { HotspotArtworkRewrite } from './hotspot-artwork-save'
-import type { SaveProgressEvent } from './scene-save-progress'
-import type { SourceToSave } from './scene-source-to-save'
 import type { SaveStudioFinish } from '../../../../types/api'
 import type {
 	CapturedThumbnailFrame,
 	SceneMetaState
 } from '../../../../types/publisher-config'
 import type { StudioFinishToSave } from '../studio-finish'
+import type { HotspotArtworkRewrite } from './hotspot-artwork-save'
+import type { SaveProgressEvent } from './scene-save-progress'
+import type { SourceToSave } from './scene-source-to-save'
 import type { SceneSettings } from '@vctrl/core'
 import type { ShadowBakeResult } from '@vctrl/viewer'
 

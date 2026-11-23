@@ -1,11 +1,11 @@
 import { useCallback, useRef } from 'react'
 import { useFetcher, useLocation } from 'react-router'
 
+import { useCurrentUser } from '../../hooks/use-current-user'
+import { usePostHog } from '../../lib/posthog/posthog-react'
 import DesktopNav from './desktop-nav'
 import MobileNav from './mobile-nav'
 import { useScrolledPast } from './use-scrolled-past'
-import { useCurrentUser } from '../../hooks/use-current-user'
-import { usePostHog } from '../../lib/posthog/posthog-react'
 
 function isAuthPath(pathname: string): boolean {
 	return pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up')

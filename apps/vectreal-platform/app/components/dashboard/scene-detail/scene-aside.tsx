@@ -1,11 +1,11 @@
 import { cn, formatFileSize } from '@shared/utils'
 
+import { StatGrid, StatTile } from '../../layout-components'
 import { SceneAssetsSection } from './scene-assets-section'
 import { SceneDeleteButton } from './scene-delete-button'
 import { SceneDetailsSheet } from './scene-details-sheet'
 import { SceneMetricsSection } from './scene-metrics-section'
 import { ScenePublishPanel } from './scene-publish-panel'
-import { StatGrid, StatTile } from '../../layout-components'
 
 import type { DashboardEntityRef } from '../../../lib/domain/dashboard/dashboard-confirmation'
 import type { TextureThumbnailUrls } from '../../../lib/domain/dashboard/scene-texture-thumbnails'

@@ -10,9 +10,9 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { describe, expect, it } from 'vitest'
 
-import BackgroundSettings from './background-settings-panel'
 import { lightingAtom } from '../../../../../lib/stores/scene-settings-store'
 import { COMPOSE_TOOL_DEFINITIONS } from '../compose-tools'
+import BackgroundSettings from './background-settings-panel'
 
 // The sliders measure themselves; jsdom has no ResizeObserver.
 globalThis.ResizeObserver ??= class {

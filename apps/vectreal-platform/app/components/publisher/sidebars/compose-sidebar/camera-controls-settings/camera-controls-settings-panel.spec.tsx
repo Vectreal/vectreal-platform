@@ -8,7 +8,6 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { describe, expect, it, vi } from 'vitest'
 
-import CameraControlsSettingsPanel from './camera-controls-settings-panel'
 import {
 	cameraToolOpenRequestAtom,
 	openCameraInCameraToolAtom
@@ -20,6 +19,7 @@ import {
 	selectedCameraIdAtom
 } from '../../../../../lib/stores/scene-settings-store'
 import { PublisherViewerCaptureProvider } from '../../../publisher-viewer-capture-context'
+import CameraControlsSettingsPanel from './camera-controls-settings-panel'
 
 const { toastInfo } = vi.hoisted(() => ({ toastInfo: vi.fn() }))
 vi.mock('sonner', () => ({

@@ -9,11 +9,11 @@ import {
 } from 'drizzle-orm/pg-core'
 import { authUid, authenticatedRole } from 'drizzle-orm/supabase'
 
+import { users } from '../core/users'
+import { canAccessScene, canManageScene, isUserSelf } from '../rls'
 import { assets } from './assets'
 import { sceneSettings } from './scene-settings'
 import { scenes } from './scenes'
-import { users } from '../core/users'
-import { canAccessScene, canManageScene, isUserSelf } from '../rls'
 
 export const scenePublished = pgTable(
 	'scene_published',

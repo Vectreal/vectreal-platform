@@ -2,13 +2,13 @@ import { Button } from '@shared/components/ui/button'
 import { cn } from '@shared/utils'
 import { useState, type ComponentProps, type ReactNode } from 'react'
 
-import { ConfirmDestructiveDialog } from './confirm-destructive-dialog'
 import {
 	planDeleteConfirmation,
 	toFolderRef,
 	toProjectRef,
 	toSceneRef
 } from '../../lib/domain/dashboard/dashboard-confirmation'
+import { ConfirmDestructiveDialog } from './confirm-destructive-dialog'
 
 import type { Meta, StoryObj } from '@storybook/react-vite'
 

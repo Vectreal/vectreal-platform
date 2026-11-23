@@ -7,14 +7,6 @@ import { ArrowLeft, ArrowRight, LayoutDashboard } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, redirect, useFetcher, type MetaFunction } from 'react-router'
 
-import { Route } from './+types/onboarding-page'
-import {
-	type OnboardingProfile,
-	type OnboardingProfileKey,
-	CONTENT_VARIANTS,
-	STEPS
-} from './onboarding-steps'
-import { WelcomeVisual } from './onboarding-visuals'
 import { PostHogIdentify } from '../../components/consent/posthog-identify'
 import { AuthErrorBoundary } from '../../components/errors'
 import { clearReferralAttribution } from '../../lib/domain/analytics/referral-attribution'
@@ -23,6 +15,14 @@ import { getSafeNextPath } from '../../lib/domain/auth/auth-redirect.server'
 import { updateUserProfile } from '../../lib/domain/user/user-repository.server'
 import { usePostHog } from '../../lib/posthog/posthog-react'
 import { buildMeta } from '../../lib/seo'
+import { Route } from './+types/onboarding-page'
+import {
+	type OnboardingProfile,
+	type OnboardingProfileKey,
+	CONTENT_VARIANTS,
+	STEPS
+} from './onboarding-steps'
+import { WelcomeVisual } from './onboarding-visuals'
 
 export { AuthErrorBoundary as ErrorBoundary }
 

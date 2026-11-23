@@ -1,10 +1,10 @@
 import { cn } from '@shared/utils'
 
-import styles from './hero-sheet.module.css'
-import { useHeroState, type HeroStore } from './hero-store'
 import { HOME_PAGE_COPY } from '../../../constants/product-copy'
 import { HERO_MODEL } from '../../../lib/samples/sample-models'
 import { inUnitOf } from '../in-unit-of'
+import styles from './hero-sheet.module.css'
+import { useHeroState, type HeroStore } from './hero-store'
 
 import type { ReactNode } from 'react'
 

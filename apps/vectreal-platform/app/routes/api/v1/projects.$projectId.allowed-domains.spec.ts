@@ -6,8 +6,8 @@ import {
 import { RouterContextProvider } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { action, loader } from './projects.$projectId.allowed-domains'
 import { agentActorContext } from '../../../lib/domain/agent/agent-actor-context'
+import { action, loader } from './projects.$projectId.allowed-domains'
 
 import type { Route } from './+types/projects.$projectId.allowed-domains'
 

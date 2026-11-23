@@ -4,6 +4,7 @@ import { join } from 'node:path'
 
 import { StdioServerTransport } from '@modelcontextprotocol/server/stdio'
 
+import packageJson from '../../package.json' with { type: 'json' }
 import {
 	type CliContext,
 	type GlobalOptions,
@@ -13,11 +14,10 @@ import {
 } from '../context'
 import { loadSession } from '../credentials'
 import { EXIT, UsageError } from '../errors'
-import { readProjectLink } from './init'
-import packageJson from '../../package.json' with { type: 'json' }
 import { createVectrealMcpServer } from '../mcp/register-operations'
 import { OPERATIONS, type OperationContext } from '../operations'
 import { normalizeOrigin } from '../origin'
+import { readProjectLink } from './init'
 
 /** The CLI's version, as the MCP server reports it. */
 const VERSION = packageJson.version

@@ -12,8 +12,8 @@ import { Info, Loader2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useFetcher } from 'react-router'
 
-import { FolderPicker, type FolderPickerOption } from './folder-picker'
 import { validateFolderMove } from '../../lib/domain/dashboard/folder-move'
+import { FolderPicker, type FolderPickerOption } from './folder-picker'
 
 import type { DashboardEntityRef } from '../../lib/domain/dashboard/dashboard-confirmation'
 import type { SceneLocationOptionsResponse } from '../../types/api'

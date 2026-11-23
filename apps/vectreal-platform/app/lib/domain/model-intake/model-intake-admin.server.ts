@@ -1,6 +1,6 @@
-import { canOpenIntakeAdmin } from './model-intake-admin-gate'
 import { getPosthogClient } from '../../posthog/posthog-client.server'
 import { loadAuthenticatedUser } from '../auth/auth-loader.server'
+import { canOpenIntakeAdmin } from './model-intake-admin-gate'
 
 import type { User } from '@supabase/supabase-js'
 

@@ -1,5 +1,5 @@
-import type { LoadedModel } from './types'
 import type { useOptimizeModel } from '../use-optimize-model'
+import type { LoadedModel } from './types'
 import type { ByteProgress } from '@vctrl/core'
 import type { ModelLoader } from '@vctrl/core/model-loader'
 

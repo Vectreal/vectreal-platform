@@ -1,3 +1,5 @@
+import { recordRateLimitAttempt } from '../../http/rate-limit.server'
+import { reportServerError } from '../../observability/report-server-error.server'
 import {
 	findIntakeLetter,
 	type ModelIntakeLetter,
@@ -8,8 +10,6 @@ import {
 	normalizeIntakeLetterCode,
 	parseIntakeStorePages
 } from './model-intake-shared'
-import { recordRateLimitAttempt } from '../../http/rate-limit.server'
-import { reportServerError } from '../../observability/report-server-error.server'
 
 /**
  * Lookups per address per ten minutes. A reader opening the short address,

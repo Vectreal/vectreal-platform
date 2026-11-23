@@ -1,12 +1,12 @@
 import { useAtom } from 'jotai/react'
 import { useCallback, useMemo } from 'react'
 
+import { cameraAtom } from '../../../../../lib/stores/scene-settings-store'
 import {
 	normalizeCameraState,
 	normalizeTransition,
 	withDefaultCameraFlag
 } from './camera-state'
-import { cameraAtom } from '../../../../../lib/stores/scene-settings-store'
 
 import type {
 	CameraTransitionConfig,

@@ -5,9 +5,9 @@ import {
 } from '@shared/components/ui/load-progress'
 import { createContext, useContext, useState } from 'react'
 
+import { formatMessage } from '../locales/en'
 import { cn } from './class-names'
 import { useViewerMessages } from './viewer-messages'
-import { formatMessage } from '../locales/en'
 
 import type { LoadProgressWords } from '@shared/components/ui/load-progress'
 import type { LoadProgress } from '@vctrl/core'

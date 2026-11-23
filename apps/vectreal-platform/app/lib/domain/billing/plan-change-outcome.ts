@@ -1,8 +1,4 @@
 import {
-	getEntitlementDeltaLabels,
-	getUnlockedEntitlementLabels
-} from './plan-upgrade-features'
-import {
 	formatLimitValue,
 	PUBLISHED_COPY_LOCALE
 } from '../../../constants/limit-format'
@@ -17,6 +13,10 @@ import {
 	LIMIT_DISPLAY_LABELS,
 	PLAN_DISPLAY_NAMES
 } from '../../../constants/product-copy'
+import {
+	getEntitlementDeltaLabels,
+	getUnlockedEntitlementLabels
+} from './plan-upgrade-features'
 
 /**
  * What a completed plan change actually was, and what to say about it.

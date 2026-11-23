@@ -12,8 +12,8 @@ import {
 } from 'drizzle-orm/pg-core'
 import { authenticatedRole } from 'drizzle-orm/supabase'
 
-import { sceneSettings } from './scene-settings'
 import { canAccessScene, canManageScene } from '../rls'
+import { sceneSettings } from './scene-settings'
 
 import type { HotspotStylePreset } from '@vctrl/core'
 

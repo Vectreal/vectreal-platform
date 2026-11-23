@@ -1,7 +1,7 @@
+import { MODEL_INTAKE_COPY, PRICING_PAGE_COPY } from '../constants/product-copy'
 import { CONVERT_INDEX_COPY, CONVERT_PAIRS } from './convert/convert-pairs'
 import { PUBLIC_SEO_PAGES } from './seo-registry'
 import { SHARE_CARD_SIZE, shareCardImagePath } from './share-card-paths'
-import { MODEL_INTAKE_COPY, PRICING_PAGE_COPY } from '../constants/product-copy'
 
 /**
  * The link previews a shared page shows: one default card, and cards for the

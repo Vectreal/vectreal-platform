@@ -1,8 +1,8 @@
-import { optimizationsMatch } from './optimization-inference'
 import {
 	DEFAULT_PRESET_ID,
 	originalPreset
 } from '../../../../constants/optimizations'
+import { optimizationsMatch } from './optimization-inference'
 
 import type { SceneManifestResponse } from '../../../../types/api'
 import type {

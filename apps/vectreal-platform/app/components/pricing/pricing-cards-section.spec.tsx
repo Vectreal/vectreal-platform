@@ -7,12 +7,12 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { expect, it } from 'vitest'
 
-import { PricingCardsSection } from './pricing-cards-section'
 import { ALL_PLANS } from '../../constants/plan-config'
 import {
 	PLAN_DISPLAY_NAMES,
 	PLAN_HIGHLIGHTED
 } from '../../constants/product-copy'
+import { PricingCardsSection } from './pricing-cards-section'
 
 it('sends Pro and Business to the contact page, not checkout', () => {
 	render(

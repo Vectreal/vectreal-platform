@@ -1,9 +1,9 @@
+import { hasSupabaseAuthCookie } from '../sessions/supabase-auth-cookie'
 import {
 	CDN_PUBLIC_EXACT_PATHS,
 	CDN_PUBLIC_PREFIXES,
 	isPublicCacheablePath
 } from './cdn-cache-policy.server'
-import { hasSupabaseAuthCookie } from '../sessions/supabase-auth-cookie'
 
 export const CACHEABLE_PUBLIC_PATH_LIST = CDN_PUBLIC_EXACT_PATHS
 

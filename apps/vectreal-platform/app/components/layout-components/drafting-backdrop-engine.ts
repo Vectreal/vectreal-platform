@@ -1,5 +1,5 @@
-import { DRAFTING_LINE } from './drafting-line'
 import { createCssColorProbe, observeTheme } from '../../lib/theme/theme-probe'
+import { DRAFTING_LINE } from './drafting-line'
 
 /**
  * The site's backdrop: a drafting floor, drawn live on a 2D canvas.

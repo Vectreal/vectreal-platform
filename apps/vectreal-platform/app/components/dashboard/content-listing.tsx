@@ -2,9 +2,6 @@ import { useSetAtom } from 'jotai/react'
 import { FolderOpen } from 'lucide-react'
 import { useMemo } from 'react'
 
-import { DataTable } from './data-table'
-import { EmptyState } from '../layout-components'
-import { createContentColumns, type ContentRow } from './table-columns'
 import { useDashboardMutationStatus } from '../../hooks/use-dashboard-mutations'
 import { useDashboardTableState } from '../../hooks/use-dashboard-table-state'
 import { toContentRef } from '../../lib/domain/dashboard/dashboard-confirmation'
@@ -13,6 +10,9 @@ import {
 	moveDialogAtom,
 	renameDialogAtom
 } from '../../lib/stores/dashboard-management-store'
+import { EmptyState } from '../layout-components'
+import { DataTable } from './data-table'
+import { createContentColumns, type ContentRow } from './table-columns'
 
 /**
  * What a container holds: its folders and its scenes, as one table.

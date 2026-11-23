@@ -1,7 +1,6 @@
 import { type EmailOtpType } from '@supabase/supabase-js'
 import { redirect } from 'react-router'
 
-import { Route } from './+types/confirm'
 import { captureServerEvent } from '../../../lib/domain/analytics/server-events.server'
 import {
 	buildSigninErrorRedirect,
@@ -9,6 +8,7 @@ import {
 	newAccountDestination
 } from '../../../lib/domain/auth/auth-redirect.server'
 import { createSupabaseClient } from '../../../lib/supabase.server'
+import { Route } from './+types/confirm'
 
 import type { PostHogContext } from '../../../lib/posthog/posthog-middleware'
 

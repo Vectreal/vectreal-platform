@@ -1,5 +1,5 @@
-import { StepBlock, StepToggle } from './optimization-step'
 import { useOptimizationSettings } from '../../use-optimization-settings'
+import { StepBlock, StepToggle } from './optimization-step'
 
 import type { FC } from 'react'
 

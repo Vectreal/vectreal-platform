@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
+import { bundleSourceCopy } from '../../lib/convert/convert-capabilities'
+import { convertPairBySlug } from '../../lib/convert/convert-pairs'
 import {
 	downloadContainer,
 	measuredBytes,
 	refusalMessage
 } from './converter-surface.utils'
-import { bundleSourceCopy } from '../../lib/convert/convert-capabilities'
-import { convertPairBySlug } from '../../lib/convert/convert-pairs'
 
 const file = (name: string, size: number) =>
 	new File([new Uint8Array(size)], name)

@@ -2,8 +2,8 @@ import { MAX_SCENE_LIGHTS } from '@vctrl/core'
 import { ENVIRONMENT_PRESETS, SCENE_LIGHT_ROLES } from '@vctrl/sdk'
 import { expectTypeOf } from 'vitest'
 
-import { SceneSettingsParser } from './scene-settings.parser.server'
 import { withSceneSettingsDefaults } from '../../../../constants/viewer-defaults'
+import { SceneSettingsParser } from './scene-settings.parser.server'
 
 import type { SceneSettingsRequest } from '../../../../types/api'
 import type { EnvironmentKey, SceneLightRole } from '@vctrl/core'

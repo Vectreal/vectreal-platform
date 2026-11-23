@@ -1,8 +1,6 @@
 import { ApiResponse } from '@shared/utils'
 import { count, eq } from 'drizzle-orm'
 
-import { assertParsed } from './scene-operation-context.server'
-import { sceneSettingsService } from './scene-settings-service.server'
 import {
 	isBillingStateReadOnly,
 	type EntitlementKey,
@@ -28,9 +26,11 @@ import { assertWithinQuota } from '../../billing/quota-enforcement.server'
 import { QuotaExceededError } from '../../billing/quota-exceeded-error'
 import { getProject } from '../../project/project-repository.server'
 import { userExists } from '../../user/user-repository.server'
+import { assertParsed } from './scene-operation-context.server'
+import { sceneSettingsService } from './scene-settings-service.server'
 
-import type { GetSceneSettingsRequest } from './scene-settings.operations.server'
 import type { SceneSettingsRequest } from '../../../../types/api'
+import type { GetSceneSettingsRequest } from './scene-settings.operations.server'
 
 type PublishSceneRequest = SceneSettingsRequest & {
 	sceneId: string

@@ -1,5 +1,12 @@
 import { randomBytes, randomUUID } from 'node:crypto'
 
+import { MODEL_INTAKE_COPY } from '../../../constants/product-copy'
+import {
+	sendIntakeConfirmation,
+	sendIntakeInternalNotification
+} from '../../email/model-intake-email-sender.server'
+import { recordRateLimitAttempt } from '../../http/rate-limit.server'
+import { encryptSensitiveValue } from '../../security/pii-encryption.server'
 import { prepareIntakePhotos } from './model-intake-photos.server'
 import {
 	deleteIntakeRow,
@@ -31,13 +38,6 @@ import {
 	signIntakePhotoUrls,
 	uploadIntakePhotos
 } from './model-intake-storage.server'
-import { MODEL_INTAKE_COPY } from '../../../constants/product-copy'
-import {
-	sendIntakeConfirmation,
-	sendIntakeInternalNotification
-} from '../../email/model-intake-email-sender.server'
-import { recordRateLimitAttempt } from '../../http/rate-limit.server'
-import { encryptSensitiveValue } from '../../security/pii-encryption.server'
 
 /**
  * Five decodes per address per ten minutes, as the contact form allows. It is

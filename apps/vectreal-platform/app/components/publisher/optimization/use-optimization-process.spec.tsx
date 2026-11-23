@@ -8,7 +8,6 @@ import { act, renderHook } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { useOptimizationProcess } from './use-optimization-process'
 import {
 	balancedPreset,
 	originalPreset,
@@ -19,6 +18,7 @@ import {
 	optimizationAtom,
 	optimizationRuntimeAtom
 } from '../../../lib/stores/scene-optimization-store'
+import { useOptimizationProcess } from './use-optimization-process'
 
 import type { SceneOptimizationRuntimeState } from '../../../types/scene-optimization'
 import type { ReactNode } from 'react'

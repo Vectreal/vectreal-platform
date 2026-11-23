@@ -1,5 +1,5 @@
-import { SceneSettingsParser } from './scene-settings.parser.server'
 import { buildSceneThumbnailUrl } from '../scene-thumbnail-url'
+import { SceneSettingsParser } from './scene-settings.parser.server'
 
 import type { SceneSettingsRequest } from '../../../../types/api'
 

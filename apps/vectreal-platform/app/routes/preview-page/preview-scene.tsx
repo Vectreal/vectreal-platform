@@ -1,10 +1,10 @@
 import { useOutletContext } from 'react-router'
 
-import { Route } from './+types/preview-scene'
 import { EmbedResourceHints } from '../../components/scene-embed/embed-resource-hints'
 import PreviewChrome from '../../components/scene-embed/preview-chrome/preview-chrome'
 import SceneEmbedPage from '../../components/scene-embed/scene-embed-page'
 import { useAppColorScheme } from '../../hooks/use-app-color-scheme'
+import { Route } from './+types/preview-scene'
 
 import type { PreviewLayoutContext } from '../layouts/preview-layout'
 

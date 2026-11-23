@@ -25,12 +25,12 @@ import { MemoryRouter, useLocation } from 'react-router'
 import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { EmptyStage } from './empty-stage'
 import { exampleSceneById } from '../../../lib/samples/example-scenes'
 import {
 	sampleModelById,
 	sampleModelSource
 } from '../../../lib/samples/sample-models'
+import { EmptyStage } from './empty-stage'
 
 import type { ExampleScene } from '../../../lib/samples/example-scenes'
 import type { ComponentProps } from 'react'

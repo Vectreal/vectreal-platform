@@ -14,7 +14,6 @@ import { createStore } from 'jotai'
 import { Provider, useAtomValue } from 'jotai/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { usePublisherScene } from './use-publisher-scene'
 import { PublisherViewerCaptureProvider } from '../components/publisher/publisher-viewer-capture-context'
 import { originalPreset, smallestPreset } from '../constants/optimizations'
 import { defaultBoundsOptions } from '../constants/viewer-defaults'
@@ -27,6 +26,7 @@ import {
 	optimizationAtom
 } from '../lib/stores/scene-optimization-store'
 import { boundsAtom } from '../lib/stores/scene-settings-store'
+import { usePublisherScene } from './use-publisher-scene'
 
 import type { SaveAvailabilityState } from '../lib/domain/scene'
 import type { SceneManifestResponse } from '../types/api'

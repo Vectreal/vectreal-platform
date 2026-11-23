@@ -2,13 +2,13 @@ import { cn } from '@shared/utils'
 import { IMPORTABLE_FORMAT_IDS, modelFormat } from '@vctrl/core/model-formats'
 import { Link } from 'react-router'
 
-import { ArrowLink } from './arrow-link'
-import styles from './format-strip.module.css'
 import {
 	CONVERT_INDEX_PATH,
 	CONVERT_PAIRS,
 	convertPairPath
 } from '../../lib/convert/convert-pairs'
+import { ArrowLink } from './arrow-link'
+import styles from './format-strip.module.css'
 
 const COPY = {
 	heading: 'Convert 3D files online. For free.',

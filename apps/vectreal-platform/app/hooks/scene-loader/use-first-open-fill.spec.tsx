@@ -8,7 +8,6 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { useFirstOpenFill } from './use-first-open-fill'
 import {
 	currentSceneIdAtom,
 	enterPreviewModeAtom,
@@ -17,6 +16,7 @@ import {
 	openingFramedAtom,
 	saveLocationAtom
 } from '../../lib/stores/publisher-config-store'
+import { useFirstOpenFill } from './use-first-open-fill'
 
 import type { SaveAvailabilityState } from '../../lib/domain/scene/client/scene-save-state'
 import type { SceneSettings } from '@vctrl/core'

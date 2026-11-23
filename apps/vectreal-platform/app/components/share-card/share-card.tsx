@@ -1,8 +1,8 @@
 import { VectrealLogoAnimated } from '@shared/components/assets/icons/vectreal-logo-animated'
 import { useEffect, useRef } from 'react'
 
-import styles from './share-card.module.css'
 import { createDraftingBackdrop } from '../layout-components/drafting-backdrop-engine'
+import styles from './share-card.module.css'
 
 import type { ShareCard as ShareCardDefinition } from '../../lib/share-cards'
 

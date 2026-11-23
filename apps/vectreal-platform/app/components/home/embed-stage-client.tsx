@@ -1,10 +1,10 @@
 import { useEffect, useRef, type RefObject } from 'react'
 import { TextureLoader } from 'three'
 
+import { HERO_MODEL } from '../../lib/samples/sample-models'
 import { HERO_SHADOW_URL } from './hero/hero-assets'
 import { HERO_RESOLVED_LIGHTING } from './hero/hero-lighting'
 import { createStageEngine, type StageEngine } from './stage/stage-engine'
-import { HERO_MODEL } from '../../lib/samples/sample-models'
 
 import type { FrameRect } from './product-stage'
 

@@ -3,7 +3,6 @@ import { useAtom, useSetAtom } from 'jotai/react'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { toast } from 'sonner'
 
-import { useApplySceneSettings, useResetSceneState } from './use-scene-settings'
 import {
 	DEFAULT_PRESET_ID,
 	optimizationPresets
@@ -31,6 +30,7 @@ import {
 	optimizationRuntimeInitialState
 } from '../../lib/stores/scene-optimization-store'
 import { bakedShadowSourceAtom } from '../../lib/stores/scene-settings-store'
+import { useApplySceneSettings, useResetSceneState } from './use-scene-settings'
 
 import type { SceneManifestResponse } from '../../types/api'
 import type { ModelSource, ModelState } from '@vctrl/hooks/use-load-model'

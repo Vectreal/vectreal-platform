@@ -7,12 +7,12 @@ import { useAtom, useAtomValue } from 'jotai/react'
 import { Eye } from 'lucide-react'
 import { useEffect } from 'react'
 
-import { environmentQualityChoice, qualityLabel } from './environment-quality'
 import {
 	comparedEnvironmentQualityAtom,
 	isComparingEnvironmentQualityAtom
 } from '../../../../../lib/stores/publisher-config-store'
 import { SettingGroup } from '../../sidebar-section'
+import { environmentQualityChoice, qualityLabel } from './environment-quality'
 
 import type { EnvironmentQuality, ResolvedLighting } from '@vctrl/core'
 

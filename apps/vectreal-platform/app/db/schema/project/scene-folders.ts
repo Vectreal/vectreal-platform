@@ -11,7 +11,6 @@ import {
 } from 'drizzle-orm/pg-core'
 import { authenticatedRole } from 'drizzle-orm/supabase'
 
-import { projects } from './projects'
 import { users } from '../core/users'
 import {
 	canAccessProject,
@@ -19,6 +18,7 @@ import {
 	canManageSceneFolder,
 	isUserSelf
 } from '../rls'
+import { projects } from './projects'
 
 export const sceneFolders = pgTable(
 	'scene_folders',

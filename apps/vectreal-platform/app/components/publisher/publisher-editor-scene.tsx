@@ -5,8 +5,6 @@ import { useAtom, useAtomValue, useStore } from 'jotai/react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 
-import { PublisherViewCube } from './publisher-view-cube'
-import { usePublisherViewerCapture } from './publisher-viewer-capture-context'
 import { applyHotspotPlacement } from '../../lib/domain/scene/client/apply-hotspot-placement'
 import {
 	isHotspotPlacementGesture,
@@ -21,6 +19,8 @@ import {
 	activeHotspotIdAtom,
 	hotspotsAtom
 } from '../../lib/stores/scene-settings-store'
+import { PublisherViewCube } from './publisher-view-cube'
+import { usePublisherViewerCapture } from './publisher-viewer-capture-context'
 
 import type { HotspotDefinition } from '@vctrl/core'
 import type { Object3D } from 'three'

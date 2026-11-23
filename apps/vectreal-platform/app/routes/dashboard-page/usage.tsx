@@ -9,7 +9,6 @@ import {
 } from '@shared/components/ui/tabs'
 import { data, Link, useLoaderData } from 'react-router'
 
-import { Route } from './+types/usage'
 import {
 	RelativeTime,
 	UsageMeter,
@@ -37,6 +36,7 @@ import {
 	getQuotaLimit
 } from '../../lib/domain/billing/entitlement-service.server'
 import { describeUsageVerdict } from '../../lib/domain/dashboard/usage-verdict'
+import { Route } from './+types/usage'
 
 import type { LimitKey } from '../../constants/plan-config'
 

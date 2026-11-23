@@ -23,11 +23,11 @@ import { dispatchSaveProgressAtom } from '../../lib/stores/save-progress-store'
 import { hotspotsAtom } from '../../lib/stores/scene-settings-store'
 import { isSceneCurrentLocation } from '../../types/api'
 
-import type { UseSceneSaveFlowArgs } from './contracts'
 import type {
 	SaveLocationTarget,
 	SaveSceneResult
 } from '../../types/publisher-scene'
+import type { UseSceneSaveFlowArgs } from './contracts'
 
 export const useSceneSaveFlow = ({
 	scenePersistence,

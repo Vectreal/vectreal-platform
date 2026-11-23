@@ -1,7 +1,6 @@
 import { Button } from '@shared/components/ui/button'
 import { Link, useLocation } from 'react-router'
 
-import { ErrorState } from './error-state'
 import {
 	PUBLIC_ERROR_COPY,
 	publicErrorKind,
@@ -9,6 +8,7 @@ import {
 	routeErrorDetail
 } from '../lib/errors/error-state-copy'
 import { buildMeta } from '../lib/seo'
+import { ErrorState } from './error-state'
 
 /**
  * Every public error, at page size: the site-wide 404, a loader's thrown 403

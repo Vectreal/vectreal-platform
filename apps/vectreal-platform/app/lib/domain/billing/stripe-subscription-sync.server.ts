@@ -19,7 +19,6 @@
 import { eq } from 'drizzle-orm'
 import Stripe from 'stripe'
 
-import { resolvePlanMetadata } from './stripe-price-plan'
 import {
 	isPlan,
 	type BillingState,
@@ -29,6 +28,7 @@ import { getDbClient } from '../../../db/client'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
 import { reportServerError } from '../../observability/report-server-error.server'
 import { getStripeClient } from '../../stripe.server'
+import { resolvePlanMetadata } from './stripe-price-plan'
 
 // ---------------------------------------------------------------------------
 // Stripe status → local BillingState mapping

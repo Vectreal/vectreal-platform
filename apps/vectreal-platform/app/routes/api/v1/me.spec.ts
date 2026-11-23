@@ -2,8 +2,8 @@ import { apiSuccessSchema, meSchema } from '@vctrl/sdk'
 import { RouterContextProvider } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { loader } from './me'
 import { agentActorContext } from '../../../lib/domain/agent/agent-actor-context'
+import { loader } from './me'
 
 import type { Route } from './+types/me'
 

@@ -9,8 +9,8 @@ import { createStore, Provider } from 'jotai'
 import { createElement, type ReactNode } from 'react'
 import { describe, expect, it } from 'vitest'
 
-import { useOptimizationDrawerFlow } from './use-optimization-drawer-flow'
 import { optimizationModalAtom } from '../lib/stores/scene-optimization-store'
+import { useOptimizationDrawerFlow } from './use-optimization-drawer-flow'
 
 const saveAvailability = { canSave: true, reason: 'ready' } as const
 

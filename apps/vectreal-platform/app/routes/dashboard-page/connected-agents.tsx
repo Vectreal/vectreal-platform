@@ -6,7 +6,6 @@ import { data, Link, useFetcher, useRevalidator } from 'react-router'
 import { useAuthenticityToken } from 'remix-utils/csrf/react'
 import { toast } from 'sonner'
 
-import { Route } from './+types/connected-agents'
 import {
 	DetailPanelSection,
 	EmptyState
@@ -27,6 +26,7 @@ import { getUserOrganizations } from '../../lib/domain/user/user-repository.serv
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import { reportServerError } from '../../lib/observability/report-server-error.server'
 import { createSupabaseClient } from '../../lib/supabase.server'
+import { Route } from './+types/connected-agents'
 
 import type { DashboardConfirmationPlan } from '../../lib/domain/dashboard/dashboard-confirmation'
 

@@ -4,7 +4,6 @@ import { cn } from '@shared/utils'
 import { ChevronRight, EyeOff, SquarePen, Trash2 } from 'lucide-react'
 import { memo } from 'react'
 
-import { hotspotDisplayName } from './use-hotspot-edits'
 import { useDrillDownNavigation } from '../../drill-down'
 import {
 	ReorderHandle,
@@ -12,6 +11,7 @@ import {
 	ReorderItem,
 	type ReorderMoveDelta
 } from '../reorder-list'
+import { hotspotDisplayName } from './use-hotspot-edits'
 
 import type { HotspotDefinition } from '@vctrl/core'
 import type { DragControls } from 'framer-motion'

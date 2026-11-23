@@ -14,8 +14,8 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { createSceneStatsFromReport } from './scene-stats-helpers'
 import { buildOptimizationReport } from '../../../tests/fixtures/optimization-report'
+import { createSceneStatsFromReport } from './scene-stats-helpers'
 
 /*
   The shared fixture, which keeps every size far from every count on purpose: a

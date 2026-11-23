@@ -25,7 +25,6 @@ import {
 } from 'react-router'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
-import { Route } from './+types/signin-page'
 import { captureServerEvent } from '../../lib/domain/analytics/server-events.server'
 import { getSafeNextPath } from '../../lib/domain/auth/auth-redirect.server'
 import {
@@ -39,6 +38,7 @@ import { duration, ease, STAGGER_STEP } from '../../lib/motion/motion-tokens'
 import { reportServerError } from '../../lib/observability/report-server-error.server'
 import { buildMeta } from '../../lib/seo'
 import { createSupabaseClient } from '../../lib/supabase.server'
+import { Route } from './+types/signin-page'
 
 import type { PostHogContext } from '../../lib/posthog/posthog-middleware'
 import type { AuthLayoutContext } from '../layouts/signin-layout'

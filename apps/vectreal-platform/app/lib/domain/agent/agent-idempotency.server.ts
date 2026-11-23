@@ -1,3 +1,4 @@
+import { reportServerError } from '../../observability/report-server-error.server'
 import { agentApiError } from './agent-api-response'
 import { fingerprintRequest, readIdempotencyKey } from './agent-idempotency'
 import {
@@ -10,7 +11,6 @@ import {
 	releaseIdempotencyKey,
 	type IdempotencyRecord
 } from './agent-idempotency-repository.server'
-import { reportServerError } from '../../observability/report-server-error.server'
 
 import type { DbTransaction } from '../../../db/client'
 

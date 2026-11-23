@@ -9,7 +9,6 @@ import { render } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { describe, expect, it } from 'vitest'
 
-import { ToolSidebar } from './tool-sidebar'
 import {
 	cameraToolOpenRequestAtom,
 	openCameraInCameraToolAtom,
@@ -21,6 +20,7 @@ import {
 	selectedCameraIdAtom
 } from '../../../lib/stores/scene-settings-store'
 import { PublisherViewerCaptureProvider } from '../publisher-viewer-capture-context'
+import { ToolSidebar } from './tool-sidebar'
 
 // The open Camera panel's sliders measure themselves; jsdom has none.
 globalThis.ResizeObserver ??= class {

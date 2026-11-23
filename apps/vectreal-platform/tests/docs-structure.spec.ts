@@ -14,7 +14,6 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 
-import { isRoute } from './route-patterns'
 import {
 	DOC_AUDIENCES,
 	DOC_CATEGORY_LABELS,
@@ -23,6 +22,7 @@ import {
 } from '../app/lib/docs/docs-manifest'
 import { DOCS_MOVED, loader } from '../app/routes/docs/docs-moved'
 import { meta } from '../app/routes/layouts/docs-layout'
+import { isRoute } from './route-patterns'
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 

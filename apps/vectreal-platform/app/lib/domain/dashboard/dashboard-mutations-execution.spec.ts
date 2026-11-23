@@ -10,14 +10,14 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { deleteAssets } from '../asset/asset-storage.server'
+import * as projectRepository from '../project/project-repository.server'
+import * as repository from '../scene/server/scene-folder-repository.server'
 import { loadDashboardEntityRefs } from './dashboard-entity-loader.server'
 import {
 	ConfirmationRequiredError,
 	executeDashboardMutation
 } from './dashboard-mutations.server'
-import { deleteAssets } from '../asset/asset-storage.server'
-import * as projectRepository from '../project/project-repository.server'
-import * as repository from '../scene/server/scene-folder-repository.server'
 
 import type { LoadedEntity } from './dashboard-entity-loader.server'
 import type { DashboardMutationRequest } from './dashboard-mutations'

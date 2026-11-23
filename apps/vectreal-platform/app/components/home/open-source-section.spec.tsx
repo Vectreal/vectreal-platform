@@ -18,8 +18,8 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { OpenSourceSection } from './open-source-section'
 import { HOME_PAGE_COPY } from '../../constants/product-copy'
+import { OpenSourceSection } from './open-source-section'
 
 import type { MockInstance } from 'vitest'
 

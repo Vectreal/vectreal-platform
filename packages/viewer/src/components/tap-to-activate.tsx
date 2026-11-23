@@ -1,8 +1,8 @@
 import { CHROME_BUTTON } from './chrome-classes'
 import { cn } from './class-names'
 
-import type { InteractionInput } from './interaction-help'
 import type { ViewerMessages } from '../locales/en'
+import type { InteractionInput } from './interaction-help'
 
 /** What the start button and the way back say, for an input. */
 export function tapToActivateWords(

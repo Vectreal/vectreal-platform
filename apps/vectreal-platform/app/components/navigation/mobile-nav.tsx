@@ -14,7 +14,6 @@ import { MenuIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router'
 
-import { isNavItemActive } from './nav-items'
 import {
 	ACCOUNT,
 	NAV,
@@ -26,6 +25,7 @@ import {
 import { DocsBreadcrumb, isDocsPath } from '../docs/docs-breadcrumb'
 import { ThemeToggleButton } from '../theme-toggle-button'
 import { UserAvatar, userFirstName } from '../user-menu'
+import { isNavItemActive } from './nav-items'
 
 interface MobileNavProps {
 	user: User | null

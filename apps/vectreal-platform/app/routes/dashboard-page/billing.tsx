@@ -1,6 +1,5 @@
 import { data, useLoaderData } from 'react-router'
 
-import { Route } from './+types/billing'
 import { BillingSettingsSection } from '../../components/dashboard'
 import {
 	loadBillingDashboardData,
@@ -8,6 +7,7 @@ import {
 } from '../../lib/domain/billing/billing-dashboard-loader.server'
 import { describeBillingSituation } from '../../lib/domain/billing/billing-situation'
 import { describePlanFit } from '../../lib/domain/billing/plan-fit'
+import { Route } from './+types/billing'
 
 /**
  * What is being charged, and whether the plan still fits.

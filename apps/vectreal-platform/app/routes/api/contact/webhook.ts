@@ -1,11 +1,11 @@
 import { ApiResponse } from '@shared/utils'
 
-import { Route } from './+types/webhook'
 import {
 	processResendWebhookEvent,
 	verifyResendWebhook
 } from '../../../lib/domain/contact/resend-webhook-processor.server'
 import { reportServerError } from '../../../lib/observability/report-server-error.server'
+import { Route } from './+types/webhook'
 
 export async function action({ request }: Route.ActionArgs): Promise<Response> {
 	if (request.method !== 'POST') {

@@ -13,7 +13,6 @@ import {
 } from 'drizzle-orm/pg-core'
 import { authenticatedRole } from 'drizzle-orm/supabase'
 
-import { folders } from './folders'
 import { users } from '../core/users'
 import {
 	canAccessAsset,
@@ -21,6 +20,7 @@ import {
 	canManageAsset,
 	isUserSelf
 } from '../rls'
+import { folders } from './folders'
 
 export const assetTypeEnum = pgEnum('asset_type', [
 	'texture',

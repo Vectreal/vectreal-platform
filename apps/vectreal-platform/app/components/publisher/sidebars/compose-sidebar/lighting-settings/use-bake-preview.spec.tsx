@@ -10,6 +10,18 @@ import { createStore, Provider } from 'jotai'
 import { Group } from 'three'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { bakesKey } from '../../../../../lib/domain/scene/studio-finish'
+import {
+	bakePreviewAtom,
+	processAtom,
+	type BakePreview
+} from '../../../../../lib/stores/publisher-config-store'
+import { optimizationRuntimeAtom } from '../../../../../lib/stores/scene-optimization-store'
+import {
+	lightingAtom,
+	presentationAtom
+} from '../../../../../lib/stores/scene-settings-store'
+import { WorkerRunError } from '../../../../../workers/run-worker'
 import {
 	drawingLabel,
 	reusableFinish,
@@ -23,18 +35,6 @@ import {
 	useShowPublishedFinish,
 	useShownBake
 } from './use-bake-preview'
-import { bakesKey } from '../../../../../lib/domain/scene/studio-finish'
-import {
-	bakePreviewAtom,
-	processAtom,
-	type BakePreview
-} from '../../../../../lib/stores/publisher-config-store'
-import { optimizationRuntimeAtom } from '../../../../../lib/stores/scene-optimization-store'
-import {
-	lightingAtom,
-	presentationAtom
-} from '../../../../../lib/stores/scene-settings-store'
-import { WorkerRunError } from '../../../../../workers/run-worker'
 
 import type { BakePassOutcome } from '../../../../../workers/publish-export.worker.types'
 import type { ReactNode } from 'react'

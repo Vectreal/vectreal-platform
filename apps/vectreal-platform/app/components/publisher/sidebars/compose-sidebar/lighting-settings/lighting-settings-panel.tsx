@@ -19,6 +19,21 @@ import { Globe, Lightbulb } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { preload } from 'react-dom'
 
+import {
+	ineligibleCaption,
+	nothingCaption
+} from '../../../../../lib/domain/scene/client/studio-finish-reasons'
+import {
+	environmentThumbnail,
+	lightingSetupThumbnail
+} from '../../../../../lib/lighting/lighting-thumbnails'
+import {
+	environmentLoadFailedAtom,
+	viewDirectionAtom
+} from '../../../../../lib/stores/publisher-config-store'
+import { environmentAtom } from '../../../../../lib/stores/scene-settings-store'
+import { DrillDown, DrillDownTrigger, DrillDownView } from '../../drill-down'
+import { PanelCaption, SettingGroup } from '../../sidebar-section'
 import { BakeSection } from './bake-section'
 import { EnvironmentQualitySettings } from './environment-quality-settings'
 import {
@@ -42,21 +57,6 @@ import { ThumbnailGrid } from './thumbnail-grid'
 import { useBakePreview } from './use-bake-preview'
 import { useLightingDraft } from './use-lighting-draft'
 import { useStudioFinishPlan } from './use-studio-finish-plan'
-import {
-	ineligibleCaption,
-	nothingCaption
-} from '../../../../../lib/domain/scene/client/studio-finish-reasons'
-import {
-	environmentThumbnail,
-	lightingSetupThumbnail
-} from '../../../../../lib/lighting/lighting-thumbnails'
-import {
-	environmentLoadFailedAtom,
-	viewDirectionAtom
-} from '../../../../../lib/stores/publisher-config-store'
-import { environmentAtom } from '../../../../../lib/stores/scene-settings-store'
-import { DrillDown, DrillDownTrigger, DrillDownView } from '../../drill-down'
-import { PanelCaption, SettingGroup } from '../../sidebar-section'
 
 const OCCLUSION_MODES = [
 	{ mode: 'off', label: 'Off' },

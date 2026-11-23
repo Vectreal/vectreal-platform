@@ -5,8 +5,8 @@
  */
 import { describe, expect, it, vi } from 'vitest'
 
-import { loader } from './home-tour'
 import { resolveHomeTour } from '../../lib/samples/home-tour-scene.server'
+import { loader } from './home-tour'
 
 vi.mock('../../lib/samples/home-tour-scene.server', () => ({
 	resolveHomeTour: vi.fn()

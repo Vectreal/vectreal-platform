@@ -32,8 +32,8 @@ import {
 import { sceneSettingsService } from '../../../lib/domain/scene/server/scene-settings-service.server'
 import { storePublishedGlb } from '../../../lib/domain/scene/server/scene-upload.operations.server'
 
-import type { Route } from './+types/scenes.$sceneId.publication'
 import type { AgentActor } from '../../../lib/domain/agent/agent-actor.server'
+import type { Route } from './+types/scenes.$sceneId.publication'
 import type { ScenePublication } from '@vctrl/sdk'
 
 export const middleware = [

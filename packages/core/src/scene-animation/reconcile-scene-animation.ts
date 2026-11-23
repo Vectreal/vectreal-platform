@@ -1,10 +1,10 @@
 import { normalizeSceneAnimation } from './normalize-scene-animation'
 
-import type { AnimationClipDescriptor } from './describe-animation-clips'
 import type {
 	AnimationClipConfig,
 	AnimationSettings
 } from '../types/animation-types'
+import type { AnimationClipDescriptor } from './describe-animation-clips'
 
 /** A saved config re-attached to a clip by position after its name changed. */
 export interface AnimationClipRemap {

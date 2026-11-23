@@ -4,9 +4,9 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { SaveProgressPanel } from './save-progress-panel'
 import { enterPreviewModeAtom } from '../../../lib/stores/publisher-config-store'
 import { savePanelAtom } from '../../../lib/stores/save-progress-store'
+import { SaveProgressPanel } from './save-progress-panel'
 
 import type { SavePanelState } from '../../../lib/domain/scene/client/scene-save-progress'
 

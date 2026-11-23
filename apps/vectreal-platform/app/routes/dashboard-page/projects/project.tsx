@@ -1,6 +1,5 @@
 import { data, Outlet, useLocation } from 'react-router'
 
-import { Route } from './+types/project'
 import { ContentListing } from '../../../components/dashboard'
 import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
@@ -10,6 +9,7 @@ import {
 	getSceneFolderChildCounts
 } from '../../../lib/domain/scene/server/scene-folder-repository.server'
 import { shouldRevalidateForRouteParams } from '../../../lib/navigation/dashboard-route-behavior'
+import { Route } from './+types/project'
 
 import type { ShouldRevalidateFunction } from 'react-router'
 

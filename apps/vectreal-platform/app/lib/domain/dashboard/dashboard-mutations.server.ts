@@ -10,6 +10,21 @@
  * a 403.
  */
 
+import { reportServerError } from '../../observability/report-server-error.server'
+import { deleteAssets } from '../asset/asset-storage.server'
+import {
+	deleteProject,
+	updateProject
+} from '../project/project-repository.server'
+import {
+	createSceneFolder,
+	deleteScene,
+	deleteSceneFolder,
+	moveScene,
+	moveSceneFolder,
+	renameScene,
+	renameSceneFolder
+} from '../scene/server/scene-folder-repository.server'
 import {
 	DASHBOARD_CONFIRMATION_TOKEN,
 	requiresTypedConfirmation,
@@ -30,21 +45,6 @@ import {
 	renameOperationFor
 } from './dashboard-operations'
 import { assertDashboardPermission } from './dashboard-permissions.server'
-import { reportServerError } from '../../observability/report-server-error.server'
-import { deleteAssets } from '../asset/asset-storage.server'
-import {
-	deleteProject,
-	updateProject
-} from '../project/project-repository.server'
-import {
-	createSceneFolder,
-	deleteScene,
-	deleteSceneFolder,
-	moveScene,
-	moveSceneFolder,
-	renameScene,
-	renameSceneFolder
-} from '../scene/server/scene-folder-repository.server'
 
 export class ConfirmationRequiredError extends Error {
 	constructor() {

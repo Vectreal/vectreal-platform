@@ -8,9 +8,9 @@ import { render, screen } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { describe, expect, it, vi } from 'vitest'
 
-import { PublishCard } from './publish-card'
 import { processAtom } from '../../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../../lib/stores/scene-optimization-store'
+import { PublishCard } from './publish-card'
 
 const renderCard = (sizeExcludesTextureEncoding: boolean) =>
 	render(

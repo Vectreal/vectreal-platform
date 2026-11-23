@@ -5,12 +5,6 @@ import { useAtom, useSetAtom } from 'jotai/react'
 import { Locate, Plus } from 'lucide-react'
 import { useCallback, useMemo } from 'react'
 
-import { HotspotRow, SequencedRow } from './hotspot-row'
-import {
-	hotspotDisplayName,
-	sequencedFirst,
-	useHotspotEdits
-} from './use-hotspot-edits'
 import { applySequenceMove } from '../../../../../lib/domain/scene/scene-hotspot-sequence'
 import {
 	activeHotspotIdAtom,
@@ -20,6 +14,12 @@ import { EmptyState } from '../../../../layout-components'
 import { useSidebarCoversCanvas } from '../../dynamic-sidebar'
 import { SidebarSection } from '../../sidebar-section'
 import { useReorderDraft } from '../reorder-list'
+import { HotspotRow, SequencedRow } from './hotspot-row'
+import {
+	hotspotDisplayName,
+	sequencedFirst,
+	useHotspotEdits
+} from './use-hotspot-edits'
 
 import type { SequenceMove } from '../../../../../lib/domain/scene/scene-hotspot-sequence'
 import type { HotspotDefinition } from '@vctrl/core'

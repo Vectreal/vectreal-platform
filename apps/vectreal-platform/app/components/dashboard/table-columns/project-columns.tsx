@@ -9,12 +9,12 @@ import { Ellipsis, FolderOpen, Pencil, Trash2 } from 'lucide-react'
 import { memo } from 'react'
 import { Link, useLocation } from 'react-router'
 
-import { DESTRUCTIVE_MENU_ITEM } from './destructive-menu-item'
 import { formatShortDate } from '../../../constants/limit-format'
 import { useIsClientMounted } from '../../../hooks/use-is-client-mounted'
 import { describeDashboardOperationRequirement } from '../../../lib/domain/dashboard/dashboard-operations'
 import { createCheckboxColumn, SortableHeader } from '../data-table'
 import { StatusBreakdown, type SceneStatusCounts } from '../status-breakdown'
+import { DESTRUCTIVE_MENU_ITEM } from './destructive-menu-item'
 
 import type { LegacyColumnDef as ColumnDef } from '@tanstack/react-table/legacy'
 

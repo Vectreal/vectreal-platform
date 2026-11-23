@@ -9,7 +9,6 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { isRoute } from './route-patterns'
 import {
 	ACCOUNT,
 	FOOTER,
@@ -18,6 +17,7 @@ import {
 	isNavSection,
 	type SiteLink
 } from '../app/lib/navigation/site-map'
+import { isRoute } from './route-patterns'
 
 const pathOf = (link: SiteLink) => link.to.split('?')[0]
 

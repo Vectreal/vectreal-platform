@@ -10,8 +10,6 @@ import { useCallback, useId, useRef, useState, type FC } from 'react'
 import { useNavigate, useRevalidator } from 'react-router'
 import { toast } from 'sonner'
 
-import { InteractionStartSetting } from './interaction-start-setting'
-import { useSceneViewReturnSetting } from './use-scene-view-return-setting'
 import { originalPreset } from '../../../../../constants/optimizations'
 import {
 	isBillingLimitError,
@@ -71,6 +69,8 @@ import {
 	SidebarSection,
 	SidebarSectionContent
 } from '../../sidebar-section'
+import { InteractionStartSetting } from './interaction-start-setting'
+import { useSceneViewReturnSetting } from './use-scene-view-return-setting'
 
 import type {
 	PublishSceneResponse,

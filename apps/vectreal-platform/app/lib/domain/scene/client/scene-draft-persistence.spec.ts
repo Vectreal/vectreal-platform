@@ -13,11 +13,11 @@ vi.mock('./scene-draft-serialization', () => ({
 	serializeSceneAssetData: async () => ({})
 }))
 
+import { smallestPreset } from '../../../../constants/optimizations'
 import {
 	persistPendingSceneDraftOrchestrator,
 	restoreDraftSource
 } from './scene-draft-persistence'
-import { smallestPreset } from '../../../../constants/optimizations'
 
 import type { SceneSettings } from '@vctrl/core'
 

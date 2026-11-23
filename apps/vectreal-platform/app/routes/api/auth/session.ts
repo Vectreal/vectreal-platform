@@ -1,7 +1,7 @@
 import { data } from 'react-router'
 
-import { Route } from './+types/session'
 import { resolveOptionalUser } from '../../../lib/domain/auth/auth-loader.server'
+import { Route } from './+types/session'
 
 /**
  * Client-hydration endpoint for the current user.

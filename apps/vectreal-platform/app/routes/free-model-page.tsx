@@ -32,8 +32,8 @@ import { reportServerError } from '../lib/observability/report-server-error.serv
 import { buildPageMeta } from '../lib/seo'
 import { shareCardMeta } from '../lib/share-cards'
 
-import type { Route } from './+types/free-model-page'
 import type { PostHogContext } from '../lib/posthog/posthog-middleware'
+import type { Route } from './+types/free-model-page'
 
 export async function loader({ request }: Route.LoaderArgs) {
 	const url = new URL(request.url)

@@ -12,7 +12,6 @@ import { Textarea } from '@shared/components/ui/textarea'
 import { useAtom } from 'jotai/react'
 import { useMemo } from 'react'
 
-import { MoveItemsDialog } from './move-items-dialog'
 import { useDashboardMutations } from '../../hooks/use-dashboard-mutations'
 import { planDeleteConfirmation } from '../../lib/domain/dashboard/dashboard-confirmation'
 import {
@@ -22,6 +21,7 @@ import {
 	renameDialogAtom
 } from '../../lib/stores/dashboard-management-store'
 import { ConfirmDestructiveDialog } from '../shared/confirm-destructive-dialog'
+import { MoveItemsDialog } from './move-items-dialog'
 
 /**
  * The dashboard's create / rename / delete dialogs, mounted once by the

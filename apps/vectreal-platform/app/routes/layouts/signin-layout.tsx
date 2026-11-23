@@ -16,7 +16,6 @@ import {
 } from 'react-router'
 import { useAuthenticityToken } from 'remix-utils/csrf/react'
 
-import { Route } from './+types/signin-layout'
 import { useConsent } from '../../components/consent/consent-context'
 import { AuthErrorBoundary } from '../../components/errors'
 import { SheetFrame } from '../../components/layout-components'
@@ -29,6 +28,7 @@ import {
 	saveReferralAttribution
 } from '../../lib/domain/analytics/referral-attribution'
 import { duration, ease } from '../../lib/motion/motion-tokens'
+import { Route } from './+types/signin-layout'
 
 /**
  * No `resetTurnstile`. Invalidating a token is the layout's job, because the

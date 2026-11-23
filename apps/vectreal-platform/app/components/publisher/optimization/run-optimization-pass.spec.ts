@@ -5,12 +5,12 @@ import {
 import { toast } from 'sonner'
 import { afterEach, beforeEach, vi } from 'vitest'
 
+import { balancedPreset } from '../../../constants/optimizations'
 import { LOAD_GEOMETRY_STEP, PREPARE_STEP, SYNC_STEP } from './model'
 import { runOptimizationPass } from './run-optimization-pass'
-import { balancedPreset } from '../../../constants/optimizations'
 
-import type { OptimizationPassDeps } from './run-optimization-pass'
 import type { SceneOptimizationRuntimeState } from '../../../types/scene-optimization'
+import type { OptimizationPassDeps } from './run-optimization-pass'
 import type { Optimizations } from '@vctrl/core'
 
 const { runGeometryOptimizationsInWorker } = vi.hoisted(() => ({

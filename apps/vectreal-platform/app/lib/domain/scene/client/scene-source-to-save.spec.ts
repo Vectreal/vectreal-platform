@@ -6,16 +6,16 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+	originalPreset,
+	smallestPreset
+} from '../../../../constants/optimizations'
+import { MAX_STORED_FILE_BYTES } from '../../../../constants/utility-constants'
+import {
 	canCompareWithSource,
 	derivesFromSavedVersion,
 	recordSavedOriginal,
 	resolveSourceToSave
 } from './scene-source-to-save'
-import {
-	originalPreset,
-	smallestPreset
-} from '../../../../constants/optimizations'
-import { MAX_STORED_FILE_BYTES } from '../../../../constants/utility-constants'
 
 const SOURCE = new Uint8Array([1, 2, 3])
 const STORED = {

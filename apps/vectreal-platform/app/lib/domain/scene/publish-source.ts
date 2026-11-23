@@ -1,10 +1,10 @@
 import { PERSISTED_BAKE_FILENAME } from '@vctrl/core'
 
+import { originalPreset } from '../../../constants/optimizations'
 import { optimizationsMatch } from './client/optimization-inference'
 import { isUrlServedSceneAsset } from './scene-asset-roles'
 import { shouldCompressTexturesForGpu } from './scene-presentation'
 import { bakesKey } from './studio-finish'
-import { originalPreset } from '../../../constants/optimizations'
 
 import type {
 	LightingSettings,

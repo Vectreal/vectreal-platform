@@ -15,8 +15,8 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { parseOptimizationReport } from './optimization-report-guard'
 import { buildOptimizationReport } from '../../../../tests/fixtures/optimization-report'
+import { parseOptimizationReport } from './optimization-report-guard'
 
 /** The report a real client sends, as JSON would deliver it. */
 const valid = () => JSON.parse(JSON.stringify(buildOptimizationReport()))

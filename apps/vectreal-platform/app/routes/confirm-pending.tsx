@@ -19,7 +19,6 @@ import {
 } from 'react-router'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
-import { Route } from './+types/confirm-pending'
 import { AuthErrorBoundary } from '../components/errors'
 import { useResendCooldown } from '../hooks/use-resend-cooldown'
 import { clearReferralAttribution } from '../lib/domain/analytics/referral-attribution'
@@ -39,6 +38,7 @@ import {
 import { reportServerError } from '../lib/observability/report-server-error.server'
 import { buildMeta } from '../lib/seo'
 import { createSupabaseClient } from '../lib/supabase.server'
+import { Route } from './+types/confirm-pending'
 
 import type { AuthLayoutContext } from './layouts/signin-layout'
 
