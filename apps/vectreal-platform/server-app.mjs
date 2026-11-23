@@ -95,6 +95,32 @@ export function createServerApp({
 	const app = express()
 
 	app.disable('x-powered-by')
+
+	/*
+	  The URL React Router sees has to carry the scheme the visitor used. Fly's
+	  proxy terminates TLS and talks plain HTTP to this server, so without this
+	  `req.protocol` is `http`, every request URL reads `http://`, and React
+	  Router (from 8.3.1) refuses every action: its CSRF check compares the full
+	  origin, and a browser's `Origin` says `https://`.
+
+	  One hop is trusted, Fly's proxy, and Express reads the scheme from its
+	  `X-Forwarded-Proto`. Trusting it also makes Express read the host from
+	  `X-Forwarded-Host`, which neither Fly nor Cloudflare sets and any client
+	  can, so it is dropped here: the host stays the `Host` header Fly routed
+	  the request by, and a direct request cannot choose the origin the app
+	  builds links from.
+
+	  Fly passes a client's own `X-Forwarded-Proto` through ahead of its own,
+	  and Express takes the first value, so one that is not a scheme is dropped
+	  too: the adapter puts it straight into `new URL()`, which would throw.
+	*/
+	app.set('trust proxy', 1)
+	app.use((req, _res, next) => {
+		delete req.headers['x-forwarded-host']
+		if (!/^https?$/.test(req.protocol)) delete req.headers['x-forwarded-proto']
+		next()
+	})
+
 	app.use(compression())
 
 	/*
