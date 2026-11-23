@@ -295,19 +295,58 @@ function modelFileName(url: URL): string | null {
  */
 export function dispositionFileName(header: string | null): string | null {
 	if (!header) return null
-	const extended = /filename\*\s*=\s*[^']*'[^']*'([^;]+)/i.exec(header)?.[1]
-	const plain = /filename\s*=\s*(?:"([^"]*)"|([^;]+))/i.exec(header)
+	const parameters = dispositionParameters(header)
+	// `charset'language'percent-encoded-name`
+	const extended = parameters.get('filename*')?.split("'")
 	const named = (raw: string | undefined) => {
 		const name = raw?.trim().split(/[\\/]/).pop()
 		return name && modelFormatForFileName(name)?.canImport ? name : null
 	}
 	let decoded: string | undefined
 	try {
-		decoded = extended && decodeURIComponent(extended)
+		decoded =
+			extended && extended.length >= 3
+				? decodeURIComponent(extended.slice(2).join("'"))
+				: undefined
 	} catch {
 		// Not UTF-8: the plain `filename` is the fallback the header carries.
 	}
-	return named(decoded) ?? named(plain?.[1] ?? plain?.[2])
+	return named(decoded) ?? named(parameters.get('filename'))
+}
+
+/**
+ * A `Content-Disposition` header's parameters, keys lowercased, the first of
+ * each kept, quoted values unquoted. The header comes from whatever server
+ * hosts the model, so this reads it in one forward pass rather than with a
+ * pattern that can backtrack: `filename\*\s*=\s*[^']*'` took time quadratic in
+ * the run of spaces after `filename*=`.
+ */
+function dispositionParameters(header: string): Map<string, string> {
+	const parameters = new Map<string, string>()
+	let at = 0
+	while (at < header.length) {
+		let end = header.indexOf(';', at)
+		if (end < 0) end = header.length
+		const equals = header.slice(at, end).indexOf('=')
+		if (equals >= 0) {
+			const key = header
+				.slice(at, at + equals)
+				.trim()
+				.toLowerCase()
+			let value = header.slice(at + equals + 1, end).trim()
+			if (value.startsWith('"')) {
+				// A quoted value may hold a `;`, so it ends at its closing quote.
+				const open = header.indexOf('"', at + equals + 1)
+				const close = header.indexOf('"', open + 1)
+				value = header.slice(open + 1, close < 0 ? header.length : close)
+				end = close < 0 ? -1 : header.indexOf(';', close)
+				if (end < 0) end = header.length
+			}
+			if (!parameters.has(key)) parameters.set(key, value)
+		}
+		at = end + 1
+	}
+	return parameters
 }
 
 /** The four bytes every binary glTF starts with: `glTF`. */
