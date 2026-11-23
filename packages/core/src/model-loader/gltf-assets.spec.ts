@@ -59,6 +59,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
  */
 import { describe, expect, it } from 'vitest'
 
+import { missingFilesOf } from './missing-assets'
 import { ModelLoader } from './model-loader'
 
 /** Distinguishable image bytes. The marker is the whole assertion. */
@@ -254,6 +255,16 @@ describe('a reference it cannot resolve is refused, and named', () => {
 		).rejects.toThrow(/Missing required image files[\s\S]*body\/diffuse\.png/)
 	})
 
+	it('carries the missing files as names a reader knows', async () => {
+		const refusal = await load(
+			gltfReferencing('body/wood%20grain.png'),
+			new Map(),
+			'chair/chair.gltf'
+		).catch((error: unknown) => error)
+
+		expect(missingFilesOf(refusal)).toEqual(['body/wood grain.png'])
+	})
+
 	it('refuses a genuine tie rather than texturing twice from one file', async () => {
 		/*
 		  WHERE THIS GOT STRICTER, DELIBERATELY. A glTF that names `diffuse.png`
@@ -308,17 +319,20 @@ describe('a reference it cannot resolve is refused, and named', () => {
 			})
 		)
 
-		await expect(
-			new ModelLoader().loadGLTFWithAssets(
+		const refusal = await new ModelLoader()
+			.loadGLTFWithAssets(
 				gltf,
 				new Map([['chair/textures/wood.png', png(1)]]),
 				'chair.gltf',
 				false,
 				'chair/chair.gltf'
 			)
-		).rejects.toThrow(
+			.catch((error: unknown) => error)
+
+		expect(String(refusal)).toMatch(
 			/Missing required buffer files[\s\S]*geometry\/scene\.bin/
 		)
+		expect(missingFilesOf(refusal)).toEqual(['geometry/scene.bin'])
 	})
 
 	it('leaves a buffer nothing reads alone', async () => {

@@ -36,15 +36,44 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
  */
 const MISSING_ASSETS = 'MissingAssetsError'
 
-/** The refusal, carrying the marker its consumers recognize it by. */
-export function missingAssetsError(message: string): Error {
-	const error = new Error(message)
+/**
+ * The refusal, carrying the marker its consumers recognize it by and the
+ * references that found no file.
+ *
+ * The references travel as data because the reader needs them: the sentence
+ * that says "a texture is missing" without saying which one leaves the visitor
+ * to guess, and the names were in hand here and only ever printed into a
+ * message no surface shows.
+ */
+export function missingAssetsError(
+	message: string,
+	missingFiles: readonly string[] = []
+): Error {
+	const error = new Error(message) as Error & {
+		missingFiles: readonly string[]
+	}
 	error.name = MISSING_ASSETS
+	error.missingFiles = missingFiles
 	return error
 }
 
 /** Whether this failure, or anything it was wrapped around, is that refusal. */
 export function isMissingAssetsError(error: unknown): boolean {
+	return missingAssetsIn(error) !== null
+}
+
+/**
+ * The references the refusal found no file for, wherever in the cause chain
+ * it sits. Empty when the failure is not that refusal, or its producer did not
+ * say.
+ */
+export function missingFilesOf(error: unknown): readonly string[] {
+	return missingAssetsIn(error)?.missingFiles ?? []
+}
+
+function missingAssetsIn(
+	error: unknown
+): (Error & { missingFiles?: readonly string[] }) | null {
 	let current = error
 
 	/*
@@ -53,10 +82,10 @@ export function isMissingAssetsError(error: unknown): boolean {
 	  unbounded walk hangs rather than answering.
 	*/
 	for (let hop = 0; hop < 16; hop += 1) {
-		if (!(current instanceof Error)) return false
-		if (current.name === MISSING_ASSETS) return true
+		if (!(current instanceof Error)) return null
+		if (current.name === MISSING_ASSETS) return current
 		current = current.cause
 	}
 
-	return false
+	return null
 }

@@ -32,7 +32,8 @@ import { describe, expect, it } from 'vitest'
 import {
 	normalizeLocalLoadError,
 	normalizeServerLoadError,
-	normalizeUrlLoadError
+	normalizeUrlLoadError,
+	refusalFileNames
 } from './error-helpers'
 
 describe('a load that failed because files were missing says so', () => {
@@ -126,5 +127,37 @@ describe('a URL load says what went wrong at the host', () => {
 			source: 'remote-url',
 			context: { host: 'cdn.example.com' }
 		})
+	})
+})
+
+describe('a refusal names the files it is about', () => {
+	it('carries what a glTF named and did not get, through its wrapper', () => {
+		const refusal = new Error('Failed to load model from File object', {
+			cause: missingAssetsError('Missing required image files', [
+				'textures/wood.png'
+			])
+		})
+
+		const error = normalizeLocalLoadError(refusal, 'gltf_load_failed', {
+			fileName: 'chair.gltf'
+		})
+
+		expect(refusalFileNames(error)).toEqual({
+			model: 'chair.gltf',
+			missing: ['textures/wood.png'],
+			models: []
+		})
+	})
+
+	it('reads the models a selection held more than one of', () => {
+		expect(
+			refusalFileNames({
+				code: 'multiple_models',
+				message: '',
+				recoverable: true,
+				source: 'local-upload',
+				context: { fileNames: ['chair.gltf', 'chair.fbx'] }
+			}).models
+		).toEqual(['chair.gltf', 'chair.fbx'])
 	})
 })

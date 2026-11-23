@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
 	getDashboardSceneLoadErrorMessage,
 	getUploadLoadErrorMessage,
+	listFileNames,
 	uploadLoadErrorLink
 } from './scene-load-error-messages'
 
@@ -99,5 +100,61 @@ describe('an upload refused for what it was', () => {
 			/^Unsupported model format/
 		)
 		expect(uploadLoadErrorLink(error)).toBeNull()
+	})
+})
+
+describe('an upload refusal names the files it is about', () => {
+	const refusal = (
+		code: StructuredLoadError['code'],
+		context: Record<string, unknown>
+	): StructuredLoadError => ({
+		code,
+		message: '',
+		recoverable: true,
+		source: 'local-upload',
+		context
+	})
+
+	it('names the textures a glTF did not get', () => {
+		expect(
+			getUploadLoadErrorMessage(
+				refusal('missing_assets', {
+					fileName: 'chair.gltf',
+					missingFiles: ['textures/wood.png']
+				})
+			)
+		).toBe(
+			'chair.gltf needs textures/wood.png, which did not come with it. Drop the whole folder it lives in, or export it as one GLB.'
+		)
+	})
+
+	it('names the models and the one to drop', () => {
+		expect(
+			getUploadLoadErrorMessage(
+				refusal('multiple_models', { fileNames: ['chair.gltf', 'chair.fbx'] })
+			)
+		).toBe(
+			'This selection holds chair.gltf and chair.fbx, and the publisher opens one model at a time. Drop chair.gltf on its own, with its files.'
+		)
+	})
+
+	it('keeps the general sentences when no names came with the error', () => {
+		expect(getUploadLoadErrorMessage(refusal('missing_assets', {}))).toMatch(
+			/^Model references missing assets/
+		)
+		expect(getUploadLoadErrorMessage(refusal('multiple_models', {}))).toBe(
+			'Multiple models found. Upload one model at a time.'
+		)
+	})
+})
+
+describe('listFileNames', () => {
+	it.each([
+		[['a.png'], 'a.png'],
+		[['a.png', 'b.png'], 'a.png and b.png'],
+		[['a.png', 'b.png', 'c.png'], 'a.png, b.png and c.png'],
+		[['a', 'b', 'c', 'd', 'e'], 'a, b, c and 2 more']
+	])('lists %j as %s', (names, sentence) => {
+		expect(listFileNames(names)).toBe(sentence)
 	})
 })

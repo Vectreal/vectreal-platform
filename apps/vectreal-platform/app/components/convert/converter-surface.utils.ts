@@ -1,5 +1,10 @@
 import { modelFormatForFileName, usesSibling } from '@vctrl/core/model-formats'
-import { unreadableSelectionOf } from '@vctrl/hooks/use-load-model'
+import {
+	refusalFileNames,
+	unreadableSelectionOf
+} from '@vctrl/hooks/use-load-model'
+
+import { listFileNames } from '../../lib/domain/scene/scene-load-error-messages'
 
 import type { BundleSourceCopy } from '../../lib/convert/convert-capabilities'
 import type {
@@ -122,7 +127,20 @@ export function refusalMessage(
 			// the format sentence below would be about a file nobody brought.
 			return 'The sample did not download. Try your own file instead.'
 
-		case 'multiple_models':
+		case 'multiple_models': {
+			const { models } = refusalFileNames(error)
+			/*
+			  The one this page converts, where the selection holds it: on an
+			  FBX page, the FBX beside a glTF export is the one being asked for.
+			*/
+			const wanted =
+				models.find((name) => modelFormatForFileName(name)?.id === pair.from) ??
+				models[0]
+			if (models.length > 1) {
+				return bundleCopy
+					? `That folder holds ${listFileNames(models)}. Leave just ${wanted}, with its own files.`
+					: `That selection holds ${listFileNames(models)}. Drop just ${wanted}.`
+			}
 			/*
 			  "One at a time" is impossible advice on a bundle page, which asks
 			  for a whole folder one line above the stage. There the fix is to
@@ -131,12 +149,18 @@ export function refusalMessage(
 			return bundleCopy
 				? 'That folder has more than one model in it. Leave just the one you want converted, with its own files.'
 				: 'That selection has more than one model in it. Drop one at a time.'
+		}
 
-		case 'missing_assets':
+		case 'missing_assets': {
+			const { model, missing } = refusalFileNames(error)
+			if (missing.length > 0) {
+				return `${model ?? 'That model'} needs ${listFileNames(missing)}, which did not come with it. Drop the folder it lives in.`
+			}
 			return (
 				bundleCopy?.refusal ??
 				'That model refers to files that did not come with it. Drop the folder it lives in.'
 			)
+		}
 
 		case 'gltf_load_failed':
 		case 'binary_load_failed':

@@ -386,6 +386,7 @@ export class ModelLoader {
 			// Validate that referenced images exist in assets
 			if (gltfJson.images) {
 				const missingImages: string[] = []
+				const missingImageFiles: string[] = []
 
 				gltfJson.images.forEach((image, index: number) => {
 					// Check if image has a URI reference
@@ -395,6 +396,7 @@ export class ModelLoader {
 
 						if (!bytesFor(image.uri)) {
 							missingImages.push(`Image ${index}: ${image.uri}`)
+							missingImageFiles.push(fileNameOf(image.uri))
 						}
 					} else if (
 						typeof image.bufferView !== 'number' ||
@@ -408,7 +410,8 @@ export class ModelLoader {
 				if (missingImages.length > 0) {
 					const availableAssets = Array.from(assets.keys()).join(', ')
 					throw missingAssetsError(
-						`Missing required image files:\n${missingImages.join('\n')}\n\nAvailable assets: ${availableAssets || '(none)'}`
+						`Missing required image files:\n${missingImages.join('\n')}\n\nAvailable assets: ${availableAssets || '(none)'}`,
+						missingImageFiles
 					)
 				}
 			}
@@ -426,6 +429,7 @@ export class ModelLoader {
 			*/
 			if (gltfJson.buffers) {
 				const missingBuffers: string[] = []
+				const missingBufferFiles: string[] = []
 
 				/*
 				  ONLY THE BUFFERS THE DOCUMENT ACTUALLY READS. Checking every
@@ -446,13 +450,15 @@ export class ModelLoader {
 
 					if (!bytesFor(buffer.uri)) {
 						missingBuffers.push(`Buffer ${index}: ${buffer.uri}`)
+						missingBufferFiles.push(fileNameOf(buffer.uri))
 					}
 				})
 
 				if (missingBuffers.length > 0) {
 					const availableAssets = Array.from(assets.keys()).join(', ')
 					throw missingAssetsError(
-						`Missing required buffer files:\n${missingBuffers.join('\n')}\n\nAvailable assets: ${availableAssets || '(none)'}`
+						`Missing required buffer files:\n${missingBuffers.join('\n')}\n\nAvailable assets: ${availableAssets || '(none)'}`,
+						missingBufferFiles
 					)
 				}
 			}
@@ -948,5 +954,18 @@ export class ModelLoader {
 				items: { loaded, total }
 			})
 		}
+	}
+}
+
+/**
+ * A glTF URI as the file it names on disk. URIs are percent-encoded by spec, so
+ * `wood%20grain.png` is the file a visitor knows as `wood grain.png`; one that
+ * does not decode is already its own spelling.
+ */
+function fileNameOf(uri: string): string {
+	try {
+		return decodeURIComponent(uri)
+	} catch {
+		return uri
 	}
 }
