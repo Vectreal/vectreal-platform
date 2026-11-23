@@ -57,6 +57,16 @@ export function resolveStripeWebhookSecret(): string {
 	return secret
 }
 
+/**
+ * Whether this deployment has a Stripe account at all. Without a key there is
+ * nothing to sell and nothing broken: local runs, CI and previews show the
+ * documented prices. A key that is set but malformed is still a fault, so
+ * `getStripeClient` keeps throwing for it.
+ */
+export function isStripeConfigured(): boolean {
+	return Boolean(process.env.STRIPE_SECRET_KEY)
+}
+
 // ---------------------------------------------------------------------------
 // Singleton client
 // ---------------------------------------------------------------------------

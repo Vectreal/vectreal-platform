@@ -31,7 +31,7 @@ import {
 	scenes
 } from '../../../db/schema'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
-import { getStripeClient } from '../../stripe.server'
+import { getStripeClient, isStripeConfigured } from '../../stripe.server'
 import { loadAuthenticatedUser } from '../auth/auth-loader.server'
 import {
 	SCENE_ASSET_ROLE,
@@ -51,11 +51,20 @@ import type {
 } from '../dashboard/dashboard-types'
 
 export async function getCheckoutOptions(): Promise<BillingCheckoutOptions> {
-	const stripe = getStripeClient()
 	const options: BillingCheckoutOptions = {
 		pro: { monthly: null, annual: null },
 		business: { monthly: null, annual: null }
 	}
+
+	/*
+	  No key means no Stripe account here, which is a state rather than a fault:
+	  there is no price to sell, and that is what this answer says. Asking the
+	  client anyway threw, and /pricing reported that throw as a server error on
+	  every request wherever the key is unset.
+	*/
+	if (!isStripeConfigured()) return options
+
+	const stripe = getStripeClient()
 
 	const prices = await stripe.prices.list({
 		active: true,
