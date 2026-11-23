@@ -216,14 +216,9 @@ function PlanCell({
 									</Badge>
 								)}
 							</div>
-							{price.period === 'annual' && liveAnnualAmountCents !== null && (
+							{price.billedLabel && (
 								<p className="text-muted-foreground text-label-xs mt-1">
-									{formatPrice(
-										liveAnnualAmountCents,
-										price.currency,
-										PUBLISHED_COPY_LOCALE
-									)}{' '}
-									billed annually
+									{price.billedLabel}
 								</p>
 							)}
 						</div>

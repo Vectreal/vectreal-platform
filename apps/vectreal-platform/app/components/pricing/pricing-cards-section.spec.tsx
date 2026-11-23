@@ -149,6 +149,14 @@ it('shows the live monthly price on the yearly toggle for a plan sold monthly on
 	).toMatchObject({ Business: '€65' })
 })
 
+it.each([LIVE_EUR, null])(
+	'says how a yearly price is billed, live or not (%o)',
+	(prices) => {
+		expect(pricesShown('annual', prices).text).toContain('€168 billed yearly')
+		expect(pricesShown('monthly', prices).text).not.toContain('billed yearly')
+	}
+)
+
 it('prices Free in the currency Stripe priced the plans in', () => {
 	const usd = JSON.parse(
 		JSON.stringify(LIVE_EUR).replaceAll('"eur"', '"usd"')
