@@ -370,8 +370,23 @@ describe('dispositionFileName', () => {
 		],
 		['attachment; filename="notes.txt"', null],
 		['attachment', null],
-		[null, null]
+		[null, null],
+		['attachment; filename="chair; v2.glb"', 'chair; v2.glb'],
+		["attachment; FileName*=utf-8'en'chair%20v2.glb", 'chair v2.glb'],
+		['attachment; filename*=chair.glb; filename="sofa.glb"', 'sofa.glb']
 	])('reads %s as %s', (header, expected) => {
 		expect(dispositionFileName(header)).toBe(expected)
+	})
+
+	/**
+	 * The header comes from whichever server hosts the model. The regex this
+	 * replaced backtracked over the spaces after `filename*=`: 100 000 of them
+	 * took about 3.5 s, which froze the page reading the header.
+	 */
+	it('reads a header built to make a backtracking parser slow in linear time', () => {
+		const header = `attachment; filename*=${' '.repeat(100_000)}`
+		const started = performance.now()
+		expect(dispositionFileName(header)).toBeNull()
+		expect(performance.now() - started).toBeLessThan(250)
 	})
 })
