@@ -95,7 +95,11 @@ interface Pending {
 	publish: (file: LoaderFile) => void
 	/** Settles the load; `ingested: false` is an ingest that failed, as the loader allows. */
 	resolve: (file: LoaderFile, ingested?: boolean) => void
-	reject: (error: { code: string; message: string }) => void
+	reject: (error: {
+		code: string
+		message: string
+		context?: Record<string, unknown>
+	}) => void
 }
 
 const listeners = new Set<() => void>()
