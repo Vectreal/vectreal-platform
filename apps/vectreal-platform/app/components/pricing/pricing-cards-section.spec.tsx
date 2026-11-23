@@ -136,3 +136,28 @@ it.each([
 		expect(Object.fromEntries(figures)).toMatchObject(expected)
 	}
 )
+
+it('shows the live monthly price on the yearly toggle for a plan sold monthly only', () => {
+	const business = LIVE_EUR.business.monthly
+	if (!business) throw new Error('fixture')
+	const raised: BillingCheckoutOptions = {
+		...LIVE_EUR,
+		business: { monthly: { ...business, amountCents: 6500 }, annual: null }
+	}
+	expect(
+		Object.fromEntries(pricesShown('annual', raised).figures)
+	).toMatchObject({ Business: '€65' })
+})
+
+it('prices Free in the currency Stripe priced the plans in', () => {
+	const usd = JSON.parse(
+		JSON.stringify(LIVE_EUR).replaceAll('"eur"', '"usd"')
+	) as BillingCheckoutOptions
+	const { text, figures } = pricesShown('monthly', usd)
+	expect(text).not.toContain('€')
+	expect(Object.fromEntries(figures)).toMatchObject({
+		Free: '$0',
+		Pro: '$19',
+		Business: '$62'
+	})
+})

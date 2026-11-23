@@ -39,6 +39,12 @@ export interface PlanPrice {
 	 */
 	perMonthCents: number
 	currency: string
+	/**
+	 * The period this price is billed in, which is what checkout must be sent
+	 * with the id. A plan with no yearly price is billed monthly on either
+	 * toggle.
+	 */
+	period: BillingPeriod
 }
 
 /*
@@ -83,12 +89,44 @@ export function formatPrice(
 	}).format(amountCents / 100)
 }
 
+/**
+ * Whether a plan is sold yearly. Stripe's list decides whenever it priced the
+ * plan at all; only a plan it gave no price for falls back to the documented
+ * one. Stripe sells Business monthly only, so on the yearly toggle it shows
+ * and sells its monthly price rather than a yearly figure nobody can be
+ * charged.
+ */
+function isSoldYearly(
+	plan: PaidPlan,
+	options: BillingCheckoutOptions | null
+): boolean {
+	const live = options?.[plan]
+	if (live?.monthly || live?.annual) return live.annual !== null
+	return PLAN_FALLBACK_PRICES[plan].annualMonthly !== null
+}
+
+/**
+ * The currency the plans are priced in: Stripe's when it gave any price, else
+ * the fallbacks'. Free costs nothing in any currency, so it takes this one and
+ * never reads "$0" beside euro prices.
+ */
+export function resolvePlanCurrency(
+	options: BillingCheckoutOptions | null
+): string {
+	const live = Object.values(options ?? {})
+		.flatMap(({ monthly, annual }) => [monthly, annual])
+		.find((price) => price !== null)
+	return live?.currency ?? PLAN_PRICE_CURRENCY
+}
+
 export function resolvePlanPrice(
 	plan: PaidPlan,
-	period: BillingPeriod,
-	options: BillingCheckoutOptions
+	requested: BillingPeriod,
+	options: BillingCheckoutOptions | null
 ): PlanPrice {
-	const live = options[plan][period]
+	const period =
+		requested === 'annual' && isSoldYearly(plan, options) ? 'annual' : 'monthly'
+	const live = options?.[plan][period] ?? null
 
 	if (live) {
 		const perMonthCents =
@@ -104,27 +142,27 @@ export function resolvePlanPrice(
 					: `${formatPrice(live.amountCents, live.currency)} billed yearly`,
 			priceId: live.priceId,
 			perMonthCents,
-			currency: live.currency
+			currency: live.currency,
+			period
 		}
 	}
 
-	/*
-	  A plan with no yearly price shows its monthly one on the yearly toggle,
-	  billed monthly, so it names no saving and no yearly bill.
-	*/
 	const fallback = PLAN_FALLBACK_PRICES[plan]
-	const annualMonthly = period === 'annual' ? fallback.annualMonthly : null
-	const perMonthCents = (annualMonthly ?? fallback.monthly) * 100
+	const perMonthCents =
+		(period === 'annual'
+			? (fallback.annualMonthly ?? fallback.monthly)
+			: fallback.monthly) * 100
 
 	return {
 		perMonthLabel: formatPrice(perMonthCents, PLAN_PRICE_CURRENCY),
 		billedLabel:
-			annualMonthly !== null
-				? `${formatPrice(perMonthCents * 12, PLAN_PRICE_CURRENCY)} billed yearly`
-				: null,
+			period === 'monthly'
+				? null
+				: `${formatPrice(perMonthCents * 12, PLAN_PRICE_CURRENCY)} billed yearly`,
 		priceId: null,
 		perMonthCents,
-		currency: PLAN_PRICE_CURRENCY
+		currency: PLAN_PRICE_CURRENCY,
+		period
 	}
 }
 
@@ -146,7 +184,7 @@ export function resolvePlanPrice(
  */
 export function describeAnnualSaving(
 	plan: PaidPlan,
-	options: BillingCheckoutOptions
+	options: BillingCheckoutOptions | null
 ): string | null {
 	const monthly = resolvePlanPrice(plan, 'monthly', options)
 	const annual = resolvePlanPrice(plan, 'annual', options)

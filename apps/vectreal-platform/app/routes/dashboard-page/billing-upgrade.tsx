@@ -294,14 +294,15 @@ function BillingUpgradeContent() {
 		posthog?.capture('plan_upgrade_started', {
 			from_plan: billing.plan,
 			to_plan: target,
-			billing_period: period,
+			billing_period: price.period,
 			trigger: searchParams.get('trigger') ?? 'settings'
 		})
 		checkoutFetcher.submit(
 			JSON.stringify({
 				planId: target,
 				priceId: price.priceId,
-				billingPeriod: period
+				// The period the id is billed in, which checkout checks it against.
+				billingPeriod: price.period
 			}),
 			{
 				method: 'POST',

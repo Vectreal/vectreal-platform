@@ -49,7 +49,8 @@ describe('without a live Stripe price', () => {
 			billedLabel: null,
 			priceId: null,
 			perMonthCents: 1900,
-			currency: 'eur'
+			currency: 'eur',
+			period: 'monthly'
 		})
 	})
 
@@ -59,7 +60,8 @@ describe('without a live Stripe price', () => {
 			billedLabel: '€168 billed yearly',
 			priceId: null,
 			perMonthCents: 1400,
-			currency: 'eur'
+			currency: 'eur',
+			period: 'annual'
 		})
 	})
 
@@ -73,7 +75,8 @@ describe('without a live Stripe price', () => {
 			billedLabel: null,
 			priceId: null,
 			perMonthCents: 6200,
-			currency: 'eur'
+			currency: 'eur',
+			period: 'monthly'
 		})
 		expect(describeAnnualSaving('business', NO_LIVE_PRICES)).toBeNull()
 	})
@@ -103,7 +106,8 @@ describe('with a live Stripe price', () => {
 			billedLabel: '$276 billed yearly',
 			priceId: 'price_pro_y',
 			perMonthCents: 2300,
-			currency: 'usd'
+			currency: 'usd',
+			period: 'annual'
 		})
 	})
 
@@ -116,6 +120,49 @@ describe('with a live Stripe price', () => {
 	it('shows cents when the price has them, and not when it does not', () => {
 		expect(formatPrice(2999, 'usd')).toBe('$29.99')
 		expect(formatPrice(2900, 'usd')).toBe('$29')
+	})
+
+	it('sells a plan with a live monthly price and no yearly one monthly, on either toggle', () => {
+		/*
+		  Stripe sells Business monthly only. The yearly toggle showed the
+		  documented figure instead of the live one, and the upgrade page offered
+		  nothing to buy and no way back to monthly. Checkout refuses a monthly id
+		  sent as yearly, so the period travels with the price.
+		*/
+		const monthlyOnly: BillingCheckoutOptions = {
+			pro: LIVE.pro,
+			business: {
+				monthly: {
+					priceId: 'price_business_m',
+					amountCents: 6500,
+					currency: 'eur',
+					interval: 'month',
+					intervalCount: 1,
+					productName: 'Business'
+				},
+				annual: null
+			}
+		}
+		expect(resolvePlanPrice('business', 'annual', monthlyOnly)).toEqual({
+			perMonthLabel: '€65',
+			billedLabel: null,
+			priceId: 'price_business_m',
+			perMonthCents: 6500,
+			currency: 'eur',
+			period: 'monthly'
+		})
+		expect(describeAnnualSaving('business', monthlyOnly)).toBeNull()
+	})
+
+	it('lets the live list decide, even where a yearly fallback exists', () => {
+		const proMonthlyOnly: BillingCheckoutOptions = {
+			pro: { monthly: LIVE.pro.monthly, annual: null },
+			business: { monthly: null, annual: null }
+		}
+		expect(resolvePlanPrice('pro', 'annual', proMonthlyOnly)).toMatchObject({
+			priceId: 'price_pro_m',
+			period: 'monthly'
+		})
 	})
 
 	it('names the yearly saving from the live figures', () => {

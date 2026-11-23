@@ -252,8 +252,8 @@ export const PLAN_HIGHLIGHTED: Record<Plan, boolean> = {
 
 /*
   The currency the Stripe account sells the plans in, and so the currency of
-  every plan price the page writes itself: Free's zero and the fallbacks below.
-  Live prices carry their own currency from Stripe.
+  the fallbacks below. Live prices carry their own currency from Stripe, and
+  Free's zero takes whichever the row is priced in (`resolvePlanCurrency`).
 
   It was nobody's fact. The Free card was the literal "$0", the fallback branch
   a literal "$", `resolvePlanPrice` formatted fallbacks as 'usd' and the
