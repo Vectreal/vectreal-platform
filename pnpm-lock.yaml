@@ -170,10 +170,10 @@ importers:
         version: 9.8.2(@types/react@19.2.18)(immer@11.1.16)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(three@0.185.1)
       '@supabase/ssr':
         specifier: ^0.12.7
-        version: 0.12.7(@supabase/supabase-js@2.119.0(@opentelemetry/api@1.9.1))
+        version: 0.12.7(@supabase/supabase-js@2.119.2(@opentelemetry/api@1.9.1))
       '@supabase/supabase-js':
-        specifier: ^2.119.0
-        version: 2.119.0(@opentelemetry/api@1.9.1)
+        specifier: ^2.119.2
+        version: 2.119.2(@opentelemetry/api@1.9.1)
       '@tanstack/react-table':
         specifier: ^9.3.1
         version: 9.3.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -536,8 +536,8 @@ importers:
         specifier: 10.6.6
         version: 10.6.6(@types/react@19.2.18)(prettier@3.9.10)(react@19.2.8)
       supabase:
-        specifier: ^2.122.1
-        version: 2.122.1
+        specifier: ^3.1.0
+        version: 3.1.0
       tailwindcss:
         specifier: ^4.3.5
         version: 4.3.5
@@ -618,10 +618,10 @@ importers:
         version: link:../../shared/utils
       '@supabase/ssr':
         specifier: ^0.12.7
-        version: 0.12.7(@supabase/supabase-js@2.119.0(@opentelemetry/api@1.9.1))
+        version: 0.12.7(@supabase/supabase-js@2.119.2(@opentelemetry/api@1.9.1))
       '@supabase/supabase-js':
-        specifier: ^2.119.0
-        version: 2.119.0(@opentelemetry/api@1.9.1)
+        specifier: ^2.119.2
+        version: 2.119.2(@opentelemetry/api@1.9.1)
       '@tanstack/react-table':
         specifier: ^9.3.1
         version: 9.3.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -5274,67 +5274,67 @@ packages:
       typescript:
         optional: true
 
-  '@supabase/auth-js@2.119.0':
-    resolution: {integrity: sha512-WI7KqJRxqZjm77PlRO/VfKretL4SG8g8stWfBmpyx9To+fFapZlSbXA8QkduoMvr72rRpIF24ZLrjktBrp+ZFA==}
+  '@supabase/auth-js@2.119.2':
+    resolution: {integrity: sha512-zWi7pGT6XIMWG0Ja5Unvsv9ixwgLTq/pnWNzGVwVXlr/onraf3v4VwepCFSlxGrvNyKRmhn7O6e4CHF1TJg73Q==}
     engines: {node: '>=22.0.0'}
 
-  '@supabase/cli-darwin-arm64@2.122.1':
-    resolution: {integrity: sha512-yttIyKa7QU+yB6oxdErlI7zHYn2ohHSMqjNWzuOiZrwoMfMTCTk4/pbRrTUrL81rj1E0kC3SYNy1o4x6449/kA==}
+  '@supabase/cli-darwin-arm64@3.1.0':
+    resolution: {integrity: sha512-NDTEqMsQrc+jF1xLskZpeRqCdg5h+W7EiP7/R1M+hDFyHc/t6E+MnLKVbYSzhG99HeuyzGDgxjeNDfB4NmXOjA==}
     cpu: [arm64]
     os: [darwin]
 
-  '@supabase/cli-darwin-x64@2.122.1':
-    resolution: {integrity: sha512-8ykhbmyowzJP4BKKn223mtuOLdkM1HCSPiDtg8sOrYR+IxH69kbBRUSt3yd8BL5e4So+YDBvHVX8I4yTPRgIqA==}
+  '@supabase/cli-darwin-x64@3.1.0':
+    resolution: {integrity: sha512-J1zGuz5l5LpRl0eEy/Zz7JREOyDZkHk2cO9o8B897wCQImx19+4AV2cRtXtMPvKeQrOfT1hmw2e3Fl75MeO4Fg==}
     cpu: [x64]
     os: [darwin]
 
-  '@supabase/cli-linux-arm64-musl@2.122.1':
-    resolution: {integrity: sha512-rF1VueZTVg9w2eSe53ABkPk37lEf3cq8dcwMLUxgnDFfL5UqNw/TSI3bkE1Q32o+KnL3RPaaI8z+xWX7vOQXVA==}
+  '@supabase/cli-linux-arm64-musl@3.1.0':
+    resolution: {integrity: sha512-x/btGSaL7zlFyk2bvjJL8qfGJ1GY8jfh5D4bWl0mINeyNPlMyLz6oAw4ICRl05p3TU5SeHsiPptcBaohig7OOQ==}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@supabase/cli-linux-arm64@2.122.1':
-    resolution: {integrity: sha512-5lUt9kCQ6bEXh7gRkGgIx9HN7sQt2RviWCUArzmRWHkJsVkXq2zzmpeQN829uH5LCFG4wPJV9l6avJx7mYOlnQ==}
+  '@supabase/cli-linux-arm64@3.1.0':
+    resolution: {integrity: sha512-ZNip2P1/RiXBfWsspAdK594//HM5258RPb6/4tzybrzGUx7TNDwrLhfRw6G50/sXVWkVgaw/L38YtWLpUYRM/A==}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@supabase/cli-linux-x64-musl@2.122.1':
-    resolution: {integrity: sha512-BdGs8w0FuTPLOhA9GtZr06FmlRb+1z+GeTiJkU1kQCorwDv+BY4i92qA/x8XlfBfDp+J6i2dtyaWMhGMCzICaw==}
+  '@supabase/cli-linux-x64-musl@3.1.0':
+    resolution: {integrity: sha512-dWs2FsUv7iBz9OLbhpgI9fyrvft1S5oh1uqeuhus3Mndlxu4cpMq+qaAt6PcnaC6bjw37q60HUkISgmjs/3z+g==}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@supabase/cli-linux-x64@2.122.1':
-    resolution: {integrity: sha512-uMnSbNFJt/KjVyCQe/D0OzWZyGlVGsJKBxGiJfaiNhKlvrrsgQcqGLb27J2qdhPXuGnEfiaHpVYhALRRVQy54A==}
+  '@supabase/cli-linux-x64@3.1.0':
+    resolution: {integrity: sha512-67aBVJQ5psQZ5ezM/uby+xjKlF2Er1GLH9EtQWpUkuOpR3uI7fQjQt9fXTfV6/oqLJA3I+X8O5Fhz/pa8lAiqg==}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@supabase/cli-windows-arm64@2.122.1':
-    resolution: {integrity: sha512-bi/sA/9glToq8zr5xSKudVh36wJYY9DKlBSHWLitKgoPY09jWAhW5d2O6v6MxFyrvwMMkUUzdEAgmMX0Fr5/qA==}
+  '@supabase/cli-windows-arm64@3.1.0':
+    resolution: {integrity: sha512-qZWIgy+i7S0fh5UnLFy9tCdLF7U7pP8j4v0ttRzpU4tRnZW8ivbGWNu74U+DgS9MIBaHBOtkBKhhgbOqqPwf+g==}
     cpu: [arm64]
     os: [win32]
 
-  '@supabase/cli-windows-x64@2.122.1':
-    resolution: {integrity: sha512-m0+Q0k/Jx9oPlTolb/vUmGT3eUuz/MSDSR5Tqe1kfnDl8ra0Fi84697iBUkEc0hD80vIqImBAsTjq6tzNggTlQ==}
+  '@supabase/cli-windows-x64@3.1.0':
+    resolution: {integrity: sha512-dMHC7mEmWROSTHVrhYVUEbmDz9DIqQnczwk+4QufZJpf9XnNI8DTtxOw0+lvJU9a3cmENPwrtiKuo4aXS5/s7Q==}
     cpu: [x64]
     os: [win32]
 
-  '@supabase/functions-js@2.119.0':
-    resolution: {integrity: sha512-0aOdF/Y4lA+62K02nwZClfAthXmFEml0od42q3yy/9t3bBitomAOYEatTFSnxT/5UeeIDNn2DOnXTdAP0sqGNQ==}
+  '@supabase/functions-js@2.119.2':
+    resolution: {integrity: sha512-0pmNQRKahGbezgUV2m02l7j4t0Wdl7KMNNMWGCMe76beA7e1IfTPihtNssqWWw1IjqMDi0axoqLiDPzcdbPuGw==}
     engines: {node: '>=22.0.0'}
 
   '@supabase/phoenix@0.4.5':
     resolution: {integrity: sha512-aAn9H9ovVyeApKy11OWOrrOGq8DV68yWeH4ud2lN9fzn4aO8Zb5GLL9m1pUg9nLqIcT+ZDfAcsZe0E/nqdv2lw==}
 
-  '@supabase/postgrest-js@2.119.0':
-    resolution: {integrity: sha512-qBmcjEFO7Ptyf5qvOXYJa1s4bfA4zsMIFf2i+h2zd6RRTDLwquX8z1mnS9djNOJjbiO1OGFh5Y2Lc2k2pA8TMw==}
+  '@supabase/postgrest-js@2.119.2':
+    resolution: {integrity: sha512-Q5RIy5wD79jArQSID06JXqS9F+bKLcTr81Yz7hwk2qkMX4fWMru4HLvG3UvoY0FlQzjcjXqVba7+6GeaItq6UQ==}
     engines: {node: '>=22.0.0'}
 
-  '@supabase/realtime-js@2.119.0':
-    resolution: {integrity: sha512-fPzxt+SAYweqsZUCSZma2dvN+HT6lVjwWj8BbkVwapW6wNf1odUi+ATYN7svX4Zm9vt0kz0l0VzINAUAA38FEg==}
+  '@supabase/realtime-js@2.119.2':
+    resolution: {integrity: sha512-1xHRbZ8RgKq8Qn50uNJMnBdkuzK35GQTo1hx2+bC3QvCxbzXnFkbmq2ZyT9xSjOCuLBfD5ve3ZKxJcbWefL3ow==}
     engines: {node: '>=22.0.0'}
 
   '@supabase/ssr@0.12.7':
@@ -5342,12 +5342,12 @@ packages:
     peerDependencies:
       '@supabase/supabase-js': ^2.114.0
 
-  '@supabase/storage-js@2.119.0':
-    resolution: {integrity: sha512-htx1dSCnSJVPlx2BNSgLSUDvLMxuGbYa6pUPl5xoCs4as4cIhBVwuxj78zbggCyPHxLnEXjsV/qvlDsVjpodKw==}
+  '@supabase/storage-js@2.119.2':
+    resolution: {integrity: sha512-dbzPuYKYc3/HGz+cRXAK45zR5FWMEH6lr2Is13ZOExhOBCM3F0iO96Z9VuhlLA64vPLeSQP24O/jesWg1QY6fw==}
     engines: {node: '>=22.0.0'}
 
-  '@supabase/supabase-js@2.119.0':
-    resolution: {integrity: sha512-MKP49G6bJbPhvsZDegZ/IXS/ITApPgplDCF5+F65KZ5kIArS5Y90WFxwvWYALx2bsxdrSuHvkCiXHYr3dU8+sw==}
+  '@supabase/supabase-js@2.119.2':
+    resolution: {integrity: sha512-4HvF4G2DwdqjmwPBpz9RHnXWfdK0wSkw4yBhxe64CdeF8gdxsTF9WZuHFuNWtQnHllq71ZDyAghr4Q8nC0m/NA==}
     engines: {node: '>=22.0.0'}
     peerDependencies:
       '@opentelemetry/api': '>=1.0.0'
@@ -10787,8 +10787,8 @@ packages:
       babel-plugin-macros:
         optional: true
 
-  supabase@2.122.1:
-    resolution: {integrity: sha512-uorIJ5Cu8qeJtudBmj1eoFrQzriy7TRPtNM9Kiwb5BDOR7xPGIr1cSBaNCjUncJfKl3swuUrfVJsWz0+ywmEMA==}
+  supabase@3.1.0:
+    resolution: {integrity: sha512-kv/vLnwcxxhkd+CvRjJhp5gP6juwzUUT0a6+JungfQyw9AcM2YSQTDDZwEVHdV85tFc7K975WGkzemw5He26/g==}
     hasBin: true
 
   supports-color@7.2.0:
@@ -16076,66 +16076,66 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@supabase/auth-js@2.119.0':
+  '@supabase/auth-js@2.119.2':
     dependencies:
       tslib: 2.8.1
 
-  '@supabase/cli-darwin-arm64@2.122.1':
+  '@supabase/cli-darwin-arm64@3.1.0':
     optional: true
 
-  '@supabase/cli-darwin-x64@2.122.1':
+  '@supabase/cli-darwin-x64@3.1.0':
     optional: true
 
-  '@supabase/cli-linux-arm64-musl@2.122.1':
+  '@supabase/cli-linux-arm64-musl@3.1.0':
     optional: true
 
-  '@supabase/cli-linux-arm64@2.122.1':
+  '@supabase/cli-linux-arm64@3.1.0':
     optional: true
 
-  '@supabase/cli-linux-x64-musl@2.122.1':
+  '@supabase/cli-linux-x64-musl@3.1.0':
     optional: true
 
-  '@supabase/cli-linux-x64@2.122.1':
+  '@supabase/cli-linux-x64@3.1.0':
     optional: true
 
-  '@supabase/cli-windows-arm64@2.122.1':
+  '@supabase/cli-windows-arm64@3.1.0':
     optional: true
 
-  '@supabase/cli-windows-x64@2.122.1':
+  '@supabase/cli-windows-x64@3.1.0':
     optional: true
 
-  '@supabase/functions-js@2.119.0':
+  '@supabase/functions-js@2.119.2':
     dependencies:
       tslib: 2.8.1
 
   '@supabase/phoenix@0.4.5': {}
 
-  '@supabase/postgrest-js@2.119.0':
+  '@supabase/postgrest-js@2.119.2':
     dependencies:
       tslib: 2.8.1
 
-  '@supabase/realtime-js@2.119.0':
+  '@supabase/realtime-js@2.119.2':
     dependencies:
       '@supabase/phoenix': 0.4.5
       tslib: 2.8.1
 
-  '@supabase/ssr@0.12.7(@supabase/supabase-js@2.119.0(@opentelemetry/api@1.9.1))':
+  '@supabase/ssr@0.12.7(@supabase/supabase-js@2.119.2(@opentelemetry/api@1.9.1))':
     dependencies:
-      '@supabase/supabase-js': 2.119.0(@opentelemetry/api@1.9.1)
+      '@supabase/supabase-js': 2.119.2(@opentelemetry/api@1.9.1)
       cookie: 1.1.1
 
-  '@supabase/storage-js@2.119.0':
+  '@supabase/storage-js@2.119.2':
     dependencies:
       iceberg-js: 0.8.1
       tslib: 2.8.1
 
-  '@supabase/supabase-js@2.119.0(@opentelemetry/api@1.9.1)':
+  '@supabase/supabase-js@2.119.2(@opentelemetry/api@1.9.1)':
     dependencies:
-      '@supabase/auth-js': 2.119.0
-      '@supabase/functions-js': 2.119.0
-      '@supabase/postgrest-js': 2.119.0
-      '@supabase/realtime-js': 2.119.0
-      '@supabase/storage-js': 2.119.0
+      '@supabase/auth-js': 2.119.2
+      '@supabase/functions-js': 2.119.2
+      '@supabase/postgrest-js': 2.119.2
+      '@supabase/realtime-js': 2.119.2
+      '@supabase/storage-js': 2.119.2
     optionalDependencies:
       '@opentelemetry/api': 1.9.1
 
@@ -22699,19 +22699,19 @@ snapshots:
       '@babel/core': 8.1.0
       babel-plugin-macros: 3.1.0
 
-  supabase@2.122.1:
+  supabase@3.1.0:
     dependencies:
       eciesjs: 0.5.0
       jose: 6.2.18
     optionalDependencies:
-      '@supabase/cli-darwin-arm64': 2.122.1
-      '@supabase/cli-darwin-x64': 2.122.1
-      '@supabase/cli-linux-arm64': 2.122.1
-      '@supabase/cli-linux-arm64-musl': 2.122.1
-      '@supabase/cli-linux-x64': 2.122.1
-      '@supabase/cli-linux-x64-musl': 2.122.1
-      '@supabase/cli-windows-arm64': 2.122.1
-      '@supabase/cli-windows-x64': 2.122.1
+      '@supabase/cli-darwin-arm64': 3.1.0
+      '@supabase/cli-darwin-x64': 3.1.0
+      '@supabase/cli-linux-arm64': 3.1.0
+      '@supabase/cli-linux-arm64-musl': 3.1.0
+      '@supabase/cli-linux-x64': 3.1.0
+      '@supabase/cli-linux-x64-musl': 3.1.0
+      '@supabase/cli-windows-arm64': 3.1.0
+      '@supabase/cli-windows-x64': 3.1.0
 
   supports-color@7.2.0:
     dependencies:
