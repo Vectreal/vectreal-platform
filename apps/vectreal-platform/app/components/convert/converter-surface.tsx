@@ -18,7 +18,7 @@ import {
 	type FC
 } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
 import { usePrepareGltfDocument } from '../../hooks/scene-loader/use-scene-document-export'
@@ -45,6 +45,7 @@ import {
 	buildConvertModelResultProps
 } from '../../lib/domain/analytics/convert-events'
 import { persistPendingSceneDraftOrchestrator } from '../../lib/domain/scene/client/scene-draft-persistence'
+import { uploadLoadErrorLink } from '../../lib/domain/scene/scene-load-error-messages'
 import { usePostHog } from '../../lib/posthog/posthog-react'
 import {
 	sampleModelById,
@@ -200,6 +201,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	const [refusal, setRefusal] = useState<{
 		pair: string
 		message: string
+		link: ReturnType<typeof uploadLoadErrorLink>
 		announcement: number
 	} | null>(null)
 	const refusalCount = useRef(0)
@@ -360,6 +362,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 						setRefusal({
 							pair: pair.slug,
 							message: refusalMessage(loaded.error, pair, bundleCopy),
+							link: uploadLoadErrorLink(loaded.error),
 							announcement: ++refusalCount.current
 						})
 					}
@@ -955,6 +958,17 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 					role="alert"
 				>
 					That could not be read. {refusal.message}
+					{refusal.link && (
+						<>
+							{' '}
+							<Link
+								to={refusal.link.to}
+								className="underline underline-offset-2"
+							>
+								{refusal.link.label}
+							</Link>
+						</>
+					)}
 				</p>
 			)}
 

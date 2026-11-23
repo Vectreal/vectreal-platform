@@ -1,6 +1,28 @@
 import { IMPORTABLE_FORMAT_LABELS } from '@vctrl/core/model-formats'
+import { unreadableSelectionOf } from '@vctrl/hooks/use-load-model'
+
+import { MODEL_INTAKE_PATH } from '../model-intake/model-intake-shared'
 
 import type { StructuredLoadError } from '@vctrl/hooks/use-load-model'
+
+/**
+ * Where a refusal sends someone who brought photos: the offer that turns three
+ * photos into a model. Read by the publisher and the converter, so the two
+ * surfaces cannot point the same visitor in different directions.
+ */
+export const PHOTOS_REFUSAL_LINK = {
+	to: MODEL_INTAKE_PATH,
+	label: 'Get a free 3D model from your photos'
+} as const
+
+/** The link a refusal carries, or `null` when it carries none. */
+export function uploadLoadErrorLink(
+	error: StructuredLoadError | null
+): typeof PHOTOS_REFUSAL_LINK | null {
+	return unreadableSelectionOf(error)?.kind === 'photos'
+		? PHOTOS_REFUSAL_LINK
+		: null
+}
 
 /**
  * What the publisher says when a model the user just picked will not load.
@@ -14,7 +36,17 @@ export function getUploadLoadErrorMessage(
 	switch (error?.code) {
 		case 'missing_assets':
 			return 'Model references missing assets. Upload the full model folder (including textures/buffers) and retry.'
-		case 'unsupported_format':
+		case 'unsupported_format': {
+			const selection = unreadableSelectionOf(error)
+			if (selection?.kind === 'photos') {
+				return 'Photos are not a 3D model, so there is nothing here to open.'
+			}
+			if (selection?.kind === 'blender') {
+				return `${selection.fileName} is a Blender file, which only Blender reads. In Blender, choose File > Export > glTF 2.0, save it as GLB and drop that file here.`
+			}
+			if (selection?.kind === 'archive') {
+				return `${selection.fileName} is a zip archive, which the publisher does not open. Unzip it and drop the folder inside.`
+			}
 			/*
 			  Read from the owner rather than written out. It named three of the
 			  six formats that would have worked, so the message sent people away
@@ -22,6 +54,7 @@ export function getUploadLoadErrorMessage(
 			  it verbatim, which is how one stale sentence became two.
 			*/
 			return `Unsupported model format. Upload one of: ${IMPORTABLE_FORMAT_LABELS.join(', ')}.`
+		}
 		case 'multiple_models':
 			return 'Multiple models found. Upload one model at a time.'
 		case 'quota_exceeded':

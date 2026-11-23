@@ -68,7 +68,7 @@ import {
 	SupersededError,
 	TextureCompressionError
 } from '@vctrl/core/model-optimizer'
-import { useSyncExternalStore } from 'react'
+import { useSyncExternalStore, type ReactNode } from 'react'
 import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -95,7 +95,11 @@ interface Pending {
 	publish: (file: LoaderFile) => void
 	/** Settles the load; `ingested: false` is an ingest that failed, as the loader allows. */
 	resolve: (file: LoaderFile, ingested?: boolean) => void
-	reject: (error: { code: string; message: string }) => void
+	reject: (error: {
+		code: string
+		message: string
+		context?: Record<string, unknown>
+	}) => void
 }
 
 const listeners = new Set<() => void>()
@@ -177,8 +181,11 @@ const reachStage = (index: number, file: LoaderFile) =>
  * Refuses the load that is `index`, the way the hook does: the model already on
  * screen is left exactly where it is, and only the outcome carries the failure.
  */
-const refuse = (index: number, code = 'unsupported_format') =>
-	act(async () => pending[index]?.reject({ code, message: 'nope' }))
+const refuse = (
+	index: number,
+	code = 'unsupported_format',
+	context?: Record<string, unknown>
+) => act(async () => pending[index]?.reject({ code, message: 'nope', context }))
 
 const exported = {
 	data: new Uint8Array(0),
@@ -333,7 +340,8 @@ function resetContext() {
 	}
 }
 
-vi.mock('@vctrl/hooks/use-load-model', () => ({
+vi.mock('@vctrl/hooks/use-load-model', async (importActual) => ({
+	...(await importActual<typeof import('@vctrl/hooks/use-load-model')>()),
 	useLoadProgress: () => null,
 	useModelContext: () =>
 		useSyncExternalStore(
@@ -397,7 +405,10 @@ const navigated: string[] = []
 vi.mock('react-router', () => ({
 	useNavigate: () => async (to: string) => {
 		navigated.push(to)
-	}
+	},
+	Link: ({ to, children }: { to: string; children: ReactNode }) => (
+		<a href={to}>{children}</a>
+	)
 }))
 
 /** Holds the publisher handoff open, the way a large document would. */
@@ -945,6 +956,27 @@ describe('a load that lost does not describe the page', () => {
 
 		await waitFor(() => expect(screen.getByText(/second\.gltf/)).toBeTruthy())
 		expect(screen.queryByRole('button', { name: /^Download/ })).toBeNull()
+	})
+})
+
+describe('a refusal for photos', () => {
+	it('links the free-model offer, and no other refusal does', async () => {
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([new File(['x'], 'front.jpg')])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		await refuse(0, 'unsupported_format', { selection: { kind: 'photos' } })
+
+		const alert = await screen.findByRole('alert')
+		expect(alert.querySelector('a')?.getAttribute('href')).toBe('/free-model')
+
+		drop([new File(['x'], 'notes.txt')])
+		await waitFor(() => expect(loadCalls).toHaveLength(2))
+		await refuse(1)
+
+		await waitFor(() =>
+			expect(screen.getByRole('alert').querySelector('a')).toBeNull()
+		)
 	})
 })
 

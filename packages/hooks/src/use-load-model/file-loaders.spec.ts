@@ -315,6 +315,37 @@ describe('a selection that is not one model is refused, and says why', () => {
 		expect(error.message).toContain('notes.txt')
 	})
 
+	it('says what an unreadable selection was', async () => {
+		const nested = file('Chair.blend')
+		Object.defineProperty(nested, 'webkitRelativePath', {
+			value: 'chair/textures/Chair.blend'
+		})
+		const photos = await loadError([file('front.jpg'), file('back.heic')])
+		const blender = await loadError([nested])
+
+		expect(photos.code).toBe('unsupported_format')
+		expect(photos.context?.selection).toEqual({ kind: 'photos' })
+		expect(blender.context?.selection).toEqual({
+			kind: 'blender',
+			fileName: 'Chair.blend'
+		})
+	})
+
+	it("reads a selection by its paths, so a model's texture folder is not photos", async () => {
+		const inFolder = (name: string) => {
+			const texture = file(name)
+			Object.defineProperty(texture, 'webkitRelativePath', {
+				value: `chair/textures/${name}`
+			})
+			return texture
+		}
+
+		const error = await loadError([inFolder('wood.png'), inFolder('n.png')])
+
+		expect(error.code).toBe('unsupported_format')
+		expect(error.context?.selection).toBeNull()
+	})
+
 	it('refuses a USDZ on its own, in front of the loader', async () => {
 		/*
 		  THE DEFECT THIS CLOSES. The owner advertised USDZ import and there is no

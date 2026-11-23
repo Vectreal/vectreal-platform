@@ -20,5 +20,9 @@ export {
 	fetchManifestAssetData,
 	type FetchManifestAssetsOptions
 } from './utils/fetch-manifest-assets'
+export {
+	unreadableSelectionOf,
+	type UnreadableSelection
+} from './unreadable-selection'
 export * from './model-context'
 export { useLoadProgress } from './use-load-progress'

@@ -22,6 +22,7 @@ import {
 	collectReferencedUris
 } from './scene-data-builder'
 import { InputFileOrDirectory, LoadedModel } from './types'
+import { readUnreadableSelection } from './unreadable-selection'
 import { calculateReferencedBytesFromFiles, readDirectory } from './utils'
 
 import type { LoadContext } from './load-context'
@@ -153,7 +154,12 @@ export const loadModelFromFiles = async (
 				: 'No files to load',
 			recoverable: true,
 			source: 'local-upload',
-			context: { fileNames: files.map((file) => file.name) }
+			context: {
+				fileNames: files.map((file) => file.name),
+				selection: readUnreadableSelection(
+					files.map((file) => file.webkitRelativePath || file.name)
+				)
+			}
 		})
 	}
 

@@ -1,4 +1,5 @@
 import { modelFormatForFileName, usesSibling } from '@vctrl/core/model-formats'
+import { unreadableSelectionOf } from '@vctrl/hooks/use-load-model'
 
 import type { BundleSourceCopy } from '../../lib/convert/convert-capabilities'
 import type {
@@ -88,7 +89,23 @@ export function refusalMessage(
 	bundleCopy: BundleSourceCopy | null
 ): string {
 	switch (error?.code) {
-		case 'unsupported_format':
+		case 'unsupported_format': {
+			const selection = unreadableSelectionOf(error)
+			/*
+			  What arrived, where it was something meant as a model. Blender
+			  exports every format these pages read, so the export is named in
+			  the page's own source format rather than sending someone on a
+			  GLB-to-USDZ page off to make a GLB.
+			*/
+			if (selection?.kind === 'photos') {
+				return 'Photos are not a 3D model, so there is nothing here to convert.'
+			}
+			if (selection?.kind === 'blender') {
+				return `${selection.fileName} is a Blender file, which only Blender reads. In Blender, export it as ${pair.fromLabel} with File > Export and drop that file here.`
+			}
+			if (selection?.kind === 'archive') {
+				return `${selection.fileName} is a zip archive, which this page does not open. Unzip it and drop what is inside.`
+			}
 			/*
 			  The likeliest refusal here by far, now that the drop zone filters
 			  nothing on purpose. The generic sentence sent someone who dropped a
@@ -97,6 +114,7 @@ export function refusalMessage(
 			  was written for.
 			*/
 			return `Nothing in that selection is a format we can read. This page converts ${pair.fromLabel}.`
+		}
 
 		case 'url_http':
 		case 'url_unreachable':

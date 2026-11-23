@@ -12,6 +12,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useSceneUpload } from './use-scene-upload'
 
+import type { ReactElement } from 'react'
+
 const { load, resetSceneState, loader } = vi.hoisted(() => ({
 	load: vi.fn(),
 	resetSceneState: vi.fn(),
@@ -22,7 +24,8 @@ const { load, resetSceneState, loader } = vi.hoisted(() => ({
 	}
 }))
 
-vi.mock('@vctrl/hooks/use-load-model', () => ({
+vi.mock('@vctrl/hooks/use-load-model', async (importActual) => ({
+	...(await importActual<typeof import('@vctrl/hooks/use-load-model')>()),
 	useModelContext: () => ({ load, ...loader })
 }))
 vi.mock('./use-scene-settings', () => ({
@@ -102,6 +105,39 @@ describe('useSceneUpload', () => {
 
 		expect(vi.mocked(toast.error).mock.calls[0][0]).toBe('Try again.')
 		expect(vi.mocked(toast.error).mock.calls[1][0]).not.toBe('Try again.')
+	})
+
+	it('sends someone who dropped photos to the free-model offer', async () => {
+		const error = {
+			code: 'unsupported_format',
+			message: 'No supported model found',
+			source: 'local-upload',
+			context: { selection: { kind: 'photos' } }
+		}
+		load.mockResolvedValue(outcome('error', { error }))
+		const { result } = renderHook(() => useSceneUpload())
+
+		await act(() => result.current.openModel(SOURCE))
+
+		const { description } = vi.mocked(toast.error).mock.calls[0][1] as {
+			description: ReactElement<{ to: string }>
+		}
+		expect(description.props.to).toBe('/free-model')
+	})
+
+	it('carries no link on any other refusal', async () => {
+		const error = {
+			code: 'unsupported_format',
+			message: 'No supported model found',
+			source: 'local-upload',
+			context: { selection: null }
+		}
+		load.mockResolvedValue(outcome('error', { error }))
+		const { result } = renderHook(() => useSceneUpload())
+
+		await act(() => result.current.openModel(SOURCE))
+
+		expect(vi.mocked(toast.error).mock.calls[0][1]).toBeUndefined()
 	})
 
 	it('names what is opening while it loads, and forgets it once it lands', async () => {
