@@ -1,23 +1,23 @@
 # .github/workflows/ci-dependabot-auto-merge.yaml
 name: CI - Dependabot Auto-merge
 
-# Queues a Dependabot npm pull request to merge itself once main's ruleset is
-# satisfied, which means the Quality Gate check has passed. Only patch and
-# minor updates qualify; a major, or anything touching the HELD families
-# below, waits for a person. .github/dependabot.yml groups updates so those
-# families never share a pull request with the bumps that do qualify.
+# Approves a Dependabot npm pull request that a person may merge without
+# reading the changelog first. Only patch and minor updates qualify; a major,
+# or anything touching the HELD families below, gets no approval and waits for
+# a person. .github/dependabot.yml groups updates so those families never
+# share a pull request with the bumps that do qualify.
+#
+# Merges stay manual. The repository does not allow auto-merge, so the
+# `gh pr merge --auto` step this job used to end with failed on every pull
+# request that qualified (#1416), and it was dropped rather than the setting
+# changed.
 #
 # pull_request_target runs this file as it is on main, never the pull
 # request's version, and nothing here checks out or runs the pull request's
 # code. fetch-metadata refuses a pull request carrying commits Dependabot did
 # not author, so a person pushing to a Dependabot branch drops it out of this
-# path.
-#
-# The ruleset wants one approving review, given here with GITHUB_TOKEN. A
-# push dismisses it, and the synchronize event that push fires approves the
-# new head again. The merge itself is queued with the release GitHub App's
-# token: a merge made with GITHUB_TOKEN starts no workflow, so main's push
-# workflows (release-please, the staging deploy) would never see it.
+# path. The approval is given with GITHUB_TOKEN; a push dismisses it, and the
+# synchronize event that push fires approves the new head again.
 
 on:
   pull_request_target:
@@ -27,7 +27,7 @@ permissions: {}
 
 jobs:
   auto-merge:
-    name: Queue patch and minor updates
+    name: Approve patch and minor updates
     if: >-
       github.event.pull_request.user.login == 'dependabot[bot]' &&
       github.actor == 'dependabot[bot]' &&
@@ -76,20 +76,3 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR_URL: ${{ github.event.pull_request.html_url }}
         run: gh pr review --approve "$PR_URL"
-
-      - name: Create GitHub App token
-        if: steps.decide.outputs.merge == 'true'
-        id: app-token
-        uses: actions/create-github-app-token@v3
-        with:
-          app-id: ${{ secrets.RELEASE_APP_ID }}
-          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: ${{ github.event.repository.name }}
-
-      - name: Queue the merge
-        if: steps.decide.outputs.merge == 'true'
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          PR_URL: ${{ github.event.pull_request.html_url }}
-        run: gh pr merge --auto --squash "$PR_URL"

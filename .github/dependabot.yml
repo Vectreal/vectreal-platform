@@ -1,8 +1,8 @@
 # .github/dependabot.yml
 #
 # Patch and minor updates arrive as one grouped pull request per ecosystem.
-# .github/workflows/ci-dependabot-auto-merge.yaml merges the npm one once the
-# Quality Gate passes; the GitHub Actions one waits for a person. Majors are
+# .github/workflows/ci-dependabot-auto-merge.yaml approves the npm one for a
+# manual merge; the GitHub Actions one waits for a person's read. Majors are
 # left out of every catch-all group, so each arrives as its own pull request
 # and waits for a person.
 #
@@ -130,6 +130,11 @@ updates:
         update-types: ['version-update:semver-minor']
       - dependency-name: '@types/react-dom'
         update-types: ['version-update:semver-minor']
+      # verdaccio 7 requires Node 24 (engines >=24), and the viewer e2e runs
+      # it on Node 22 like the rest of CI (#1420). It moves with the work item
+      # "Move the runtime off Node 22, then @types/node to match".
+      - dependency-name: 'verdaccio'
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: 'github-actions'
     directory: '/'
