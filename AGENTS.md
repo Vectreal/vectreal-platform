@@ -15,7 +15,8 @@ owned.
    fix it where the cause lives (`vectreal-iterative-delivery`, Bug work).
 5. Before pushing: `pnpm test:brief`, `npx prettier --check .`, and typecheck
    and lint on the six projects (the delivery skill's Gates section).
-6. UI changes: screenshots at 390 and 1440 wide in the PR.
+6. UI changes: the PR says where to see each state, on staging after merge or
+   with the local command, and the steps to reach it. No screenshots for review.
 7. Never raise a budget, threshold or limit silently; name it in the PR.
 8. No secrets in code, logs, PR text or notes.
 9. Ask before adding an on-screen element nobody asked for.

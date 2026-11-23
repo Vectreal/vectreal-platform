@@ -35,7 +35,8 @@ for keyboard access, focus and contrast: retrofitted, they get the budget left
 over.
 
 **Look at it.** Design claims are cheap and design defects are visual. A change
-closes with a screenshot in both themes at real breakpoints.
+closes with you looking at it in a browser, in both themes at real breakpoints.
+Review happens on staging or locally, never from screenshots.
 → [Enforcement](.agents/skills/vectreal-brand-ux-design/references/enforcement.md)
 
 **Decide, then be consistent.** What makes a site look machine-made is not
