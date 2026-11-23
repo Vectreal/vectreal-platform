@@ -11,7 +11,7 @@
 		"@react-three/drei": "catalog:",
 		"@react-three/fiber": "catalog:",
 		"@supabase/ssr": "^0.12.7",
-		"@supabase/supabase-js": "^2.118.0",
+		"@supabase/supabase-js": "^2.119.0",
 		"@vctrl/core": "workspace:*",
 		"@vctrl/embed": "workspace:*",
 		"@vctrl/hooks": "workspace:*",
