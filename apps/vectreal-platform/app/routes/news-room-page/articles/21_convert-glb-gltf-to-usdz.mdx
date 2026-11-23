@@ -1,0 +1,100 @@
+---
+title: "How to convert GLB or glTF to USDZ for iPhone AR and Shopify"
+slug: "convert-glb-gltf-to-usdz"
+excerpt: "USDZ is the file an iPhone or iPad opens in AR Quick Look, so you need one wherever a link, a message or a page should put your model in someone's room. On Shopify you don't make it yourself: Shopify converts the GLB you upload so both versions exist. Everywhere else, a browser converter turns your GLB or glTF into USDZ; in the one this guide uses, animation stays behind and glass loses its refraction."
+publishedAt: "2026-11-25T18:00"
+updatedAt: "2026-11-23"
+category: "guides"
+tags:
+  - "usdz"
+  - "glb"
+  - "gltf"
+  - "formats"
+author:
+    name: "Moritz Becker"
+    role: "Founder at Vectreal"
+    bio: "Building open infrastructure for practical 3D on the web."
+    avatar: "/media/images/author-image.jpeg"
+    linkedinUrl: "https://www.linkedin.com/in/moritz-becker-5751851a1"
+draft: false
+
+voice: A
+author_persona: moritz
+type: "Practical Guide"
+premise: capability
+pillar: Quality
+seo_cluster: "3D formats / glb to usdz"
+cta: https://vectreal.com/convert/gltf-to-usdz
+sceneImage: "/media/images/newsroom/scene-convert-glb-gltf-to-usdz.webp"
+coverImage: "/media/images/newsroom/og-convert-glb-gltf-to-usdz.webp"
+---
+
+![The GLB to USDZ converter after a conversion: the sample rocket on the left, and on the right the Download USDZ button above a card comparing the file before and after, 944 KB as a GLB and 2.0 MB as a USDZ.](/media/images/newsroom/21/converter-result.webp)
+
+## What is a USDZ file for?
+
+USDZ is the single-file package of Universal Scene Description that Apple uses for AR. Safari, Messages, Mail, News and Notes on iPhone, iPad and Apple Vision Pro open a `.usdz` in Quick Look, where the model can be turned in 3D or placed in the room around you ([Apple, AR Quick Look](https://developer.apple.com/augmented-reality/quick-look/)).
+
+A web page opens it from an ordinary link with `rel="ar"` around an image. When someone taps it in Safari, iOS shows the model in AR Quick Look ([Apple, Previewing a model with AR Quick Look](https://developer.apple.com/documentation/arkit/previewing-a-model-with-ar-quick-look)):
+
+```html
+<a rel="ar" href="/models/armchair.usdz">
+  <img src="/models/armchair.jpg" alt="Armchair in oak and green wool">
+</a>
+```
+
+The GLB stays the main file, because it's what the page itself draws. The USDZ is the copy for Apple's AR, which is why [the best 3D file formats for the web](https://vectreal.com/news-room/best-3d-file-formats-for-the-web?utm_source=newsroom&utm_medium=article&utm_campaign=convert-glb-gltf-to-usdz) puts it next to a GLB rather than instead of one.
+
+## Do I need to make the USDZ myself?
+
+Often not. Two of the common ways to put a model on a product page make it for you.
+
+**On Shopify, no.** Upload the GLB to the product's media the way you'd upload a photo, and Shopify converts it so that both a USDZ and a GLB version of the model exist ([Shopify Help Center, product media types](https://help.shopify.com/en/manual/products/product-media/product-media-types)). Shopify's themes can open AR with its Shopify-XR library, which supports AR Quick Look in Safari on iOS and Scene Viewer on Android ([Shopify, support product media](https://shopify.dev/docs/storefronts/themes/product-merchandising/media/support-media)).
+
+Above 15 MB, Shopify optimizes the model's geometry and textures itself; below 15 MB it leaves them as they are (same Help Center page). [3D on a Shopify product page](https://vectreal.com/news-room/3d-on-a-shopify-product-page?utm_source=newsroom&utm_medium=article&utm_campaign=convert-glb-gltf-to-usdz) covers the rest of the setup.
+
+**With `<model-viewer>`, usually not.** If its AR modes include Quick Look and you haven't set `ios-src`, which is the default, model-viewer generates a USDZ on the fly when someone presses the AR button. Its documentation adds that animations aren't supported that way yet, and that supplying your own USDZ in `ios-src` can give better results in some cases ([model-viewer documentation](https://modelviewer.dev/docs/)).
+
+**Everywhere else, yes.** A plain `rel="ar"` link, a model sent to someone by email or in Messages, a page built on three.js or on a viewer that doesn't export its own: each needs the file to exist before anyone taps.
+
+If your store is on Shopify, upload the GLB, keep it under 15 MB if you want it left exactly as it is, and leave the USDZ to Shopify.
+
+## How do I convert a GLB or glTF to USDZ?
+
+I work on Vectreal, which is open source, and its converters do this in the browser. The file is read on your computer rather than uploaded, and there's no account to make.
+
+1. Open the [GLB to USDZ converter](https://vectreal.com/convert/glb-to-usdz?utm_source=newsroom&utm_medium=article&utm_campaign=convert-glb-gltf-to-usdz) for a `.glb`, or the [glTF to USDZ converter](https://vectreal.com/convert/gltf-to-usdz?utm_source=newsroom&utm_medium=article&utm_campaign=convert-glb-gltf-to-usdz) for a `.gltf`.
+2. Drop the file in. A `.gltf` usually comes as a folder, so drop the `.gltf` together with its `.bin` and its texture images.
+3. The model appears on the page. Press **Convert to USDZ**.
+4. Press **Download USDZ**. The card below it compares the size before and after, and adds a line when the model's see-through glass had to change.
+
+To see it the way a shopper will, save the USDZ to Files on an iPhone or send it to yourself in Messages or Mail, then tap it. [How to open a GLB file on Windows, Mac and iPhone](https://vectreal.com/news-room/how-to-open-a-glb-file?utm_source=newsroom&utm_medium=article&utm_campaign=convert-glb-gltf-to-usdz) has a recording of exactly that.
+
+## What carries over to USDZ, and what doesn't?
+
+Four of Khronos's glTF sample models went through the converter on 23 November 2026. What it writes is an uncompressed zip underneath, so any unzip tool opens one, and in these four the textures sat in a folder called `textures`.
+
+| Sample model | In | As USDZ | What changed |
+| --- | --- | --- | --- |
+| [Damaged Helmet](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/DamagedHelmet), five 2048 px textures | 3.6 MB GLB | 2.6 MB | All five maps came across, each as a 1024 px JPEG |
+| [Transmission Test](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/TransmissionTest), a sheet of glass samples | 1.4 MB GLB | 3.8 MB | The clear glass became plain transparency, and the file grew |
+| [Box Animated](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/BoxAnimated) | 12 KB GLB | 30 KB | The animation is gone |
+| [Duck](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Duck), a `.gltf` with its `.bin` and one texture | 120 KB | 330 KB | Three files became one |
+
+**What comes across:** the meshes and how they hang together, and the materials as `UsdPreviewSurface`, USD's standard material: base color, metalness and roughness, the normal map, ambient occlusion, emission, transparency and cut-outs. The file is written in meters, the unit glTF uses ([Khronos, glTF 2.0 specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html)), so a model built at real size keeps its size, and it asks to be placed on a horizontal surface.
+
+**What doesn't:**
+
+- **Animation.** The box that moves in the GLB stands still in the USDZ. A product with a moving part shows up at rest.
+- **Glass that bends light.** The converter writes see-through glass as plain transparency, so it no longer bends light, and the result says so when it has done that.
+- **Textures above 1024 px.** Each texture is written at most 1024 pixels across, as a JPEG, or as a PNG where its transparency is used. Small print on a label can go soft when someone holds the phone close to it.
+- **Draco and WebP compression.** The converter writes neither, and stores the geometry uncompressed, so the result can be smaller or larger than the GLB: the helmet shrank, and the glass sheet more than doubled.
+- **Viewer settings.** Lighting, shadows, camera views and hotspots set in a viewer, Vectreal's Publisher included, belong to that viewer rather than to the model file, so no conversion carries them.
+
+## Convert a file
+
+If you have a GLB or a glTF, and a page or a person that needs the iPhone version, drop it into the converter and read the card for what changed. Then send the USDZ to a phone and tap it.
+
+[Convert to USDZ](https://vectreal.com/convert/gltf-to-usdz?utm_source=newsroom&utm_medium=article&utm_campaign=convert-glb-gltf-to-usdz)
+
+All sources were checked on 23 November 2026.
