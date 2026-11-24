@@ -1,3 +1,4 @@
+import { PREPARING_PROGRESS } from '@shared/components/ui/load-progress'
 import { LoadProgressIndicator } from '@shared/components/ui/load-progress-indicator'
 import { cn } from '@shared/utils'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
@@ -43,8 +44,6 @@ import { toViewerLoadingThumbnail } from '../../lib/viewer/viewer-loading-thumbn
 
 import type { ViewerInteractionEvent } from '@vctrl/viewer'
 import type { ShouldRevalidateFunction } from 'react-router'
-
-const PREPARING = { phase: 'preparing' } as const
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({
 	currentUrl,
@@ -345,7 +344,9 @@ const PublisherPage = () => {
 					  this is preparing; at once, since the stage's own indicator
 					  was on screen until a moment ago.
 					*/
-					fallback={<LoadProgressIndicator progress={PREPARING} delayMs={0} />}
+					fallback={
+						<LoadProgressIndicator progress={PREPARING_PROGRESS} delayMs={0} />
+					}
 				>
 					{file?.model && <PublisherEditorScene />}
 				</ClientVectrealViewer>

@@ -4,8 +4,8 @@ import { VectrealViewer } from '@vctrl/viewer'
 import { useEffect, useRef } from 'react'
 
 import rocket from '../../assets/models/rocket-v3.glb?url'
+import { useAppColorScheme } from '../../hooks/use-app-color-scheme'
 import { prefersReducedMotion } from '../../lib/motion/motion-tokens'
-import CenteredSpinner from '../centered-spinner'
 
 import type { Group } from 'three'
 
@@ -64,6 +64,9 @@ interface HeroSceneClientProps {
 
 const HeroSceneClient = ({ vertical }: HeroSceneClientProps) => {
 	const pointer = useRef({ x: 0, y: 0 })
+	// The page's scheme: the hero has no backdrop of its own, so its loader
+	// sits on the page around it.
+	const theme = useAppColorScheme()
 
 	useEffect(() => {
 		if (prefersReducedMotion()) return
@@ -79,8 +82,7 @@ const HeroSceneClient = ({ vertical }: HeroSceneClientProps) => {
 	return (
 		<div className="relative h-full w-full">
 			<VectrealViewer
-				theme="dark"
-				loader={<CenteredSpinner text="Loading model..." />}
+				theme={theme}
 				controlsOptions={{ enabled: false }}
 				envOptions={{ preset: 'studio-soft' }}
 				shadowsOptions={{ enabled: false }}

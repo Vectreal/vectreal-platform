@@ -1,3 +1,5 @@
+import { PREPARING_PROGRESS } from '@shared/components/ui/load-progress'
+import { LoadProgressIndicator } from '@shared/components/ui/load-progress-indicator'
 import { cn } from '@shared/utils'
 import { memo, useCallback, useMemo, useState } from 'react'
 
@@ -12,7 +14,6 @@ import {
 	shouldShowSceneViewReturn
 } from '../../lib/domain/scene/scene-presentation'
 import { useErrorReport } from '../../lib/observability/use-error-report'
-import CenteredSpinner from '../centered-spinner'
 import { ClientVectrealViewer } from '../viewer/client-vectreal-viewer'
 
 import type { EmbedHotspotPresentation } from '../../lib/domain/embed/embed-presentation'
@@ -237,14 +238,16 @@ const SceneEmbedViewer = memo(
 					/*
 					  Mounted while the model is still downloading, so the viewer's
 					  code, its WebGL context and the environment map load alongside
-					  it; the loader says which of the two waits it is.
+					  it. The viewer draws its own loader from `loadProgress`; until
+					  its code is here, the same drawing stands in for it.
 					*/
-					loader={
-						<CenteredSpinner
-							text={file?.model ? 'Preparing scene...' : 'Loading scene...'}
+					fallback={
+						<LoadProgressIndicator
+							progress={
+								loadProgress ?? (file?.model ? PREPARING_PROGRESS : null)
+							}
 						/>
 					}
-					fallback={<CenteredSpinner text="Loading scene..." />}
 				/>
 			</div>
 		)

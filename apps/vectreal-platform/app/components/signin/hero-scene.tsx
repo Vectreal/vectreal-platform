@@ -1,7 +1,7 @@
+import { LoadProgressIndicator } from '@shared/components/ui/load-progress-indicator'
 import { lazy, Suspense } from 'react'
 
 import { useIsClientMounted } from '../../hooks/use-is-client-mounted'
-import CenteredSpinner from '../centered-spinner'
 
 const HeroSceneClient = lazy(() => import('./hero-scene-client'))
 
@@ -23,7 +23,13 @@ const HeroScene = ({ vertical }: HeroSceneProps) => {
 	return (
 		<div className="relative h-full w-full overflow-hidden max-md:h-[50svh] max-md:min-h-[300px]">
 			{isMounted ? (
-				<Suspense fallback={<CenteredSpinner />}>
+				<Suspense
+					fallback={
+						<div className="flex h-full items-center justify-center">
+							<LoadProgressIndicator />
+						</div>
+					}
+				>
 					<HeroSceneClient vertical={vertical} />
 				</Suspense>
 			) : null}
