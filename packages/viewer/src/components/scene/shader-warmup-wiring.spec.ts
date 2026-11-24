@@ -71,8 +71,8 @@ describe('shader warm-up', () => {
 
 	it('holds the loader until the first warm-up finishes', () => {
 		expect(viewer).toContain('onShadersReady={handleShadersReady}')
-		expect(viewer).toContain(
-			'isInitialFramingComplete && (areShadersReady || !enablePostProcessing)'
+		expect(viewer).toMatch(
+			/isInitialFramingComplete &&[\s\S]{0,80}\(areShadersReady \|\| !enablePostProcessing\)/
 		)
 	})
 })

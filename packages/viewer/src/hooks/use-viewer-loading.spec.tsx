@@ -51,4 +51,39 @@ describe('useViewerLoading', () => {
 		rerender({ framed: false })
 		expect(result.current.loadingState).toBe('loading')
 	})
+
+	describe('a held reveal', () => {
+		const renderHeld = () =>
+			renderHook(
+				({ framed, held }: { framed: boolean; held: boolean }) =>
+					useViewerLoading(true, framed, true, held),
+				{ initialProps: { framed: false, held: true } }
+			)
+
+		it('waits for the hold, not only for the scene', () => {
+			const { result, rerender } = renderHeld()
+
+			rerender({ framed: true, held: true })
+			expect(result.current.loadingState).toBe('loading')
+
+			rerender({ framed: true, held: false })
+			expect(result.current.loadingState).toBe('loaded')
+		})
+
+		// A later shadow redraw (a light moved, a model swapped in the editor)
+		// must not bring the loader back over a scene already shown.
+		it('never brings the loader back once shown', () => {
+			const { result, rerender } = renderHeld()
+
+			rerender({ framed: true, held: false })
+			expect(result.current.loadingState).toBe('loaded')
+
+			rerender({ framed: true, held: true })
+			expect(result.current.loadingState).toBe('loaded')
+
+			act(() => result.current.completeLoadingTransition())
+			rerender({ framed: true, held: true })
+			expect(result.current.loadingState).toBe('ready')
+		})
+	})
 })
