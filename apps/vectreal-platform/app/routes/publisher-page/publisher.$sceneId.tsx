@@ -345,13 +345,7 @@ const PublisherPage = () => {
 					  this is preparing; at once, since the stage's own indicator
 					  was on screen until a moment ago.
 					*/
-					fallback={
-						<LoadProgressIndicator
-							progress={PREPARING}
-							delayMs={0}
-							className="h-full"
-						/>
-					}
+					fallback={<LoadProgressIndicator progress={PREPARING} delayMs={0} />}
 				>
 					{file?.model && <PublisherEditorScene />}
 				</ClientVectrealViewer>
