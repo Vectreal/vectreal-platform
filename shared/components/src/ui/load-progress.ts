@@ -39,6 +39,9 @@ export const LOAD_PROGRESS_WORDS: LoadProgressWords = {
 	items: (loaded, total) => `${loaded} of ${total} files`
 }
 
+/** A model that is here, waiting on the viewer: its code, its scene. */
+export const PREPARING_PROGRESS: LoadProgressValue = { phase: 'preparing' }
+
 /** How long a load runs before its progress appears, so a fast one draws nothing. */
 export const LOAD_PROGRESS_DELAY_MS = 300
 
