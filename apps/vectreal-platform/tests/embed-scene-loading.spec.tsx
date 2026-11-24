@@ -6,7 +6,8 @@
  * parsed, which kept the viewer's code, its WebGL context and the environment
  * map from loading until then too: each waited on the model in turn. Mounted
  * from the start, they load alongside it, and the viewer's own loader covers
- * the wait.
+ * the wait. Every surface draws the same loader: the viewer's own, and the
+ * Publisher's indicator standing in for it until the viewer's code is here.
  */
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
@@ -21,7 +22,7 @@ const captured: VectrealViewerProps[] = []
 vi.mock('../app/components/viewer/client-vectreal-viewer', () => ({
 	ClientVectrealViewer: (props: VectrealViewerProps) => {
 		captured.push(props)
-		return props.loader as ReactElement
+		return (props as { fallback?: ReactElement }).fallback as ReactElement
 	}
 }))
 
@@ -54,14 +55,24 @@ describe('an embed that is still loading its scene', () => {
 		const viewer = captured.at(-1)
 		if (!viewer) throw new Error('the viewer was not mounted while loading')
 		expect(viewer.model).toBeUndefined()
-		expect(screen.getByText('Loading scene...')).toBeTruthy()
+		expect(screen.getByText('Loading')).toBeTruthy()
 	})
 
 	it('says it is preparing the scene once the model is in', () => {
 		loadState.current = { file: { model: {} } }
 		render(<SceneEmbedPage projectId="p" sceneId="s" />)
 
-		expect(screen.getByText('Preparing scene...')).toBeTruthy()
+		expect(screen.getByText('Preparing the scene')).toBeTruthy()
+	})
+
+	// No override: the viewer draws its default loader, the one the Publisher
+	// shows, from the load's own progress.
+	it('leaves the loader to the viewer', () => {
+		captured.length = 0
+		loadState.current = { file: null }
+		render(<SceneEmbedPage projectId="p" sceneId="s" />)
+
+		expect(captured.at(-1)).not.toHaveProperty('loader')
 	})
 
 	it('hands the viewer the manifest’s environment before the model arrives', () => {

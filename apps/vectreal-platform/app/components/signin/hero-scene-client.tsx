@@ -5,7 +5,6 @@ import { useEffect, useRef } from 'react'
 
 import rocket from '../../assets/models/rocket-v3.glb?url'
 import { prefersReducedMotion } from '../../lib/motion/motion-tokens'
-import CenteredSpinner from '../centered-spinner'
 
 import type { Group } from 'three'
 
@@ -80,7 +79,6 @@ const HeroSceneClient = ({ vertical }: HeroSceneClientProps) => {
 		<div className="relative h-full w-full">
 			<VectrealViewer
 				theme="dark"
-				loader={<CenteredSpinner text="Loading model..." />}
 				controlsOptions={{ enabled: false }}
 				envOptions={{ preset: 'studio-soft' }}
 				shadowsOptions={{ enabled: false }}
