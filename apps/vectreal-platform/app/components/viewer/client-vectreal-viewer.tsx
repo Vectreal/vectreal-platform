@@ -1,3 +1,4 @@
+import { cn } from '@shared/utils'
 import { type ComponentType, useEffect, useState } from 'react'
 
 import { useAppColorScheme } from '../../hooks/use-app-color-scheme'
@@ -34,7 +35,19 @@ export const ClientVectrealViewer = ({
 	}, [])
 
 	if (import.meta.env.SSR || !ViewerComponent) {
-		return <>{fallback}</>
+		// The viewer's box, with its fallback in the middle, as the viewer
+		// draws its own loader: placed by its parent instead, a flex row put
+		// the fallback against the left edge until the viewer arrived.
+		return fallback === null ? null : (
+			<div
+				className={cn(
+					'flex h-full w-full flex-col items-center justify-center',
+					props.className
+				)}
+			>
+				{fallback}
+			</div>
+		)
 	}
 
 	return <ViewerComponent {...props} theme={theme ?? appColorScheme} />

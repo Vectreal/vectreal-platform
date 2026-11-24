@@ -59,7 +59,7 @@ import {
 	SceneViewReturn
 } from './components'
 import { CHROME_PLACEMENT } from './components/chrome-classes'
-import { withHostClasses } from './components/class-names'
+import { cn, withHostClasses } from './components/class-names'
 import FullscreenControl from './components/fullscreen-control'
 import { describeInteraction } from './components/interaction-help'
 import InteractionHint from './components/interaction-hint'
@@ -120,6 +120,7 @@ import { pointerInput, useInteractionHint } from './hooks/use-interaction-hint'
 import { useLoadEvents, useViewerLoadProgress } from './hooks/use-load-progress'
 import { useSceneViewReturn } from './hooks/use-scene-view-return'
 import { useSrcModel } from './hooks/use-src-model'
+import { useViewerColorScheme } from './hooks/use-viewer-color-scheme'
 import { useViewerLoading } from './hooks/use-viewer-loading'
 
 import type { HotspotPositionSetter } from './components/scene'
@@ -1263,6 +1264,27 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		) : (
 			loaderSlot
 		)
+	/*
+	  The viewer's own box, standing in while the canvas suspends: sized,
+	  scoped and colored like the root it replaces, with the loader in its
+	  middle. Left bare, the loader took whatever layout the host page gave
+	  it, and a flex row put it against the left edge.
+	*/
+	const fallbackColorScheme = useViewerColorScheme(theme)
+	const suspendedLoader = (
+		<div
+			className={withHostClasses(
+				cn(
+					'viewer vctrl-viewer vv:flex vv:h-full vv:w-full vv:flex-col vv:items-center vv:justify-center',
+					fallbackColorScheme
+				),
+				className
+			)}
+			style={backdrop ? { background: sceneBackdropCss(backdrop) } : undefined}
+		>
+			{loader}
+		</div>
+	)
 
 	const interactionHint = useInteractionHint({
 		enabled: interactionHintOverride ?? showInteractionHint,
@@ -1298,7 +1320,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		<ViewerKeysContext.Provider value={viewerKeys}>
 			<ViewerMessagesContext.Provider value={messages}>
 				<ViewerLoadClockContext.Provider value={loadStartedAt}>
-					<Suspense fallback={loader}>
+					<Suspense fallback={suspendedLoader}>
 						<Canvas
 							frameloop="always"
 							// `isolate` keeps the chrome's `z-[100]` inside the viewer, so it orders the viewer's own layers and never the host page's: without it the camera switcher drew over a dashboard sheet.
