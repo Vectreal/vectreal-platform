@@ -20,7 +20,10 @@ const shadows = readFileSync(
 
 describe('live shadow bakes', () => {
 	it('mount only once the model is sized', () => {
-		expect(shadows).toMatch(/\) : sized \? \([\s\S]*?\bbake\s*\) : null\}/)
+		// `resolveGroundDrawing` is 'live' only once sized: ground-ready.spec.ts.
+		expect(shadows).toMatch(
+			/\) : groundDrawing === 'live' \? \([\s\S]*?\bbake\s*\) : null\}/
+		)
 	})
 
 	it('treat a viewer of children alone as sized', () => {
@@ -54,7 +57,10 @@ describe('a persisted bake', () => {
 		expect(shadows).toMatch(
 			/const showsPersistedBake =\s*usePersistedBake && bakedShadow\?\.url !== failedBakeUrl/
 		)
-		expect(shadows).toContain('{showsPersistedBake && bakedShadow ? (')
+		expect(shadows).toContain(
+			'const storedUrl = showsPersistedBake && bakedShadow ? bakedShadow.url : null'
+		)
+		expect(shadows).toContain('{storedUrl !== null && bakedShadow ? (')
 	})
 
 	it('is captured for a save with the basis it was validated against', () => {

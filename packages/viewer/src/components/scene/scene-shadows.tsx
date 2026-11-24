@@ -1,11 +1,12 @@
 import { ContactShadows } from '@react-three/drei'
-import { useThree } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { GROUND_BAKE_SIGNATURE_INPUTS, resolveLighting } from '@vctrl/core'
 import {
 	Fragment,
 	memo,
 	type RefObject,
 	Suspense,
+	useCallback,
 	useEffect,
 	useLayoutEffect,
 	useMemo,
@@ -249,6 +250,67 @@ interface SceneShadowsOwnProps {
 		reason: LiveBakeSkipReason
 		estimatedDraws: number
 	}) => void
+	/**
+	 * Told whenever the ground's readiness changes: true once it is in its
+	 * final look (off, or its current shadow drawn), false while a new drawing
+	 * is on its way. The viewer keeps its loader up until it is true.
+	 */
+	onGroundReadyChange?: (ready: boolean) => void
+}
+
+/**
+ * Which drawing of the ground's shadow is current: the stored bake (by its
+ * image), the contact shadow, the live bake, or none at all. Null while it
+ * cannot be chosen yet, before the model is measured.
+ */
+export type GroundDrawing = 'none' | 'contact' | 'live' | `stored:${string}`
+
+export const resolveGroundDrawing = ({
+	enabled,
+	animating,
+	storedUrl,
+	skipped,
+	sized
+}: {
+	enabled: boolean
+	animating: boolean
+	/** The stored bake's image, when that is what draws. */
+	storedUrl: string | null
+	skipped: boolean
+	sized: boolean
+}): GroundDrawing | null => {
+	if (!enabled) return 'none'
+	if (animating) return 'contact'
+	if (storedUrl !== null) return `stored:${storedUrl}`
+	if (skipped) return 'contact'
+	return sized ? 'live' : null
+}
+
+/**
+ * One run of a ground drawing: a new one for every drawing chosen and every
+ * time that drawing starts over (a bake restarted by new inputs, a remount).
+ */
+export interface GroundRun {
+	readonly drawing: GroundDrawing | null
+}
+
+/**
+ * Whether the ground looks as it will: nothing to draw, or the current run
+ * has reported itself drawn. A report from an earlier run (a stored image
+ * that then failed, a bake since restarted) does not count.
+ */
+export const isGroundReady = (run: GroundRun, reported: GroundRun | null) =>
+	run.drawing === 'none' || (run.drawing !== null && reported === run)
+
+/** Calls `onDrawn` on the first frame after mount, once that frame has run. */
+const AfterFirstFrame = ({ onDrawn }: { onDrawn: () => void }) => {
+	const done = useRef(false)
+	useFrame(() => {
+		if (done.current) return
+		done.current = true
+		onDrawn()
+	})
+	return null
 }
 
 interface ModelMetrics {
@@ -439,6 +501,7 @@ const SceneShadows = memo(
 		onShadowBakeReady,
 		liveBake = 'always',
 		onLiveBakeSkipped,
+		onGroundReadyChange,
 		clipExtents,
 		...legacyShadows
 	}: SceneShadowsProps) => {
@@ -486,6 +549,13 @@ const SceneShadows = memo(
 		// The editor keeps the temporal fade-in so live tweaks don't hard-hitch.
 		const temporal = !staticBake
 
+		// What the current drawing of the ground last reported as drawn.
+		// The run the ground last reported drawn, and the current one, which
+		// every report names: a report always belongs to the run it was made in.
+		const [reported, setReported] = useState<GroundRun | null>(null)
+		const runRef = useRef<GroundRun>({ drawing: null })
+		const markDrawn = useCallback(() => setReported(runRef.current), [])
+
 		// Memoized so its identity changes only with a bake input: the hold effect
 		// below watches it to learn that the bake changed during a hold.
 		const bake = useMemo(
@@ -518,9 +588,10 @@ const SceneShadows = memo(
 						near: radius * 0.02,
 						far: radius * 25
 					}}
+					onSettled={markDrawn}
 				/>
 			),
-			[temporal, frames, planeScale, ground, radius]
+			[temporal, frames, planeScale, ground, radius, markDrawn]
 		)
 
 		// The ground the shadows are drawn on: a square centered under the model,
@@ -614,6 +685,15 @@ const SceneShadows = memo(
 			}
 		}, [enabled, skipReason, estimatedDraws, model])
 
+		const storedUrl = showsPersistedBake && bakedShadow ? bakedShadow.url : null
+		const groundDrawing = resolveGroundDrawing({
+			enabled,
+			animating: isModelAnimating,
+			storedUrl,
+			skipped: skipReason !== null,
+			sized
+		})
+
 		// Every live shadow pass captures the meshes drawn when it starts: the
 		// bake snapshots them on restart. So while the viewer draws another
 		// object, a bake that has not settled starts over on it, and once the
@@ -622,6 +702,28 @@ const SceneShadows = memo(
 		// so the bake remounts only when it changed during the hold. A layout
 		// effect, so no frame renders between the swap and the restart.
 		const [shadowGeneration, setShadowGeneration] = useState(0)
+
+		// A new run whenever what draws the ground starts over: another
+		// drawing, the live bake's inputs changing (it restarts on them), the
+		// contact shadow switching between its moving and still forms, or a
+		// remount after a hold. Only what restarts the mounted drawing: a new
+		// run that nothing restarts would wait for a report that never comes.
+		const liveBakeRun = groundDrawing === 'live' ? bake : null
+		const run = useMemo<GroundRun>(
+			() => ({ drawing: groundDrawing }),
+			// Identity is the point: each of these starts the drawing over.
+			// eslint-disable-next-line react-hooks/exhaustive-deps
+			[groundDrawing, liveBakeRun, isModelAnimating, shadowGeneration]
+		)
+		runRef.current = run
+		const groundReady = isGroundReady(run, reported)
+		const onGroundReadyChangeRef = useRef(onGroundReadyChange)
+		onGroundReadyChangeRef.current = onGroundReadyChange
+		// A layout effect, so the viewer hears it in the commit the shadow is
+		// drawn in, not a frame later.
+		useLayoutEffect(() => {
+			onGroundReadyChangeRef.current?.(groundReady)
+		}, [groundReady])
 		const holdRef = useRef<{
 			settledBake: ShadowBakeApi | null
 			passesChanged: boolean
@@ -667,30 +769,35 @@ const SceneShadows = memo(
 			[handleLight?.azimuth, handleLight?.elevation, rotation, radius]
 		)
 
-		if (!enabled) return null
+		if (groundDrawing === 'none') return null
 
 		// Tracks a moving model by rendering it every frame; stands in for a
 		// bake this viewer may not run by rendering a still model once. Left
 		// rendering every frame, the stand-in redrew all 1,664 of the Porsche's
 		// meshes about five times a frame, for as long as the page was open.
 		const contactShadow = (frames: number) => (
-			<ContactShadows
-				frames={frames}
-				// As dark as ground every light is blocked from.
-				opacity={1 - ground.blockedShare}
-				scale={animatingScale}
-				color={defaultContactFallback.color}
-				blur={defaultContactFallback.blur}
-				far={defaultContactFallback.far * radius}
-			/>
+			<>
+				<ContactShadows
+					frames={frames}
+					// As dark as ground every light is blocked from.
+					opacity={1 - ground.blockedShare}
+					scale={animatingScale}
+					color={defaultContactFallback.color}
+					blur={defaultContactFallback.blur}
+					far={defaultContactFallback.far * radius}
+				/>
+				<AfterFirstFrame onDrawn={markDrawn} />
+			</>
 		)
 
+		// Drawn from `groundDrawing` alone, so what is mounted is always the
+		// drawing whose report the viewer waits for.
 		if (isModelAnimating) return contactShadow(Infinity)
 
 		return (
 			<>
 				<Fragment key={shadowGeneration}>
-					{showsPersistedBake && bakedShadow ? (
+					{storedUrl !== null && bakedShadow ? (
 						// Load-time fast path: render the stored bake, no recomputation.
 						<LoadFailureBoundary
 							key={bakedShadow.url}
@@ -702,12 +809,13 @@ const SceneShadows = memo(
 									planeScale={planeScale}
 									opacity={1}
 									color="#000000"
+									onDrawn={markDrawn}
 								/>
 							</Suspense>
 						</LoadFailureBoundary>
-					) : skipReason ? (
+					) : groundDrawing === 'contact' ? (
 						contactShadow(1)
-					) : sized ? (
+					) : groundDrawing === 'live' ? (
 						// Not before: the bake runs on mount, so a bake sized from the
 						// placeholder metrics is thrown away when the real ones land.
 						// A static bake blocks the main thread for its whole length.

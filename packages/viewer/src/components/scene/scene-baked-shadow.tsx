@@ -1,5 +1,5 @@
 import { useTexture } from '@react-three/drei'
-import { useMemo } from 'react'
+import { useLayoutEffect, useMemo } from 'react'
 import { Color } from 'three'
 
 import { GROUND_EDGE_FADE } from './ground-edge-fade'
@@ -13,6 +13,8 @@ interface SceneBakedShadowProps {
 	opacity: number
 	/** Live shadow color. */
 	color: string
+	/** Called once the stored image has loaded and the plane is in the scene. */
+	onDrawn?: () => void
 }
 
 const VERTEX_SHADER = /* glsl */ `
@@ -48,9 +50,13 @@ const SceneBakedShadow = ({
 	url,
 	planeScale,
 	opacity,
-	color
+	color,
+	onDrawn
 }: SceneBakedShadowProps) => {
 	const map = useTexture(url)
+	// Past `useTexture`, so only once the image is here: the commit that puts
+	// the plane in the scene.
+	useLayoutEffect(() => onDrawn?.(), [onDrawn])
 
 	// Color and opacity are written below on every render, so the material
 	// keeps its uniforms object and only the texture rebuilds it.

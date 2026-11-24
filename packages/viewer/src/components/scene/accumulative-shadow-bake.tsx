@@ -77,6 +77,8 @@ interface AccumulativeShadowBakeProps {
 	colorBlend: number
 	color: string
 	light: BakeLight
+	/** Called each time a bake settles: every frame accumulated, cutoff calibrated. */
+	onSettled?: () => void
 }
 
 // drei's SoftShadowMaterial (MIT, pmndrs/drei). `cutoff` is a brightness
@@ -207,6 +209,7 @@ const AccumulativeShadowBake = forwardRef<
 			uniforms.opacity.value = current.opacity
 			state.settled = true
 			live.current.invalidate()
+			current.onSettled?.()
 		}
 
 		const restart = () => {
