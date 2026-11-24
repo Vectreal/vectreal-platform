@@ -788,6 +788,13 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 	// Latched on the first compile: a later model swap keeps the previous frame
 	// up while it compiles, and must not bring the loader back.
 	const [areShadersReady, setAreShadersReady] = useState(false)
+	// Whether the ground's shadow is drawn in its final look. A stored bake's
+	// image, a live bake's frames and the contact shadow's first capture all
+	// land after framing, and each was a shadow popping in under a scene
+	// already shown. Followed live, so a drawing replaced before the reveal (a
+	// stored image that failed, a model swapped mid-load) is waited for too;
+	// `useViewerLoading` stops listening once the scene is shown.
+	const [isGroundReady, setIsGroundReady] = useState(false)
 	const [controlsEnabledOverride, setControlsEnabledOverride] = useState<
 		null | boolean
 	>(null)
@@ -869,6 +876,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		if (!hasContent) {
 			setIsInitialFramingComplete(false)
 			setAreShadersReady(false)
+			setIsGroundReady(false)
 			setControlsEnabledOverride(null)
 			setAutoRotateOverride(null)
 			setControlsOptionsOverride(null)
@@ -883,6 +891,10 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 
 	const handleShadersReady = useCallback(() => {
 		setAreShadersReady(true)
+	}, [])
+
+	const handleGroundReadyChange = useCallback((ready: boolean) => {
+		setIsGroundReady(ready)
 	}, [])
 
 	const { forwardCommand: forwardAnimationCommand } = animation
@@ -1223,12 +1235,14 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		}
 	}, [executeViewerCommand, onCommandExecutorReady])
 
-	// Without the composer nothing compiles ahead of the first frame, so there
-	// is nothing to wait for.
+	// The first frame shown is the scene's final look: framed, its shaders
+	// compiled and its ground shadow drawn. Without the composer nothing
+	// compiles ahead of the first frame, so there is nothing to wait for there.
 	const { loadingState, completeLoadingTransition } = useViewerLoading(
 		hasContent,
 		isInitialFramingComplete && (areShadersReady || !enablePostProcessing),
-		typeof loaderSlot === 'function' || Boolean(loaderSlot)
+		typeof loaderSlot === 'function' || Boolean(loaderSlot),
+		!isGroundReady
 	)
 	/*
 	  When the loader last came up, for its delay; see `ViewerLoadClockContext`.
@@ -1545,6 +1559,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 												onShadowBakeReady={onShadowBakeReady}
 												liveBake={liveShadowBake}
 												onLiveBakeSkipped={handleLiveBakeSkipped}
+												onGroundReadyChange={handleGroundReadyChange}
 												clipExtents={clipExtents}
 											/>
 											<SceneHotspots

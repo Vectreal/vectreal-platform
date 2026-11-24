@@ -23,8 +23,10 @@ const viewer = readFileSync(
 describe('the live bake gate', () => {
 	it('draws the contact shadow, not the bake, when the gate says skip', () => {
 		expect(shadows).toMatch(
-			/\) : skipReason \? \(\s*contactShadow\(1\)\s*\) : sized \? \([\s\S]*?\bbake\s*\) : null\}/
+			/\) : groundDrawing === 'contact' \? \(\s*contactShadow\(1\)\s*\) : groundDrawing === 'live' \? \([\s\S]*?\bbake\s*\) : null\}/
 		)
+		// `resolveGroundDrawing` chooses contact for a skip: ground-ready.spec.ts.
+		expect(shadows).toContain('skipped: skipReason !== null,')
 	})
 
 	it('draws that contact shadow once, not every frame', () => {
