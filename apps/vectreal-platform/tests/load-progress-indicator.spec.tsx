@@ -125,6 +125,30 @@ describe('useDelayedVisible', () => {
 		expect(vi.getTimerCount()).toBe(0)
 	})
 
+	// The viewer's own loader takes over from the app's stand-in in one commit;
+	// counting its own delay again blanked the loader in the middle of a load.
+	it('takes over at once from a drawing already on screen', () => {
+		vi.useFakeTimers()
+		const standIn = renderHook(() => useDelayedVisible(300))
+		act(() => vi.advanceTimersByTime(300))
+		expect(standIn.result.current).toBe(true)
+
+		const viewerLoader = renderHook(() => useDelayedVisible(300))
+		expect(viewerLoader.result.current).toBe(true)
+
+		standIn.unmount()
+		viewerLoader.unmount()
+		const nextLoad = renderHook(() => useDelayedVisible(300))
+		expect(nextLoad.result.current).toBe(false)
+	})
+
+	it('waits its own delay while the one before it is still waiting', () => {
+		vi.useFakeTimers()
+		renderHook(() => useDelayedVisible(300))
+		const second = renderHook(() => useDelayedVisible(300))
+		expect(second.result.current).toBe(false)
+	})
+
 	it('shows at once when the delay is shortened past the time waited', () => {
 		vi.useFakeTimers()
 		const { result, rerender } = renderHook(

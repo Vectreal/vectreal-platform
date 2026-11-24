@@ -104,12 +104,31 @@ export function describeLoadProgress(
 }
 
 /**
+ * How many progress drawings are on screen in this document. A load is drawn
+ * by more than one in turn: the app's stand-in until the viewer's code is
+ * here, then the viewer's own loader, which mounts in the commit the stand-in
+ * leaves in. Each starting its own delay blanked the loader mid-load.
+ */
+let drawingsOnScreen = 0
+
+/**
  * False until `delayMs` has passed since mount, then true for good. A delay of
- * 0 or less, or one shortened past the time already waited, shows at once.
+ * 0 or less, or one shortened past the time already waited, shows at once, and
+ * so does one that takes over from a drawing already on screen.
  */
 export function useDelayedVisible(delayMs: number = LOAD_PROGRESS_DELAY_MS) {
 	const [mountedAt] = useState(() => Date.now())
-	const [visible, setVisible] = useState(delayMs <= 0)
+	// Read during render, before the commit that unmounts the one it replaces.
+	const [visible, setVisible] = useState(
+		() => delayMs <= 0 || drawingsOnScreen > 0
+	)
+	useEffect(() => {
+		if (!visible) return
+		drawingsOnScreen++
+		return () => {
+			drawingsOnScreen--
+		}
+	}, [visible])
 	useEffect(() => {
 		if (visible) return
 		const remaining = mountedAt + delayMs - Date.now()
