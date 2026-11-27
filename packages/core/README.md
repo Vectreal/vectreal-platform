@@ -12,6 +12,11 @@ npm install @vctrl/core
 pnpm add @vctrl/core
 ```
 
+**Peer dependency:** `three`, so your app and core share one copy (two copies
+fail each other's `instanceof` checks). npm and pnpm install it automatically.
+If your package manager doesn't install peer dependencies automatically (e.g.
+Yarn), add `three` to your own dependencies.
+
 **Module format:** ES modules only. Import it from any bundler, browser or Node.js. `require()` also loads it on Node.js 20.19, 22.12 and later, but three.js and glTF-Transform then load as ES modules too, separately from a `require('three')` of your own, so their objects fail each other's `instanceof` checks. Use `import` when you pass those objects in.
 
 > **Texture compression is encoder-injectable.** In Node.js, [Sharp](https://sharp.pixelplumbing.com) is used by default. In browser environments, pass your own `TextureCompressOptions.encoder` (anything matching the part of the sharp constructor API glTF-Transform calls: `(buffer) => instance`, whose `toFormat` and `resize` return the instance and whose `toBuffer` resolves to the encoded bytes) so sharp is never imported. `@vctrl/hooks` ships an `OffscreenCanvas`-based encoder as `createBrowserTextureEncoder()`, injects it for you inside `useOptimizeModel`, and exports it for direct use.

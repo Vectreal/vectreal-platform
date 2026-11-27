@@ -75,7 +75,8 @@
 		}
 	},
 	"peerDependencies": {
-		"@react-three/drei": "catalog:"
+		"@react-three/drei": "catalog:",
+		"three": "catalog:"
 	},
 	"peerDependenciesMeta": {
 		"@react-three/drei": {
@@ -90,13 +91,13 @@
 		"jszip": "catalog:",
 		"ktx2-encoder": "catalog:",
 		"meshoptimizer": "catalog:",
-		"three": "catalog:",
 		"three-mesh-bvh": "catalog:",
 		"watlas": "1.0.1",
 		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"@nx/vite": "catalog:",
+		"three": "catalog:",
 		"vite": "catalog:",
 		"vite-plugin-dts": "catalog:"
 	}
