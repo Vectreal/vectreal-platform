@@ -15,8 +15,6 @@ import { buildInternalPreviewPath } from '../../../lib/domain/embed/embed-snippe
 import { duration, ease } from '../../../lib/motion/motion-tokens'
 import {
 	currentLocationAtom,
-	enterPreviewModeAtom,
-	exitPreviewModeAtom,
 	isPreviewModeAtom,
 	lastSavedSceneIdAtom,
 	openComposeToolAtom,
@@ -24,6 +22,7 @@ import {
 } from '../../../lib/stores/publisher-config-store'
 import { COMPOSE_TOOL_DEFINITIONS } from '../sidebars/compose-sidebar/compose-tools'
 import { PUBLISHER_EDGE_INSET, PUBLISHER_LAYER } from './shell-layout'
+import { usePreviewToggle } from './use-preview-toggle'
 
 import type { ComposeTool } from '../../../types/publisher-config'
 
@@ -54,8 +53,7 @@ export const PREVIEW_TOGGLE_ID = 'publisher-preview-toggle'
 export const ToolBar = memo(() => {
 	const openComposeTool = useAtomValue(openComposeToolAtom)
 	const isPreviewMode = useAtomValue(isPreviewModeAtom)
-	const enterPreviewMode = useSetAtom(enterPreviewModeAtom)
-	const exitPreviewMode = useSetAtom(exitPreviewModeAtom)
+	const { enterPreview, exitPreview } = usePreviewToggle()
 	const setProcessState = useSetAtom(processAtom)
 	const prefersReducedMotion = useReducedMotion()
 	const activeToolIndicatorId = useId()
@@ -145,7 +143,10 @@ export const ToolBar = memo(() => {
 				id={PREVIEW_TOGGLE_ID}
 				type="button"
 				aria-pressed={isPreviewMode}
-				onClick={isPreviewMode ? exitPreviewMode : enterPreviewMode}
+				onClick={() => {
+					if (isPreviewMode) exitPreview()
+					else void enterPreview()
+				}}
 				className={cn(
 					triggerClassName,
 					isPreviewMode ? activeClassName : restingClassName

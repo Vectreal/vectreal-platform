@@ -7,6 +7,7 @@ export {
 	type SceneScreenshotCapture,
 	type SceneCameraSnapshot,
 	type SceneCameraSnapshotCapture,
+	type SceneCameraSnapshotRestore,
 	type SceneScreenshotOptions,
 	type ShadowBakeCapture,
 	type ShadowBakeResult,

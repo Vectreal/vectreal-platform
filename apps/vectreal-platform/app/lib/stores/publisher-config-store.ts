@@ -38,6 +38,7 @@ import type {
 	SceneSettings
 } from '@vctrl/core'
 import type { ModelFile } from '@vctrl/hooks/use-load-model'
+import type { SceneCameraSnapshot } from '@vctrl/viewer'
 import type { Object3D } from 'three'
 
 /**
@@ -181,44 +182,60 @@ const previewModeStateAtom = atom<{
 		'mode' | 'activeComposeTool' | 'showSidebar' | 'showPublishPanel'
 	>
 	returnToCameraId: null | string
-}>({ active: false, returnTo: null, returnToCameraId: null })
+	/** Where the author was looking, put back on exit. */
+	returnView: null | SceneCameraSnapshot
+}>({ active: false, returnTo: null, returnToCameraId: null, returnView: null })
 
 const isPreviewModeAtom = atom((get) => get(previewModeStateAtom).active)
 
-const enterPreviewModeAtom = atom(null, (get, set) => {
-	if (get(previewModeStateAtom).active) return
-	// Out of the hotspot camera mode first, so what preview hands back on exit
-	// is the scene camera the author left for it, not a hotspot's close-up.
-	set(exitHotspotCameraAtom)
-	const { mode, activeComposeTool, showSidebar, showPublishPanel } =
-		get(processAtom)
-	set(previewModeStateAtom, {
-		active: true,
-		returnTo: { mode, activeComposeTool, showSidebar, showPublishPanel },
-		returnToCameraId: get(selectedCameraIdAtom)
-	})
-	set(processAtom, (prev) => ({
-		...prev,
-		showSidebar: false,
-		showPublishPanel: false
-	}))
-	const defaultCameraId = resolveDefaultSceneCameraId(get(cameraAtom).cameras)
-	if (defaultCameraId) set(selectedCameraIdAtom, defaultCameraId)
-})
-
-const exitPreviewModeAtom = atom(null, (get, set) => {
-	const { active, returnTo, returnToCameraId } = get(previewModeStateAtom)
-	if (!active) return
-	set(previewModeStateAtom, {
-		active: false,
-		returnTo: null,
-		returnToCameraId: null
-	})
-	if (returnTo) {
-		set(processAtom, (prev) => ({ ...prev, ...returnTo }))
+const enterPreviewModeAtom = atom(
+	null,
+	(get, set, returnView: null | SceneCameraSnapshot = null) => {
+		if (get(previewModeStateAtom).active) return
+		// Out of the hotspot camera mode first, so what preview hands back on exit
+		// is the scene camera the author left for it, not a hotspot's close-up.
+		set(exitHotspotCameraAtom)
+		const { mode, activeComposeTool, showSidebar, showPublishPanel } =
+			get(processAtom)
+		set(previewModeStateAtom, {
+			active: true,
+			returnTo: { mode, activeComposeTool, showSidebar, showPublishPanel },
+			returnToCameraId: get(selectedCameraIdAtom),
+			returnView
+		})
+		set(processAtom, (prev) => ({
+			...prev,
+			showSidebar: false,
+			showPublishPanel: false
+		}))
+		const defaultCameraId = resolveDefaultSceneCameraId(get(cameraAtom).cameras)
+		if (defaultCameraId) set(selectedCameraIdAtom, defaultCameraId)
 	}
-	if (returnToCameraId) set(selectedCameraIdAtom, returnToCameraId)
-})
+)
+
+/**
+ * Leaves preview, handing back the view entering it recorded, if any, for
+ * the viewer to put back on screen (`usePreviewToggle`).
+ */
+const exitPreviewModeAtom = atom(
+	null,
+	(get, set): null | SceneCameraSnapshot => {
+		const { active, returnTo, returnToCameraId, returnView } =
+			get(previewModeStateAtom)
+		if (!active) return null
+		set(previewModeStateAtom, {
+			active: false,
+			returnTo: null,
+			returnToCameraId: null,
+			returnView: null
+		})
+		if (returnTo) {
+			set(processAtom, (prev) => ({ ...prev, ...returnTo }))
+		}
+		if (returnToCameraId) set(selectedCameraIdAtom, returnToCameraId)
+		return returnView
+	}
+)
 
 /**
  * How the Publisher's viewport moves. The scene's interaction settings shape

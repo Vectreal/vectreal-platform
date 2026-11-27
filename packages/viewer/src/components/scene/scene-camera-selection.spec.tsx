@@ -18,6 +18,7 @@ import type {
 	ViewerCommandExecutor,
 	ViewerInteractionEvent
 } from '../../types/viewer-interactions'
+import type { SceneCameraSnapshotRestore } from '../../types/viewer-types'
 import type { CameraProps, CameraTransitionConfig } from '@vctrl/core'
 import type { OpeningPose } from '@vctrl/core/scene-camera'
 import type { ComponentProps } from 'react'
@@ -88,7 +89,10 @@ const step = (toMs: number) =>
 	})
 
 /** Mounts the camera layer and lets it frame, as the viewer does. */
-async function mount(events: ViewerInteractionEvent[] = []) {
+async function mount(
+	events: ViewerInteractionEvent[] = [],
+	extra: Partial<ComponentProps<typeof SceneCamera>> = {}
+) {
 	const openingPose = { current: null as OpeningPose | null }
 	const props = (
 		overrides: Partial<ComponentProps<typeof SceneCamera>> = {}
@@ -103,6 +107,7 @@ async function mount(events: ViewerInteractionEvent[] = []) {
 			executor = next
 		},
 		onInteractionEvent: (event) => events.push(event),
+		...extra,
 		...overrides
 	})
 	const view = render(<SceneCamera {...props()} />)
@@ -225,5 +230,65 @@ describe('the props choose the camera', () => {
 		rerender({ activeCameraId: 'side', cameras: cameras(30) })
 
 		expect(camera.fov).toBe(30)
+	})
+})
+
+describe('a snapshot restore', () => {
+	const view = {
+		position: [4, 4, 4] as [number, number, number],
+		rotation: [0, 0, 0] as [number, number, number],
+		target: [1, 1, 1] as [number, number, number],
+		fov: 40,
+		framingAspect: 16 / 9,
+		viewportAspect: 16 / 9
+	}
+
+	const mountWithRestore = async () => {
+		let restore: null | SceneCameraSnapshotRestore = null
+		const mounted = await mount([], {
+			onCameraSnapshotRestoreReady: (next) => {
+				restore = next
+			}
+		})
+		expect(restore).not.toBeNull()
+		return {
+			...mounted,
+			restore: (onApplied?: () => void) => restore?.(view, onApplied)
+		}
+	}
+
+	const expectOnView = () => {
+		const target = (three.state?.controls as { target: Vector3 }).target
+		expect(camera.position.distanceTo(new Vector3(4, 4, 4))).toBeLessThan(1e-6)
+		expect(target.distanceTo(new Vector3(1, 1, 1))).toBeLessThan(1e-6)
+		expect(camera.fov).toBe(40)
+	}
+
+	it('lands over a flight the props started in the same update', async () => {
+		const { rerender, restore } = await mountWithRestore()
+		const applied = vi.fn()
+
+		// The host restores and moves the selection in one go, restore first.
+		act(() => {
+			restore(applied)
+			rerender({ activeCameraId: 'side' })
+		})
+		expect(applied).not.toHaveBeenCalled()
+		step(16)
+		expect(applied).toHaveBeenCalledOnce()
+		expectOnView()
+
+		step(1500)
+		expectOnView()
+	})
+
+	it('lands over a flight that started before it', async () => {
+		const { rerender, restore } = await mountWithRestore()
+
+		rerender({ activeCameraId: 'side' })
+		act(() => restore())
+		step(500)
+		step(1500)
+		expectOnView()
 	})
 })

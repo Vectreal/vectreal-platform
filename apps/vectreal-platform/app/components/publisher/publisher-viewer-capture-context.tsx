@@ -12,6 +12,7 @@ import type {
 	HotspotPositionSetter,
 	SceneCameraSnapshot,
 	SceneCameraSnapshotCapture,
+	SceneCameraSnapshotRestore,
 	SceneScreenshotCapture,
 	SceneScreenshotOptions,
 	ShadowBakeCapture,
@@ -30,6 +31,11 @@ interface PublisherViewerCaptureContextValue {
 		capture: null | SceneCameraSnapshotCapture
 	) => void
 	requestSceneCameraSnapshot: () => Promise<null | SceneCameraSnapshot>
+	registerSceneCameraSnapshotRestore: (
+		restore: null | SceneCameraSnapshotRestore
+	) => void
+	/** Puts a snapshot back on screen; see `SceneCameraSnapshotRestore`. */
+	restoreSceneCameraSnapshot: SceneCameraSnapshotRestore
 	registerShadowBakeCapture: (capture: null | ShadowBakeCapture) => void
 	requestShadowBake: () => Promise<null | ShadowBakeResult>
 	registerCommandExecutor: (executor: null | ViewerCommandExecutor) => void
@@ -57,6 +63,9 @@ export function PublisherViewerCaptureProvider({
 		null
 	)
 	const commandExecutorRef = useRef<null | ViewerCommandExecutor>(null)
+	const cameraSnapshotRestoreRef = useRef<null | SceneCameraSnapshotRestore>(
+		null
+	)
 	const hotspotPositionSetterRef = useRef<null | HotspotPositionSetter>(null)
 
 	const registerSceneScreenshotCapture = useCallback(
@@ -87,6 +96,20 @@ export function PublisherViewerCaptureProvider({
 			? cameraSnapshotCaptureRef.current()
 			: null
 	}, [])
+
+	const registerSceneCameraSnapshotRestore = useCallback(
+		(restore: null | SceneCameraSnapshotRestore) => {
+			cameraSnapshotRestoreRef.current = restore
+		},
+		[]
+	)
+
+	const restoreSceneCameraSnapshot = useCallback<SceneCameraSnapshotRestore>(
+		(view, onApplied) => {
+			cameraSnapshotRestoreRef.current?.(view, onApplied)
+		},
+		[]
+	)
 
 	const shadowBakeCaptureRef = useRef<null | ShadowBakeCapture>(null)
 
@@ -121,6 +144,8 @@ export function PublisherViewerCaptureProvider({
 			requestSceneScreenshot,
 			registerSceneCameraSnapshotCapture,
 			requestSceneCameraSnapshot,
+			registerSceneCameraSnapshotRestore,
+			restoreSceneCameraSnapshot,
 			registerShadowBakeCapture,
 			requestShadowBake,
 			registerCommandExecutor,
@@ -133,6 +158,8 @@ export function PublisherViewerCaptureProvider({
 			requestSceneScreenshot,
 			registerSceneCameraSnapshotCapture,
 			requestSceneCameraSnapshot,
+			registerSceneCameraSnapshotRestore,
+			restoreSceneCameraSnapshot,
 			registerShadowBakeCapture,
 			requestShadowBake,
 			registerCommandExecutor,
