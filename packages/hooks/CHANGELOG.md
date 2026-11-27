@@ -1,5 +1,26 @@
 # Changelog
 
+## [3.5.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v3.4.0...hooks-v3.5.0) (2026-11-27)
+
+
+### Features
+
+* **hooks:** the model loader says where a load is: phase, bytes and files ([#1376](https://github.com/Vectreal/vectreal-platform/issues/1376)) ([02e539e](https://github.com/Vectreal/vectreal-platform/commit/02e539eadc6f2c6d19fd0c55fddd69f9a828b409))
+* **viewer:** the viewer shows and reports where a load is ([#1388](https://github.com/Vectreal/vectreal-platform/issues/1388)) ([e8a6127](https://github.com/Vectreal/vectreal-platform/commit/e8a6127bbaacb99e9a571a242acdc6f454055acd))
+
+
+### Bug Fixes
+
+* **publisher:** a drop with no model says whether it was photos, a Blender file or a zip ([#1435](https://github.com/Vectreal/vectreal-platform/issues/1435)) ([42b0d47](https://github.com/Vectreal/vectreal-platform/commit/42b0d4732f2f7d224431cc43352ed8f5c3983028))
+* **publisher:** a refusal names the models a folder held, or the files a glTF did not get ([#1436](https://github.com/Vectreal/vectreal-platform/issues/1436)) ([3b5d632](https://github.com/Vectreal/vectreal-platform/commit/3b5d632f042cf3ea43ee8c67276451c35ac8d0d8))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 3.5.0
+
 ## [3.4.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v3.3.0...hooks-v3.4.0) (2026-11-04)
 
 
