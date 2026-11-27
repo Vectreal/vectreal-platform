@@ -91,7 +91,9 @@ const SaveButton = ({
 							label: 'Sign In to Save',
 							icon: <CircleFadingArrowUp size={16} className="inline" />
 						}
-					: saveAvailability.reason === 'no-unsaved-changes'
+					: // A saved scene still loading is the stored scene itself.
+						saveAvailability.reason === 'no-unsaved-changes' ||
+						  saveAvailability.reason === 'opening'
 						? {
 								key: 'saved',
 								label: 'Saved',

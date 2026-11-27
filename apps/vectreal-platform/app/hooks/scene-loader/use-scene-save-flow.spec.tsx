@@ -168,6 +168,7 @@ function SceneSaveFlowHarness({
 
 	const scenePersistence: ScenePersistenceState = {
 		hasModel: true,
+		isOpeningSavedScene: false,
 		userId: 'user-1',
 		currentSceneId,
 		setCurrentSceneId: setCurrentSceneIdState,

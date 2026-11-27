@@ -14,6 +14,8 @@ import type { ShadowBakeResult } from '@vctrl/viewer'
 export interface ScenePersistenceState {
 	/** Whether a model is on the stage; nothing can be saved before one is. */
 	hasModel: boolean
+	/** A saved scene is open and its model is still on its way to the stage. */
+	isOpeningSavedScene: boolean
 	userId?: string
 	currentSceneId: null | string
 	setCurrentSceneId: (sceneId: null | string) => void
