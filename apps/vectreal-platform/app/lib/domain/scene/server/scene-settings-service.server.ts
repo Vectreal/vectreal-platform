@@ -917,9 +917,21 @@ class SceneSettingsService {
 				.limit(1)
 			if (!stats) return null
 
+			/*
+			  The published size is read from the file a publish stored, never
+			  from `scene_stats.current_scene_bytes`. That column is a copy a
+			  publish writes, and saves before #1047 overwrote it with their own
+			  projection, so on scenes saved after publishing it names a file
+			  that was never published. It stays written only so a release still
+			  reading it during a deploy reads the same number.
+			*/
 			const [published] = await tx
-				.select({ sourceFingerprint: scenePublished.sourceFingerprint })
+				.select({
+					sourceFingerprint: scenePublished.sourceFingerprint,
+					fileSize: assets.fileSize
+				})
 				.from(scenePublished)
+				.leftJoin(assets, eq(assets.id, scenePublished.assetId))
 				.where(eq(scenePublished.sceneId, sceneId))
 				.limit(1)
 
@@ -937,7 +949,11 @@ class SceneSettingsService {
 					publishSourceMatches(published.sourceFingerprint, current)
 				: null
 
-			return { ...stats, publishedIsCurrent }
+			return {
+				...stats,
+				currentSceneBytes: published?.fileSize ?? null,
+				publishedIsCurrent
+			}
 		})
 	}
 

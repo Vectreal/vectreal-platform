@@ -12,7 +12,9 @@ import {
 
 import { getDbClient } from '../../../db/client'
 import { organizationMemberships } from '../../../db/schema/core/organization-memberships'
+import { assets } from '../../../db/schema/project/assets'
 import { projects } from '../../../db/schema/project/projects'
+import { scenePublished } from '../../../db/schema/project/scene-published'
 import { sceneStats } from '../../../db/schema/project/scene-stats'
 import { scenes } from '../../../db/schema/project/scenes'
 
@@ -26,12 +28,13 @@ const db = getDbClient()
   add its original and no result, and the "saved" figure would grow by its
   whole weight.
 
-  The current size is the published GLB, which only a publish records, so a
-  scene counts once it has been published: the saving is what visitors no
-  longer download. Rows written before that rule hold the size a save
-  reported, the same projection of the published file.
+  The current size is the published GLB as stored, so a scene counts once it
+  has been published: the saving is what visitors no longer download. Read
+  from the file, not `scene_stats.current_scene_bytes`, a copy that saves
+  before #1047 overwrote with their own projection.
 */
-const hasBothSizes = sql`${sceneStats.initialSceneBytes} > 0 and ${sceneStats.currentSceneBytes} > 0`
+const publishedBytes = assets.fileSize
+const hasBothSizes = sql`${sceneStats.initialSceneBytes} > 0 and ${publishedBytes} > 0`
 /*
   The snapshots are untyped json written by the client. A hard cast would throw
   on one malformed row and take the whole dashboard down with it, so anything
@@ -76,7 +79,7 @@ export async function getDashboardFactsForUser(
 				projectCount: countDistinct(scenes.projectId),
 				publishedCount: sql<number>`count(*) filter (where ${scenes.status} = 'published')`,
 				initialBytes: sql<string>`sum(${sceneStats.initialSceneBytes}) filter (where ${hasBothSizes})`,
-				currentBytes: sql<string>`sum(${sceneStats.currentSceneBytes}) filter (where ${hasBothSizes})`,
+				currentBytes: sql<string>`sum(${publishedBytes}) filter (where ${hasBothSizes})`,
 				measuredSceneCount: sql<number>`count(*) filter (where ${hasBothSizes})`,
 				verticesBefore: sql<string>`sum(${verticesBefore}) filter (where ${hasBothVertexCounts})`,
 				verticesAfter: sql<string>`sum(${verticesAfter}) filter (where ${hasBothVertexCounts})`
@@ -84,26 +87,30 @@ export async function getDashboardFactsForUser(
 			.from(scenes)
 			.innerJoin(projects, eq(projects.id, scenes.projectId))
 			.leftJoin(sceneStats, eq(sceneStats.sceneId, scenes.id))
+			.leftJoin(scenePublished, eq(scenePublished.sceneId, scenes.id))
+			.leftJoin(assets, eq(assets.id, scenePublished.assetId))
 			.where(inUsersOrganizations),
 		db
 			.select({
 				sceneName: scenes.name,
 				initialBytes: sceneStats.initialSceneBytes,
-				currentBytes: sceneStats.currentSceneBytes
+				currentBytes: publishedBytes
 			})
 			.from(scenes)
 			.innerJoin(projects, eq(projects.id, scenes.projectId))
 			.innerJoin(sceneStats, eq(sceneStats.sceneId, scenes.id))
+			.innerJoin(scenePublished, eq(scenePublished.sceneId, scenes.id))
+			.innerJoin(assets, eq(assets.id, scenePublished.assetId))
 			.where(
 				and(
 					inUsersOrganizations,
-					gt(sceneStats.currentSceneBytes, 0),
-					lt(sceneStats.currentSceneBytes, sceneStats.initialSceneBytes)
+					gt(publishedBytes, 0),
+					lt(publishedBytes, sceneStats.initialSceneBytes)
 				)
 			)
 			.orderBy(
 				desc(
-					sql`1 - ${sceneStats.currentSceneBytes}::float8 / ${sceneStats.initialSceneBytes}`
+					sql`1 - ${publishedBytes}::float8 / ${sceneStats.initialSceneBytes}`
 				)
 			)
 			.limit(1)
