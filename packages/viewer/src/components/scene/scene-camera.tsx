@@ -11,14 +11,18 @@ import {
 	DEFAULT_CAMERA,
 	DEFAULT_SCENE_TRANSITION,
 	isLensOnlyEdit,
+	orbitAnchor,
+	orbitLimitsFor,
 	resolveCameraPose,
 	type CameraSelectionSignature,
 	type OpeningPose,
-	type OrbitDistanceLimits,
+	type OrbitLimits,
+	type ResolvedCameraConstraints,
 	type ViewportFraming
 } from '@vctrl/core/scene-camera'
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import {
+	Box3,
 	type Euler,
 	type Object3D,
 	PerspectiveCamera,
@@ -27,6 +31,7 @@ import {
 } from 'three'
 
 import { applyInitialFraming } from './initial-framing'
+import { worldBounds } from './model-measurement'
 import { prefersReducedMotion } from './reduced-motion'
 import { viewCaptureCamera } from './screenshot-pose'
 import { useCameraFlight } from './use-camera-flight'
@@ -79,10 +84,17 @@ interface SceneCameraProps extends CameraProps {
 	 */
 	openingPose: RefObject<OpeningPose | null>
 	/**
-	 * The host's orbit distance limits. The camera layer scales them with the
-	 * viewport fit (`CameraFraming.distanceLimits`), so it owns writing them.
+	 * The limits that hold a visitor at a camera, by its id: its own, or the
+	 * scene-wide controls for a camera without any. The camera layer anchors
+	 * them on the view it lands at and scales the distances with the viewport
+	 * fit (`CameraFraming.distanceLimits`), so it owns writing them.
 	 */
-	distanceLimits?: OrbitDistanceLimits
+	constraintsFor?: (cameraId: string) => ResolvedCameraConstraints
+	/**
+	 * The host's own editing view moves freely: the orbit point is not held
+	 * inside the model. `constraintsFor` is the host's to free as well.
+	 */
+	freeCamera?: boolean
 	/**
 	 * Filled here with a reset of the viewport fit to a bounds fit, for
 	 * `SceneModel`'s refit, which moves the camera outside this layer.
@@ -167,11 +179,25 @@ export function resolveCameraSelection(
 	}
 }
 
+/** No limits: what the controls hold while a flight plays. */
+const OPEN_LIMITS: OrbitLimits = {
+	minPolarAngle: 0,
+	maxPolarAngle: Math.PI,
+	minAzimuthAngle: -Infinity,
+	maxAzimuthAngle: Infinity,
+	minDistance: 0,
+	maxDistance: Infinity
+}
+
+const panDelta = new Vector3()
+const insideBox = new Box3()
+
 export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	const {
 		boundsEnabled = true,
-		distanceLimits,
+		constraintsFor,
 		focusRequest,
+		freeCamera = false,
 		framingReset,
 		hasContent: hasModel = false,
 		model,
@@ -245,38 +271,86 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	// re-register the executor before the new model is framed.
 	const modelRef = useRef(model)
 	modelRef.current = model
-	const distanceLimitsRef = useRef<OrbitDistanceLimits>({})
-	distanceLimitsRef.current = distanceLimits ?? {}
+	const constraintsForRef = useRef(constraintsFor)
+	constraintsForRef.current = constraintsFor
+	const freeCameraRef = useRef(freeCamera)
+	freeCameraRef.current = freeCamera
 	/** Which fit is on screen (`CameraFraming`). Started afresh by each framing. */
 	const framing = useRef<CameraFraming | null>(null)
+	/**
+	 * The camera the view was last sent to, and what its limits are anchored
+	 * on: the distance and azimuth of its pose as stored (without the fit on
+	 * screen). A camera with limits of its own also keeps the orbit point
+	 * inside the model and its own target, wherever the author aimed it; one
+	 * saved before cameras had limits pans as freely as it always did.
+	 */
+	const held = useRef<null | {
+		cameraId: string
+		constraints: ResolvedCameraConstraints
+		anchor: { distance: number; azimuth: number }
+		keepInside: null | Vector3
+	}>(null)
+	/** Read by every sync: a flight plays with the limits open. */
+	const flightRef = useRef<{ progress: () => number | null } | null>(null)
 
 	/*
-	  The host's limits, scaled for the fit on screen. Read from the store: this
-	  also runs from the framing timeout, before `controls` in this render's
-	  closure has registered.
+	  The held camera's limits, scaled for the fit on screen. Read from the
+	  store: this also runs from the framing timeout, before `controls` in this
+	  render's closure has registered. While a flight plays the limits are open,
+	  so neither end of it, nor its path, is clamped; the camera it lands at
+	  sets them again.
 	*/
-	const syncDistanceLimits = useCallback(() => {
-		const orbit = getThreeState().controls as {
-			minDistance?: number
-			maxDistance?: number
-		} | null
-		if (
-			!framing.current ||
-			typeof orbit?.minDistance !== 'number' ||
-			typeof orbit.maxDistance !== 'number'
-		) {
-			return
-		}
-		Object.assign(
-			orbit,
-			framing.current.distanceLimits(distanceLimitsRef.current)
-		)
-	}, [getThreeState])
+	const syncConstraints = useCallback(
+		(open = false) => {
+			const orbit = getThreeState().controls as Partial<OrbitLimits> | null
+			if (!framing.current || typeof orbit?.minDistance !== 'number') return
+			const hold = held.current
+			if (open || !hold || flightRef.current?.progress() != null) {
+				Object.assign(orbit, OPEN_LIMITS)
+				return
+			}
+			const limits = orbitLimitsFor(hold.constraints, hold.anchor)
+			Object.assign(orbit, limits, framing.current.distanceLimits(limits))
+		},
+		[getThreeState]
+	)
+
+	/** Holds the view to the camera `selection` sends it to (`held`). */
+	const holdTo = useCallback(
+		(selection: ResolvedCameraSelection) => {
+			const resolve = constraintsForRef.current
+			if (!resolve) {
+				held.current = null
+				return
+			}
+			const anchor = orbitAnchor(
+				selection.targetPosition,
+				selection.targetLookAt,
+				sceneCamera.up
+			)
+			const ownsLimits = cameras?.some(
+				(camera) =>
+					camera.cameraId === selection.cameraId &&
+					camera.constraints !== undefined
+			)
+			held.current = {
+				cameraId: selection.cameraId,
+				constraints: resolve(selection.cameraId),
+				anchor: {
+					distance: anchor.distance / (selection.framing?.scale ?? 1),
+					azimuth: anchor.azimuth
+				},
+				keepInside: ownsLimits ? selection.targetLookAt.clone() : null
+			}
+		},
+		[cameras, sceneCamera]
+	)
 
 	const flight = useCameraFlight(modelRef, () => {
 		framing.current?.land()
-		syncDistanceLimits()
+		syncConstraints()
 	})
+	flightRef.current = flight
 
 	const readStoredView = useCallback((): SceneCameraSnapshot => {
 		const activeCamera = sceneCamera as PerspectiveCamera
@@ -342,14 +416,14 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			activeCamera.updateProjectionMatrix()
 			framing.current?.show(selection.framing, progress)
 			// Before update(), which clamps the distance to them.
-			syncDistanceLimits()
+			syncConstraints()
 			if (controls?.target) {
 				controls.target.copy(selection.targetLookAt)
 				controls.update?.()
 			}
 			invalidate()
 		},
-		[controls, flight, invalidate, sceneCamera, syncDistanceLimits]
+		[controls, flight, invalidate, sceneCamera, syncConstraints]
 	)
 
 	/*
@@ -427,9 +501,9 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				durationMs,
 				selection.transition.easing
 			)
-			syncDistanceLimits()
+			syncConstraints()
 		},
-		[applyCameraInstantly, flight, syncDistanceLimits]
+		[applyCameraInstantly, flight, syncConstraints]
 	)
 
 	const executeViewerCommand = useCallback(
@@ -451,6 +525,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				return
 			}
 
+			holdTo(nextSelection)
 			startTransition(nextSelection)
 			viewSelection.current = {
 				cameraId: nextSelection.cameraId,
@@ -464,6 +539,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		[
 			cameras,
 			controls?.target,
+			holdTo,
 			onInteractionEvent,
 			openingPose,
 			sceneCamera,
@@ -501,13 +577,18 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				sceneCamera,
 				sceneTransition
 			)
+			holdTo(selection)
 			applyCameraInstantly(selection)
 			// The fit about to be made frames the model for this viewport, whatever
 			// the camera was framed at. Reset before it, so update() clamps it
 			// against the host's own limits rather than the stored camera's fit.
+			// A camera with limits of its own measures them from its view, and the
+			// fit is not that view: they open for it and anchor on the view it
+			// makes, below.
+			const anchorsOnFit = boundsEnabled && held.current?.keepInside != null
 			if (boundsEnabled) {
 				framing.current.reset(viewportAspectOf(sceneCamera) ?? 1)
-				syncDistanceLimits()
+				syncConstraints(anchorsOnFit)
 			}
 			// Read from the store rather than this render's `controls`: this runs
 			// from a timeout, and the fit's target is lost if it lands on a closure
@@ -519,6 +600,14 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				getThreeState().controls as InitialFramingControls | null,
 				boundsEnabled
 			)
+			const fitTarget = (
+				getThreeState().controls as InitialFramingControls | null
+			)?.target
+			if (anchorsOnFit && held.current && fitTarget) {
+				const fit = orbitAnchor(sceneCamera.position, fitTarget, sceneCamera.up)
+				held.current.anchor = { distance: fit.distance, azimuth: fit.azimuth }
+				syncConstraints()
+			}
 
 			if (!hasInitialFramingCompleted.current) {
 				isWaitingForStableFrame.current = true
@@ -546,9 +635,10 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			cameras,
 			controls?.target,
 			getThreeState,
+			holdTo,
 			model,
 			sceneTransition,
-			syncDistanceLimits
+			syncConstraints
 		]
 	)
 
@@ -627,16 +717,17 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		} else if (inView?.cameraId === selectionKey) {
 			// Without the opening pose: an edit to the camera in view must not pull
 			// a camera with no pose of its own back to where the scene opened.
-			applyCameraInstantly(
-				resolveCameraSelection(
-					cameras,
-					activeCameraId,
-					controls?.target ?? new Vector3(0, 0, 0),
-					sceneCamera as PerspectiveCamera,
-					sceneTransitionRef.current
-				)
+			const edited = resolveCameraSelection(
+				cameras,
+				activeCameraId,
+				controls?.target ?? new Vector3(0, 0, 0),
+				sceneCamera as PerspectiveCamera,
+				sceneTransitionRef.current
 			)
+			holdTo(edited)
+			applyCameraInstantly(edited)
 		} else {
+			holdTo(selection)
 			startTransition(selection)
 		}
 		viewSelection.current = requestedSelection.current
@@ -650,6 +741,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		cameras,
 		controls?.target,
 		flight,
+		holdTo,
 		invalidate,
 		onInteractionEvent,
 		openingPose,
@@ -664,12 +756,12 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			// The refit replaces whatever a flight was flying to.
 			flight.stop()
 			framing.current?.reset(viewportAspectOf(sceneCamera) ?? 1)
-			syncDistanceLimits()
+			syncConstraints()
 		}
 		return () => {
 			framingReset.current = null
 		}
-	}, [flight, framingReset, sceneCamera, syncDistanceLimits])
+	}, [flight, framingReset, sceneCamera, syncConstraints])
 
 	useEffect(() => {
 		if (!focusRequest || !controls?.target) return
@@ -694,22 +786,55 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				FOCUS_FLIGHT_MS,
 				'ease_in_out'
 			)
+			syncConstraints()
 		}
 		return () => {
 			focusRequest.current = null
 		}
-	}, [controls, flight, focusRequest, invalidate, sceneCamera])
+	}, [controls, flight, focusRequest, invalidate, sceneCamera, syncConstraints])
 
-	// The controls were recreated, or the host changed its limits: either way
-	// the controls now hold the host's raw limits, whether or not the fit moved.
+	// The controls were recreated, or the limits changed (an edit to a camera,
+	// the scene-wide controls, or the host freeing the view): the held camera's
+	// limits are resolved again and written, whether or not the fit moved.
 	useEffect(() => {
-		syncDistanceLimits()
-	}, [
-		controls,
-		distanceLimits?.maxDistance,
-		distanceLimits?.minDistance,
-		syncDistanceLimits
-	])
+		const hold = held.current
+		if (hold && constraintsFor) {
+			hold.constraints = constraintsFor(hold.cameraId)
+		}
+		syncConstraints()
+	}, [constraintsFor, controls, syncConstraints])
+
+	/*
+	  The orbit point stays inside the model (and the camera's own target),
+	  so a visitor cannot pan the subject off screen. Panning moves the camera
+	  and its target together, so the camera moves back with the target and
+	  the pan stops at the box. Not during a flight, which owns both, and not
+	  in a host's editing view.
+	*/
+	useEffect(() => {
+		const orbit = controls as
+			| (typeof controls & {
+					addEventListener?: (type: 'change', listener: () => void) => void
+					removeEventListener?: (type: 'change', listener: () => void) => void
+			  })
+			| undefined
+		if (!orbit?.target || !orbit.addEventListener) return
+		const target = orbit.target
+		const holdInside = () => {
+			const aim = held.current?.keepInside
+			const shown = modelRef.current
+			if (!aim || !shown || freeCameraRef.current || flight.progress() !== null)
+				return
+			// Read now: a model swapped or refitted in place has new bounds.
+			const box = worldBounds(shown, insideBox).expandByPoint(aim)
+			panDelta.copy(target).clamp(box.min, box.max).sub(target)
+			if (panDelta.lengthSq() === 0) return
+			target.add(panDelta)
+			sceneCamera.position.add(panDelta)
+		}
+		orbit.addEventListener('change', holdInside)
+		return () => orbit.removeEventListener?.('change', holdInside)
+	}, [controls, flight, sceneCamera])
 
 	/*
 	  The viewport changed shape: refit what is on screen, or both ends of a
@@ -728,7 +853,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		)
 		if (!moved) return
 
-		syncDistanceLimits()
+		syncConstraints()
 		controls?.update?.()
 		invalidate()
 	}, [
@@ -738,7 +863,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		sceneCamera,
 		size.height,
 		size.width,
-		syncDistanceLimits
+		syncConstraints
 	])
 
 	useFrame(() => {

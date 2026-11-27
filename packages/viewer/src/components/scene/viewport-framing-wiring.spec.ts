@@ -46,7 +46,7 @@ describe('the camera layer fits what it shows', () => {
 		)
 	})
 
-	it('resets the fit before a bounds fit, so update() clamps it to the host’s own limits', () => {
+	it('resets the fit and opens the limits before a bounds fit, which no stored view limits', () => {
 		const init = slice(
 			camera,
 			'const initializeCamera = useCallback(',
@@ -58,7 +58,7 @@ describe('the camera layer fits what it shows', () => {
 		expect(reset).toBeGreaterThan(
 			init.indexOf('applyCameraInstantly(selection)')
 		)
-		expect(init.indexOf('syncDistanceLimits()', reset)).toBeLessThan(
+		expect(init.indexOf('syncConstraints(anchorsOnFit)', reset)).toBeLessThan(
 			init.indexOf('applyInitialFraming(')
 		)
 	})
@@ -81,8 +81,8 @@ describe('the camera layer fits what it shows', () => {
 		expect(instant.indexOf('flight.stop()')).toBeLessThan(
 			instant.indexOf('framing.current?.show(')
 		)
-		expect(instant.indexOf('syncDistanceLimits()')).toBeGreaterThan(-1)
-		expect(instant.indexOf('syncDistanceLimits()')).toBeLessThan(
+		expect(instant.indexOf('syncConstraints()')).toBeGreaterThan(-1)
+		expect(instant.indexOf('syncConstraints()')).toBeLessThan(
 			instant.indexOf('controls.update?.()')
 		)
 	})
@@ -126,7 +126,7 @@ describe('the camera layer fits what it shows', () => {
 				'framing.current?.reset(viewportAspectOf(sceneCamera) ?? 1)'
 			)
 		)
-		expect(reset).toContain('syncDistanceLimits()')
+		expect(reset).toContain('syncConstraints()')
 		const call = model.indexOf('framingReset?.current?.()')
 		expect(call).toBeGreaterThan(-1)
 		expect(call).toBeLessThan(
@@ -142,7 +142,7 @@ describe('the camera layer fits what it shows', () => {
 
 	it('hands the view to the destination when a flight lands', () => {
 		expect(camera).toMatch(
-			/useCameraFlight\(modelRef, \(\) => \{\s*framing\.current\?\.land\(\)\s*syncDistanceLimits\(\)/
+			/useCameraFlight\(modelRef, \(\) => \{\s*framing\.current\?\.land\(\)\s*syncConstraints\(\)/
 		)
 		const landing = slice(flight, 'if (rawProgress >= 1) {', 'invalidate()')
 		expect(landing).toContain('onLandRef.current?.()')
@@ -168,7 +168,7 @@ describe('the camera layer fits what it shows', () => {
 			'useEffect(() => {\n\t\tconst aspect'
 		)
 		expect(resync).toMatch(
-			/useEffect\(\(\) => \{\s*syncDistanceLimits\(\)\s*\}, \[\s*controls,/
+			/hold\.constraints = constraintsFor\(hold\.cameraId\)\s*\}\s*syncConstraints\(\)\s*\}, \[constraintsFor, controls, syncConstraints\]\)/
 		)
 	})
 
@@ -202,10 +202,15 @@ describe('the camera layer fits what it shows', () => {
 		expect(opening).toContain('framingAspect: stored.framingAspect')
 	})
 
-	it('is handed the host’s distance limits by the viewer', () => {
-		expect(
-			viewer.match(/distanceLimits=\{orbitDistanceLimits\}/g)
-		).toHaveLength(2)
+	it('is handed each camera’s limits by the viewer, and the capture the host’s distances', () => {
+		const layer = (tag: string) => {
+			const start = viewer.indexOf(tag)
+			return viewer.slice(start, viewer.indexOf('/>', start))
+		}
+		expect(layer('<SceneCamera')).toContain('constraintsFor={constraintsFor}')
+		expect(layer('<SceneModel')).toContain(
+			'distanceLimits={orbitDistanceLimits}'
+		)
 	})
 })
 

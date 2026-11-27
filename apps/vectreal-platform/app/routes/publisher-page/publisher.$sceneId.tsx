@@ -282,6 +282,8 @@ const PublisherPage = () => {
 					showAnimationControls={isPreviewMode}
 					cameraOptions={cameraOptions}
 					controlsOptions={viewportControls}
+					// The editor moves freely; each camera's limits apply in Preview.
+					freeCamera={!isPreviewMode}
 					// Thumbnails and opening views are what a visitor opens on.
 					captureControlsOptions={controls}
 					lighting={lighting}
