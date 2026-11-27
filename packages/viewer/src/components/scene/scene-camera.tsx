@@ -30,6 +30,7 @@ import {
 	Vector3
 } from 'three'
 
+import { entersModel, isInsideGuard } from './camera-guard'
 import { applyInitialFraming } from './initial-framing'
 import { worldBounds } from './model-measurement'
 import { prefersReducedMotion } from './reduced-motion'
@@ -190,6 +191,19 @@ const OPEN_LIMITS: OrbitLimits = {
 }
 
 const panDelta = new Vector3()
+
+/** A camera's own saved position, if it has one. */
+const storedPosition = (
+	cameras: CameraProps['cameras'],
+	cameraId: string
+): null | Vector3 => {
+	const position = cameras?.find(
+		(camera) => camera.cameraId === cameraId
+	)?.position
+	return Array.isArray(position) && position.length === 3
+		? new Vector3(...(position as [number, number, number]))
+		: null
+}
 const insideBox = new Box3()
 
 export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
@@ -289,7 +303,26 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		constraints: ResolvedCameraConstraints
 		anchor: { distance: number; azimuth: number }
 		keepInside: null | Vector3
+		/**
+		 * Where the camera was saved, if it was: one saved inside the model (an
+		 * interior shot) is not kept out of it (`isInsideGuard`). Measured
+		 * against the model as it is now, without the fit on screen.
+		 */
+		stored: null | Vector3
 	}>(null)
+	/**
+	 * The last pose outside the model, which a move into it goes back to
+	 * (`entersModel`): one a visitor's move left, or one this layer set
+	 * (`rememberPose`, on a landing, a switch, a focus, a refit). A pose this
+	 * layer sets replaces it rather than being judged as a step from it; only
+	 * a refit made outside the layer (`framingReset`) leaves none.
+	 */
+	const safePose = useRef({
+		known: false,
+		position: new Vector3(),
+		quaternion: new Quaternion(),
+		target: new Vector3()
+	})
 	/** Read by every sync: a flight plays with the limits open. */
 	const flightRef = useRef<{ progress: () => number | null } | null>(null)
 
@@ -340,15 +373,37 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 					distance: anchor.distance / (selection.framing?.scale ?? 1),
 					azimuth: anchor.azimuth
 				},
-				keepInside: ownsLimits ? selection.targetLookAt.clone() : null
+				keepInside: ownsLimits ? selection.targetLookAt.clone() : null,
+				stored: storedPosition(cameras, selection.cameraId)
 			}
 		},
 		[cameras, sceneCamera]
 	)
 
+	/**
+	 * A pose this layer has just set is the one a visitor's next move is judged
+	 * from, when it is outside the model; one inside it (an interior shot)
+	 * leaves nothing to judge from.
+	 */
+	const rememberPose = useCallback(() => {
+		const safe = safePose.current
+		const shown = modelRef.current
+		const target = (getThreeState().controls as { target?: Vector3 } | null)
+			?.target
+		safe.known =
+			!!shown &&
+			!!target &&
+			!worldBounds(shown, insideBox).containsPoint(sceneCamera.position)
+		if (!safe.known || !target) return
+		safe.position.copy(sceneCamera.position)
+		safe.quaternion.copy(sceneCamera.quaternion)
+		safe.target.copy(target)
+	}, [getThreeState, sceneCamera])
+
 	const flight = useCameraFlight(modelRef, () => {
 		framing.current?.land()
 		syncConstraints()
+		rememberPose()
 	})
 	flightRef.current = flight
 
@@ -410,6 +465,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			// stays where the flight left the camera.
 			const progress = flight.progress()
 			flight.stop()
+			safePose.current.known = false
 			activeCamera.position.copy(selection.targetPosition)
 			activeCamera.rotation.copy(selection.targetRotation)
 			activeCamera.fov = selection.targetFov
@@ -421,9 +477,10 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				controls.target.copy(selection.targetLookAt)
 				controls.update?.()
 			}
+			rememberPose()
 			invalidate()
 		},
-		[controls, flight, invalidate, sceneCamera, syncConstraints]
+		[controls, flight, invalidate, rememberPose, sceneCamera, syncConstraints]
 	)
 
 	/*
@@ -755,6 +812,8 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		framingReset.current = () => {
 			// The refit replaces whatever a flight was flying to.
 			flight.stop()
+			// The refit moves the camera from outside this layer.
+			safePose.current.known = false
 			framing.current?.reset(viewportAspectOf(sceneCamera) ?? 1)
 			syncConstraints()
 		}
@@ -772,10 +831,12 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			const progress = flight.progress()
 			if (prefersReducedMotion()) {
 				flight.stop()
+				safePose.current.known = false
 				framing.current?.show(null, progress)
 				activeCamera.position.copy(position)
 				target.copy(point)
 				controls.update?.()
+				rememberPose()
 				invalidate()
 				return
 			}
@@ -791,7 +852,15 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		return () => {
 			focusRequest.current = null
 		}
-	}, [controls, flight, focusRequest, invalidate, sceneCamera, syncConstraints])
+	}, [
+		controls,
+		flight,
+		focusRequest,
+		invalidate,
+		rememberPose,
+		sceneCamera,
+		syncConstraints
+	])
 
 	// The controls were recreated, or the limits changed (an edit to a camera,
 	// the scene-wide controls, or the host freeing the view): the held camera's
@@ -805,11 +874,16 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	}, [constraintsFor, controls, syncConstraints])
 
 	/*
-	  The orbit point stays inside the model (and the camera's own target),
-	  so a visitor cannot pan the subject off screen. Panning moves the camera
-	  and its target together, so the camera moves back with the target and
-	  the pan stops at the box. Not during a flight, which owns both, and not
-	  in a host's editing view.
+	  After each move a visitor makes, two holds, neither during a flight
+	  (which owns the camera) nor in a host's editing view:
+	  - For a camera with limits of its own, the orbit point stays inside the
+	    model (and the camera's own target), so a visitor cannot pan the
+	    subject off screen. Panning moves the camera and its target together,
+	    so the camera moves back with the target and the pan stops at the box.
+	  - For every camera but one saved inside the model, a move that would
+	    take the camera into the model, or through it, is put back to the last
+	    pose outside it (`entersModel`, `safePose`): zoom stops at the surface
+	    and an orbit at the model's edge.
 	*/
 	useEffect(() => {
 		const orbit = controls as
@@ -820,20 +894,40 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			| undefined
 		if (!orbit?.target || !orbit.addEventListener) return
 		const target = orbit.target
-		const holdInside = () => {
-			const aim = held.current?.keepInside
+		const holdToModel = () => {
+			const hold = held.current
 			const shown = modelRef.current
-			if (!aim || !shown || freeCameraRef.current || flight.progress() !== null)
+			// A flight owns the camera, and records where it lands.
+			if (flight.progress() !== null) return
+			if (!hold || !shown || freeCameraRef.current) {
+				safePose.current.known = false
 				return
+			}
 			// Read now: a model swapped or refitted in place has new bounds.
-			const box = worldBounds(shown, insideBox).expandByPoint(aim)
-			panDelta.copy(target).clamp(box.min, box.max).sub(target)
-			if (panDelta.lengthSq() === 0) return
-			target.add(panDelta)
-			sceneCamera.position.add(panDelta)
+			if (hold.keepInside) {
+				const box = worldBounds(shown, insideBox).expandByPoint(hold.keepInside)
+				panDelta.copy(target).clamp(box.min, box.max).sub(target)
+				target.add(panDelta)
+				sceneCamera.position.add(panDelta)
+			}
+			const box = worldBounds(shown, insideBox)
+			if (hold.stored && isInsideGuard(hold.stored, box)) return
+			const safe = safePose.current
+			if (safe.known && entersModel(safe.position, sceneCamera.position, box)) {
+				sceneCamera.position.copy(safe.position)
+				sceneCamera.quaternion.copy(safe.quaternion)
+				target.copy(safe.target)
+				return
+			}
+			if (!box.containsPoint(sceneCamera.position)) {
+				safe.known = true
+				safe.position.copy(sceneCamera.position)
+				safe.quaternion.copy(sceneCamera.quaternion)
+				safe.target.copy(target)
+			}
 		}
-		orbit.addEventListener('change', holdInside)
-		return () => orbit.removeEventListener?.('change', holdInside)
+		orbit.addEventListener('change', holdToModel)
+		return () => orbit.removeEventListener?.('change', holdToModel)
 	}, [controls, flight, sceneCamera])
 
 	/*
@@ -853,13 +947,16 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		)
 		if (!moved) return
 
+		safePose.current.known = false
 		syncConstraints()
 		controls?.update?.()
+		rememberPose()
 		invalidate()
 	}, [
 		controls,
 		flight,
 		invalidate,
+		rememberPose,
 		sceneCamera,
 		size.height,
 		size.width,

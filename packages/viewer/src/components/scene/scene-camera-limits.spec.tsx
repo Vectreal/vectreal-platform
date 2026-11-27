@@ -103,6 +103,32 @@ const cameras: NonNullable<CameraProps['cameras']> = [
 		position: [0, 0, 8],
 		target: [0, 0, 0],
 		fov: 50
+	},
+	{
+		// Saved inside the model, an interior shot.
+		cameraId: 'interior',
+		name: 'Interior',
+		position: [0, 0, 0.5],
+		target: [0, 0, -0.5],
+		fov: 50
+	},
+	{
+		// A close-up saved just off the surface, inside the margin.
+		cameraId: 'closeup',
+		name: 'Close-up',
+		position: [0, 0, 1.03],
+		target: [0, 0, 0],
+		fov: 50,
+		// Limits of its own, none of them set: the scene-wide minimum of 3
+		// would hold it back from the close-up.
+		constraints: {}
+	},
+	{
+		// No pose of its own: it opens where the framing puts it.
+		cameraId: 'aimless',
+		name: 'Aimless',
+		target: [0, 0, 0],
+		fov: 50
 	}
 ]
 
@@ -126,12 +152,13 @@ class FakeControls extends EventDispatcher<{ change: object }> {
 	maxPolarAngle = Math.PI
 	minAzimuthAngle = -Infinity
 	maxAzimuthAngle = Infinity
-	/** Clamps as OrbitControls does, so limits written late show. */
+	/** Clamps and reports as OrbitControls does, so limits written late show. */
 	update = () => {
 		camera.position.copy(
 			clampToOrbitLimits(camera.position, this.target, camera.up, this)
 		)
 		camera.lookAt(this.target)
+		this.dispatchEvent({ type: 'change' })
 	}
 }
 
@@ -411,5 +438,141 @@ describe('the viewer', () => {
 		expect(viewer).toMatch(
 			/freeCamera\s*\?\s*undefined\s*:\s*aimedCameras\?\.find/
 		)
+	})
+})
+
+describe('the camera', () => {
+	/** A visitor's move to `position`, looking at the orbit point. */
+	const moveTo = (x: number, y: number, z: number) => {
+		camera.position.set(x, y, z)
+		camera.lookAt(controls.target)
+		controls.dispatchEvent({ type: 'change' })
+	}
+
+	it('stops at the model, for a camera without limits too', async () => {
+		await mount({ activeCameraId: 'legacy' })
+		moveTo(0, 0, 3)
+		moveTo(0, 0, 0.5)
+		expect(camera.position).toEqual(new Vector3(0, 0, 3))
+	})
+
+	it('stops at the model on the first move, from the view the scene opens on', async () => {
+		await mount({ activeCameraId: 'legacy' })
+		const opening = camera.position.clone()
+		moveTo(0, 0, 0.5)
+		expect(camera.position).toEqual(opening)
+	})
+
+	it('stops at the model on the first move after a flight lands', async () => {
+		await mount({ activeCameraId: 'legacy' })
+		activate('side')
+		step(500)
+		step(1000)
+		const landed = camera.position.clone()
+		moveTo(0.5, 0, 0)
+		expect(camera.position).toEqual(landed)
+	})
+
+	it('lets a close-up saved in the margin move, but not into the model', async () => {
+		await mount({ activeCameraId: 'closeup' })
+		moveTo(0, 0, 1.05)
+		expect(camera.position.z).toBeCloseTo(1.05)
+		moveTo(0, 0, 0.9)
+		expect(camera.position.z).toBeCloseTo(1.05)
+	})
+
+	it('keeps its line of sight when an oblique zoom is stopped', async () => {
+		await mount({ activeCameraId: 'legacy' })
+		moveTo(2, 0.5, 2)
+		const aim = camera.quaternion.clone()
+		// Off the line, and inside: the stop puts the aim back too.
+		moveTo(0.4, 0.6, 0.1)
+		expect(camera.position).toEqual(new Vector3(2, 0.5, 2))
+		expect(camera.quaternion.angleTo(aim)).toBeCloseTo(0)
+	})
+
+	it('never comes out the far side, however large the step', async () => {
+		await mount({ activeCameraId: 'legacy' })
+		moveTo(0, 0, 3)
+		moveTo(0, 0, -3)
+		expect(camera.position.z).toBeCloseTo(3)
+	})
+
+	it('leaves by the side it came from when it orbits a point on the surface', async () => {
+		await mount({ activeCameraId: 'legacy' })
+		controls.target.set(0, 0, 1)
+		moveTo(0, 0, 3)
+		moveTo(0, 0, 0.8)
+		expect(camera.position.z).toBeCloseTo(3)
+		expect(controls.target.z).toBeCloseTo(1)
+	})
+
+	it('moves on freely once it is back out of the way', async () => {
+		await mount({ activeCameraId: 'legacy' })
+		moveTo(0, 0, 3)
+		moveTo(0, 0, 0.5)
+		moveTo(0, 0, 4)
+		expect(camera.position.z).toBeCloseTo(4)
+	})
+
+	it('stops at the model for a camera with no saved position', async () => {
+		await mount({ activeCameraId: 'aimless' })
+		moveTo(0, 0, 3)
+		moveTo(0, 0, 0.5)
+		expect(camera.position.z).toBeCloseTo(3)
+	})
+
+	it('is left inside the model for a camera saved there', async () => {
+		await mount({ activeCameraId: 'interior' })
+		moveTo(0, 0, 3)
+		moveTo(0, 0, 0.2)
+		expect(camera.position.z).toBeCloseTo(0.2)
+	})
+
+	it('puts the orbit point back with it when a pan carries both in', async () => {
+		await mount({ activeCameraId: 'legacy' })
+		moveTo(0, 0, 3)
+		controls.target.set(0, 0, -2.5)
+		moveTo(0, 0, 0.5)
+		expect(controls.target.z).toBeCloseTo(0)
+	})
+
+	it('is judged afresh after a flight lands', async () => {
+		await mount({ activeCameraId: 'legacy' })
+		moveTo(0, 0, 3)
+		activate('side')
+		step(500)
+		step(1000)
+		moveTo(0, 0, -3)
+		expect(camera.position.z).toBeCloseTo(-3)
+	})
+
+	it('is not judged against a pose from before the camera layer moved it', async () => {
+		await mount({
+			activeCameraId: 'legacy',
+			sceneTransition: { type: 'none' }
+		})
+		moveTo(0, 0, 3)
+		// An instant switch to the side camera, then a move that would cross
+		// the model as a step from the old pose.
+		activate('side')
+		moveTo(0, 0, -3)
+		expect(camera.position.z).toBeCloseTo(-3)
+	})
+
+	it('is left to a flight while one plays', async () => {
+		await mount({ activeCameraId: 'legacy' })
+		moveTo(0, 0, 3)
+		activate('side')
+		step(500)
+		moveTo(0, 0, 0.5)
+		expect(camera.position.z).toBeCloseTo(0.5)
+	})
+
+	it('goes anywhere in the host’s editing view', async () => {
+		await mount({ activeCameraId: 'legacy', freeCamera: true })
+		moveTo(0, 0, 3)
+		moveTo(0, 0, 0.5)
+		expect(camera.position.z).toBeCloseTo(0.5)
 	})
 })
