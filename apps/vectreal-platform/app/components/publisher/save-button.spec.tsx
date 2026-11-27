@@ -74,6 +74,17 @@ describe('SaveButton', () => {
 		expect(screen.getByRole('button')).toBeEnabled()
 	})
 
+	/*
+	  A saved scene still loading used to share the empty stage's "Save", which
+	  is also what unsaved changes read, until its model reported ready.
+	*/
+	it('reads Saved while a saved scene is still loading', () => {
+		render(renderSaveButton({ canSave: false, reason: 'opening' }))
+
+		expect(screen.getByRole('button')).toHaveTextContent('Saved')
+		expect(screen.getByRole('button')).toBeDisabled()
+	})
+
 	it('waits out a publish, which saves first itself', () => {
 		const store = createStore()
 		store.set(dispatchSaveProgressAtom, {

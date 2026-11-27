@@ -15,10 +15,31 @@ describe('scene save state', () => {
 				expect(
 					resolveSaveAvailability({
 						hasModel: false,
+						isOpeningSavedScene: false,
 						userId,
 						hasChanges
 					})
 				).toEqual({ canSave: false, reason: 'no-model' })
+			}
+		}
+	})
+
+	/*
+	  A saved scene on its way onto the stage is the stored scene, not an empty
+	  stage: the button read "Save" for the whole load, as if it were unsaved.
+	*/
+	it('reports a saved scene still loading as opening, never as savable', () => {
+		for (const userId of [undefined, 'user-1']) {
+			for (const hasChanges of [false, true]) {
+				const availability = resolveSaveAvailability({
+					hasModel: false,
+					isOpeningSavedScene: true,
+					userId,
+					hasChanges
+				})
+
+				expect(availability).toEqual({ canSave: false, reason: 'opening' })
+				expect(isSaveActionBlocked(availability)).toBe(true)
 			}
 		}
 	})
@@ -28,7 +49,11 @@ describe('scene save state', () => {
 		expect(isSaveActionBlocked({ canSave: false, reason: 'no-user' })).toBe(
 			false
 		)
-		for (const reason of ['no-model', 'no-unsaved-changes'] as const) {
+		for (const reason of [
+			'opening',
+			'no-model',
+			'no-unsaved-changes'
+		] as const) {
 			expect(isSaveActionBlocked({ canSave: false, reason }), reason).toBe(true)
 		}
 	})
@@ -37,6 +62,7 @@ describe('scene save state', () => {
 		expect(
 			resolveSaveAvailability({
 				hasModel: true,
+				isOpeningSavedScene: false,
 				userId: undefined,
 				hasChanges: true
 			})
@@ -47,6 +73,7 @@ describe('scene save state', () => {
 		expect(
 			resolveSaveAvailability({
 				hasModel: true,
+				isOpeningSavedScene: false,
 				userId: 'user-1',
 				hasChanges: true
 			})
@@ -57,6 +84,7 @@ describe('scene save state', () => {
 		expect(
 			resolveSaveAvailability({
 				hasModel: true,
+				isOpeningSavedScene: false,
 				userId: 'user-1',
 				hasChanges: false
 			})

@@ -36,6 +36,7 @@ export const useSceneSaveFlow = ({
 }: UseSceneSaveFlowArgs) => {
 	const {
 		hasModel,
+		isOpeningSavedScene,
 		userId,
 		currentSceneId,
 		setCurrentSceneId,
@@ -479,10 +480,11 @@ export const useSceneSaveFlow = ({
 		() =>
 			resolveSaveAvailability({
 				hasModel,
+				isOpeningSavedScene,
 				userId,
 				hasChanges
 			}),
-		[hasModel, userId, hasChanges]
+		[hasModel, isOpeningSavedScene, userId, hasChanges]
 	)
 
 	return {
