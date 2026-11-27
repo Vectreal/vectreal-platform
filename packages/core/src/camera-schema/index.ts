@@ -16,6 +16,9 @@ import { z } from 'zod'
 import {
 	CAMERA_FOV_MAX,
 	CAMERA_FOV_MIN,
+	CAMERA_ORBIT_MAX,
+	CAMERA_TILT_MAX,
+	CAMERA_TILT_MIN,
 	CAMERA_TRANSITION_EASINGS,
 	CAMERA_TRANSITION_TYPES,
 	CAMERA_VECTOR_FIELDS
@@ -107,6 +110,62 @@ export const cameraTransitionSchema = z
 		}
 	})
 
+const ZOOM_FACTOR = 'must be a number of times, at least 1'
+const zoomFactor = z
+	.number({ error: ZOOM_FACTOR })
+	.min(1, { error: ZOOM_FACTOR })
+	.optional()
+const TILT_RANGE = `must be a number of degrees between ${CAMERA_TILT_MIN} and ${CAMERA_TILT_MAX}`
+const tilt = z
+	.number({ error: TILT_RANGE })
+	.min(CAMERA_TILT_MIN, { error: TILT_RANGE })
+	.max(CAMERA_TILT_MAX, { error: TILT_RANGE })
+	.optional()
+const ORBIT_RANGE = `must be a number of degrees between 0 and ${CAMERA_ORBIT_MAX}`
+const orbitTurn = z
+	.number({ error: ORBIT_RANGE })
+	.min(0, { error: ORBIT_RANGE })
+	.max(CAMERA_ORBIT_MAX, { error: ORBIT_RANGE })
+
+/**
+ * `isCameraConstraints` as a write rule. Strict, unlike the camera around it:
+ * every field here has a rule, so an unknown one is a typo the author would
+ * otherwise never see take effect.
+ */
+export const cameraConstraintsSchema = z.strictObject(
+	{
+		zoom: z
+			.strictObject(
+				{
+					enabled: z.boolean({ error: 'must be a boolean' }).optional(),
+					closer: zoomFactor,
+					farther: zoomFactor
+				},
+				{ error: 'must be an object' }
+			)
+			.optional(),
+		pan: z.boolean({ error: 'must be a boolean' }).optional(),
+		tilt: z
+			.strictObject(
+				{ lowest: tilt, highest: tilt },
+				{ error: 'must be an object' }
+			)
+			.refine(
+				({ lowest, highest }) =>
+					lowest === undefined || highest === undefined || lowest <= highest,
+				{ error: 'lowest must not be above highest', path: ['lowest'] }
+			)
+			.optional(),
+		orbit: z
+			.strictObject(
+				{ left: orbitTurn, right: orbitTurn },
+				{ error: 'must be an object with left and right' }
+			)
+			.optional()
+	},
+	{ error: 'must be an object' }
+)
+
 const vector = cameraVectorSchema.optional()
 
 /**
@@ -127,6 +186,7 @@ export const cameraEntrySchema = z.looseObject(
 			.gt(0, { error: 'must be a positive finite number' })
 			.optional(),
 		transition: cameraTransitionSchema.optional(),
+		constraints: cameraConstraintsSchema.optional(),
 		position: vector,
 		target: vector,
 		rotation: vector,

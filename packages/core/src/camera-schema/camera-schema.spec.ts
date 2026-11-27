@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+	cameraConstraintsSchema,
 	cameraFovSchema,
 	cameraSettingsSchema,
 	cameraTransitionSchema,
+	isCameraConstraints,
 	isCameraFov,
 	isCameraTransition,
 	repairCameraEntry
@@ -114,6 +116,70 @@ describe('repairCameraEntry', () => {
 	it('returns the entry itself when nothing needs repair', () => {
 		const stored = { ...scene, fov: 50, position: { x: 0, y: 0, z: 5 } }
 		expect(repairCameraEntry(stored, 0).entry).toBe(stored)
+	})
+})
+
+describe('cameraConstraintsSchema and isCameraConstraints', () => {
+	it.each([
+		{},
+		{ zoom: { enabled: false } },
+		{ zoom: { closer: 1, farther: 2.5 } },
+		{ pan: false },
+		{ tilt: { lowest: -90, highest: 90 } },
+		{ tilt: { lowest: 10, highest: 10 } },
+		{ orbit: { left: 0, right: 180 } },
+		{
+			zoom: { enabled: true, closer: 2, farther: 2 },
+			pan: true,
+			tilt: { lowest: 0, highest: 85 },
+			orbit: { left: 45, right: 45 }
+		}
+	])('both accept %j', (constraints) => {
+		expect(cameraConstraintsSchema.safeParse(constraints).success).toBe(true)
+		expect(isCameraConstraints(constraints)).toBe(true)
+	})
+
+	it.each([
+		null,
+		[],
+		{ zoom: { closer: 0.5 } },
+		{ zoom: { farther: Infinity } },
+		{ zoom: { enabled: 'yes' } },
+		{ pan: 1 },
+		{ tilt: { lowest: -91 } },
+		{ tilt: { highest: 90.5 } },
+		{ tilt: { lowest: 40, highest: 10 } },
+		{ orbit: { left: 30 } },
+		{ orbit: { left: -1, right: 10 } },
+		{ orbit: { left: 10, right: 181 } },
+		{ dolly: true },
+		{ zoom: { near: 0.5 } },
+		{ tilt: { lowest: 0, up: 5 } },
+		{ orbit: { left: 10, right: 10, up: 5 } }
+	])('both refuse %j', (constraints) => {
+		expect(cameraConstraintsSchema.safeParse(constraints).success).toBe(false)
+		expect(isCameraConstraints(constraints)).toBe(false)
+	})
+
+	it('refuses an unknown field on a write, naming it', () => {
+		const result = cameraSettingsSchema.safeParse({
+			cameras: [{ ...scene, constraints: { zoom: { near: 0.5 } } }]
+		})
+		expect(result.error?.issues[0]?.path).toEqual([
+			'cameras',
+			0,
+			'constraints',
+			'zoom'
+		])
+	})
+
+	it('drops stored limits the viewer cannot apply, so the camera falls back', () => {
+		const { entry, repairs } = repairCameraEntry(
+			{ ...scene, constraints: { tilt: { lowest: 40, highest: 10 } } },
+			2
+		)
+		expect(entry).not.toHaveProperty('constraints')
+		expect(repairs).toEqual([{ cameraIndex: 2, field: 'constraints' }])
 	})
 })
 

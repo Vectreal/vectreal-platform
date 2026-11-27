@@ -97,6 +97,69 @@ export function isCameraTransition(value: unknown): boolean {
 	)
 }
 
+/** Tilt is an elevation: level is 0, straight down 90, straight up -90. */
+export const CAMERA_TILT_MIN = -90
+export const CAMERA_TILT_MAX = 90
+/** Orbit turns at most half way round to each side; past that is all round. */
+export const CAMERA_ORBIT_MAX = 180
+
+const isZoomFactor = (value: unknown) => isFiniteNumber(value) && value >= 1
+const isTilt = (value: unknown) =>
+	isFiniteNumber(value) && value >= CAMERA_TILT_MIN && value <= CAMERA_TILT_MAX
+const isOrbitTurn = (value: unknown) =>
+	isFiniteNumber(value) && value >= 0 && value <= CAMERA_ORBIT_MAX
+/** The write schema is strict here, so the read refuses what it refuses. */
+const hasOnly = (value: Record<string, unknown>, keys: readonly string[]) =>
+	Object.keys(value).every((key) => keys.includes(key))
+
+/**
+ * Whether `value` is a set of camera limits the viewer can apply:
+ * `cameraConstraintsSchema` as a predicate, for readers that carry no zod.
+ * `camera-schema.spec.ts` holds the two to the same answers.
+ */
+export function isCameraConstraints(value: unknown): boolean {
+	if (!isRecord(value) || !hasOnly(value, ['zoom', 'pan', 'tilt', 'orbit'])) {
+		return false
+	}
+	const { zoom, pan, tilt, orbit } = value
+	if (
+		zoom !== undefined &&
+		!(
+			isRecord(zoom) &&
+			hasOnly(zoom, ['enabled', 'closer', 'farther']) &&
+			isOptional(zoom['enabled'], (e) => typeof e === 'boolean') &&
+			isOptional(zoom['closer'], isZoomFactor) &&
+			isOptional(zoom['farther'], isZoomFactor)
+		)
+	) {
+		return false
+	}
+	if (!isOptional(pan, (p) => typeof p === 'boolean')) return false
+	if (
+		tilt !== undefined &&
+		!(
+			isRecord(tilt) &&
+			hasOnly(tilt, ['lowest', 'highest']) &&
+			isOptional(tilt['lowest'], isTilt) &&
+			isOptional(tilt['highest'], isTilt) &&
+			!(
+				isFiniteNumber(tilt['lowest']) &&
+				isFiniteNumber(tilt['highest']) &&
+				tilt['lowest'] > tilt['highest']
+			)
+		)
+	) {
+		return false
+	}
+	return (
+		orbit === undefined ||
+		(isRecord(orbit) &&
+			hasOnly(orbit, ['left', 'right']) &&
+			isOrbitTurn(orbit['left']) &&
+			isOrbitTurn(orbit['right']))
+	)
+}
+
 /** One stored value a read repaired, for whoever logs it. */
 export interface CameraRepair {
 	/** Absent for a field of the settings rather than of one camera. */
@@ -119,7 +182,10 @@ const READ_RULES: Record<string, (value: unknown) => boolean> = {
 	// `sceneTransition` replaced it, and no save checked it before the write
 	// schema, so a stored one can fail that schema. Dropping it costs the
 	// viewer nothing and lets the scene's next save through.
-	transition: isCameraTransition
+	transition: isCameraTransition,
+	// Limits the viewer cannot apply: the camera falls back to the scene-wide
+	// controls, as it did before it had limits of its own.
+	constraints: isCameraConstraints
 }
 
 /**
