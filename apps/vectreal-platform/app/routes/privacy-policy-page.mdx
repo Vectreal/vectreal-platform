@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last Updated: November 4, 2026**
+**Last Updated: November 27, 2026**
 
 This Privacy Policy explains how Vectreal collects, uses, shares, and protects personal data when you use our services. It also serves as our cookie notice: we do not maintain a separate cookies page, and Section 4 is the authoritative description of the cookies and similar technologies we use.
 
@@ -31,6 +31,7 @@ We collect the following categories of data, depending on how you use the platfo
 - **Contact and support data:** information you submit through the contact form, including your name, email address, inquiry type, and message. Your name, email address, and message are encrypted at rest; the inquiry type is stored in plain text.
 - **Free-model requests:** if you request a free 3D model at /free-model, we process your name, work email, company, product type, the optional size and message, the three photos you upload, and the letter or letter batch the link came from. We use them to make and deliver the model and, if you agreed, to email you about it and about a paid pilot. Name, email, company and message are encrypted at rest. Photos are re-encoded on upload, which removes their metadata (including any location), and kept in a private storage bucket that is never publicly readable. You can withdraw your consent to follow-up emails at any time.
 - **Letter addresses:** when you open the short address printed on one of our letters (vectreal.com/c/ followed by a code), we record that this letter's code was opened and when. We record nothing else about the visit, such as your IP address or device.
+- **Visit counts without consent:** if you have not accepted analytics, we count page views and a few steps from our newsroom to sign-up without cookies, as described in Section 4 under "Counting Without Consent".
 - **Consent and preference data:** your consent choices for functional, analytics, and marketing categories, the consent policy version, a country derived from your IP address, and your browser user agent. This record is stored only if you have an account. If you are not signed in, your consent choices stay in the `consent_prefs` cookie on your device and no server-side record is created.
 - **Technical and security data:** IP address and request metadata used transiently for security, rate limiting, and bot protection, and session and CSRF tokens required to operate the service. We do not persist your full IP address for consent records; we store only the derived country.
 
@@ -47,17 +48,18 @@ We process data to:
 - Send transactional and support emails, such as sign-in links, account notifications, and replies.
 - Protect the service against abuse, fraud, and automated attacks (including bot protection and rate limiting).
 - Measure product usage and performance where analytics consent is granted.
+- Count visits and how many visitors go from our newsroom to signing up, without cookies and without identifying you, where analytics consent is not granted.
 - Comply with legal obligations and enforce our terms.
 
 ## 4. Cookies, Consent, and Tracking
 
-Vectreal uses cookies and similar storage mechanisms for core operation and, with your consent, for optional features. We load product analytics (PostHog) only after you opt in.
+Vectreal uses cookies and similar storage mechanisms for core operation and, with your consent, for optional features. Full product analytics (PostHog) runs only after you opt in; until then, PostHog only counts visits without cookies, as described below.
 
 ### Consent Categories
 
 - **Strictly necessary:** always enabled; required for authentication, CSRF protection, storing your consent choice, and core platform operation.
 - **Functional:** remembers preferences such as your theme and UI settings.
-- **Analytics and performance:** enables product analytics (PostHog) when opted in.
+- **Analytics and performance:** enables full product analytics (PostHog) when opted in. Declining it does not turn off the cookieless counting described below, which stores nothing on your device.
 - **Marketing and personalization:** optional category covering campaign and referral attribution (such as the `vr_referral` entry described below), and reserved for future marketing features.
 
 ### Cookies and Local Storage We Use
@@ -74,7 +76,23 @@ Vectreal uses cookies and similar storage mechanisms for core operation and, wit
 | `ph_*` | Analytics | PostHog product analytics; set only after analytics consent | Cookie and local storage |
 | `vr_referral` | Marketing | Remembers how you arrived (referrer, campaign source) for attribution; set only after marketing consent | Local storage |
 
-Before you grant analytics consent, the PostHog SDK is loaded but opted out: it sends no events, and it runs in a memory-only mode that stores no identifiers on your device. This applies to events raised by our servers as well, including sign-in, sign-up, and contact form events. If you are signed in, your user ID, email address, and name are sent to PostHog only after you grant analytics consent; being signed in is not by itself treated as consent. If you decline, nothing is sent at all.
+Before you grant analytics consent, PostHog keeps nothing on your device: no cookies, no local storage and no session storage. Session replay, surveys and identification do not run, and events raised by our servers, including sign-in, sign-up, and contact form events, are not sent. If you are signed in, your user ID, email address, and name are sent to PostHog only after you grant analytics consent; being signed in is not by itself treated as consent.
+
+### Counting Without Consent
+
+If you decline analytics, or have not answered the cookie banner yet, PostHog runs in a cookieless mode and our site sends it only these events:
+
+- a page view each time you open a page,
+- viewing the newsroom listing (with the number of results shown and whether a search or category filter was used),
+- viewing a newsroom article (its address, category and reading time),
+- clicking the call to action at the end of an article (which article, where it leads, and which button), and
+- loading a model into the Publisher (the file's format and how long loading took).
+
+Each event carries only the page's address without its query string, any campaign parameters in that address (`utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term`), the website you came from (its domain only, never the page), your browser's user agent and the browser, operating system and device type derived from it, and the time. It carries no screen or window size, no language or timezone, no page title, no form input, no clicks elsewhere on the page, and no account or contact details.
+
+To count visitors without storing an identifier on your device, PostHog's servers compute a one-way hash of your IP address, browser user agent and our domain together with a random value (a "salt") that changes every day and is deleted once that day's events are processed. The hash cannot be turned back into your IP address, and because the salt changes daily, the same visitor on two different days cannot be recognized as the same person. Your IP address is not stored and is not used to look up your location. This lets us see, for example, how many visitors read an article and then opened the sign-up page on the same day, but never who they were.
+
+We rely on our legitimate interest (Art. 6(1)(f) GDPR) in knowing how many people visit our site and whether our articles lead to sign-ups. Nothing is kept on your device for this purpose. You may object at any time by contacting us; because the data holds nothing that identifies you, we cannot single out your past entries (Art. 11 GDPR). Browser extensions that block PostHog also stop this counting. If you accept analytics, cookieless counting ends and full product analytics starts with a new identifier; what was counted before is not linked to it.
 
 Referral and campaign attribution (`vr_referral`) is written only after you grant marketing consent, and is removed if you withdraw it.
 
@@ -93,7 +111,7 @@ Functional preferences (`theming`, `sidebar_state`) are written only after you g
 Where the GDPR applies, we rely on one or more of the following:
 
 - **Contractual necessity** (Art. 6(1)(b)): to provide the platform, accounts, and billing you request.
-- **Legitimate interests** (Art. 6(1)(f)): for security, reliability, abuse prevention, and product operations, balanced against your rights.
+- **Legitimate interests** (Art. 6(1)(f)): for security, reliability, abuse prevention, and product operations, and for counting visits without cookies as described in Section 4, balanced against your rights.
 - **Consent** (Art. 6(1)(a)): for optional categories such as analytics and marketing. You can withdraw consent at any time through the in-app consent controls, without affecting prior lawful processing.
 - **Legal obligations** (Art. 6(1)(c)): for example, tax and accounting requirements.
 
@@ -107,7 +125,7 @@ We share personal data only as needed with processors and service providers ("su
 | Stripe | Billing and payment processing | Billing identifiers and payment data you enter at checkout |
 | Cloudflare | Network delivery and bot protection (Turnstile) | IP address and request metadata |
 | Fly.io | Application hosting | Data processed while operating the service |
-| PostHog | Product analytics (only with consent) | Usage events and, for signed-in users, user ID, email, and name |
+| PostHog | Product analytics with consent; cookieless visit counting without it (Section 4) | With consent: usage events and, for signed-in users, user ID, email, and name. Without consent: the events listed in Section 4, plus IP address and user agent processed transiently to compute the daily hash |
 | Resend | Transactional and support email delivery | Recipient email, name, and message content |
 | Google / GitHub | Optional single sign-on | Identity data you authorize during sign-in |
 

@@ -3,7 +3,6 @@ import { ArrowRight, Search, SearchX } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { data, Form, Link, useNavigation } from 'react-router'
 
-import { useConsent } from '../../components/consent/consent-context'
 import { PublicErrorBoundary } from '../../components/errors'
 import {
 	Band,
@@ -141,7 +140,6 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 	*/
 	const isSearching = navigation.state === 'loading' && !!navigation.formMethod
 	const posthog = usePostHog()
-	const { consent } = useConsent()
 	const viewTrackedRef = useRef(false)
 	const [featuredArticle, ...remainingArticles] = articles
 	const latestStoryPath = latestSlug
@@ -149,23 +147,18 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 		: '/news-room#news-feed'
 
 	useEffect(() => {
-		if (!consent?.analytics || viewTrackedRef.current) {
+		// Counted with or without consent: see `cookieless-events.ts`.
+		if (!posthog || viewTrackedRef.current) {
 			return
 		}
 
 		viewTrackedRef.current = true
-		posthog?.capture('newsroom_listing_viewed', {
+		posthog.capture('newsroom_listing_viewed', {
 			result_count: articles.length,
 			has_query: Boolean(filters.query),
 			has_category_filter: Boolean(filters.category)
 		})
-	}, [
-		articles.length,
-		consent?.analytics,
-		filters.category,
-		filters.query,
-		posthog
-	])
+	}, [articles.length, filters.category, filters.query, posthog])
 
 	return (
 		<main>

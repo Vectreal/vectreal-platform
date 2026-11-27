@@ -158,3 +158,24 @@ describe('the shared client', () => {
 		expect(webhook?.source).toMatch(/void client\.captureImmediate\(/)
 	})
 })
+
+describe('distinctIdFromRequest', () => {
+	const request = (distinctId?: string) =>
+		new Request('https://vectreal.com/', {
+			headers: distinctId ? { 'X-POSTHOG-DISTINCT-ID': distinctId } : {}
+		})
+
+	it('passes on the id the browser reports under', async () => {
+		const { distinctIdFromRequest } = await import('./posthog-client.server')
+		expect(distinctIdFromRequest(request('0193-abc'))).toBe('0193-abc')
+		expect(distinctIdFromRequest(request())).toBeUndefined()
+	})
+
+	// Shared by every visitor counted without cookies: one person, if passed on.
+	it('ignores the cookieless placeholder', async () => {
+		const { distinctIdFromRequest } = await import('./posthog-client.server')
+		expect(
+			distinctIdFromRequest(request('$posthog_cookieless'))
+		).toBeUndefined()
+	})
+})

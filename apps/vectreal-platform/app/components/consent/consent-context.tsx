@@ -83,36 +83,30 @@ export function ConsentProvider({ children }: ConsentProviderProps) {
 		}
 	}, [fetcher.state, fetcher.data])
 
-	// Sync PostHog persistence and opt-in/out whenever analytics consent changes.
-	// null = first visit, no decision yet - posthog-browser.ts opts out by default, so
-	//   leaving it alone keeps capturing off until the banner is answered.
-	// accepted → switch to localStorage+cookie persistence so the session
-	//   persists across pages, then opt in.
-	// rejected → stay in memory mode and opt out.
+	// Bring PostHog in line whenever the analytics choice changes
+	// (`analytics-consent.ts`): accepting opts in with persistence, declining
+	// leaves a visitor who never opted in counted without cookies, and
+	// withdrawing a grant ends it.
+	// null = no decision yet - posthog-browser.ts starts PostHog opted out, so
+	//   nothing needs doing until the banner is answered.
 	//
 	// PostHog loads after hydration; until it has, the client queues these
 	// calls and replays them in order (see `posthog-react.tsx`).
 	useEffect(() => {
 		if (!posthog) return
 		if (consent === null) return
-		if (consent.analytics) {
-			posthog.set_config({ persistence: 'localStorage+cookie' })
-			posthog.opt_in_capturing()
-		} else {
-			posthog.set_config({ persistence: 'memory' })
-			posthog.opt_out_capturing()
-		}
+		posthog.setAnalyticsConsent(consent.analytics)
 	}, [consent?.analytics, consent, posthog])
 
 	const saveConsent = useCallback(
 		(choices: Omit<ConsentChoices, 'necessary'>) => {
 			// Record the decision only when analytics was accepted, and only after
-			// opting in: PostHog is opted out by default, so anything captured
-			// before opt_in_capturing() is dropped. A rejection is deliberately not
-			// captured - we have no consent to send an event about it.
+			// opting in: without consent this event is not on the cookieless
+			// allowlist, so anything captured before the opt-in is dropped. A
+			// rejection is deliberately not captured - we have no consent to send
+			// an event about it.
 			if (posthog && choices.analytics) {
-				posthog.set_config({ persistence: 'localStorage+cookie' })
-				posthog.opt_in_capturing()
+				posthog.setAnalyticsConsent(true)
 				posthog.capture('cookie_consent_accepted', {
 					functional: choices.functional,
 					marketing: choices.marketing

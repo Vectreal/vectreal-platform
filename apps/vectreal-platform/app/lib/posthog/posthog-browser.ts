@@ -1,5 +1,6 @@
 import { readConsentCookie } from '../consent/consent-cookie'
 import { isThirdPartySurface } from '../third-party-surface'
+import { applyAnalyticsConsent } from './analytics-consent'
 import { DEAD_CLICKS_CONFIG, RAGECLICK_CONFIG } from './frustration-signals'
 import { isPosthogEnabled } from './posthog-enabled'
 import { redactUrlSecretsFromProperties } from './redact-url-secrets'
@@ -51,7 +52,14 @@ export async function loadPostHog(
 		*/
 		const consented = readConsentCookie()?.choices.analytics
 
-		const { default: posthog } = await import('posthog-js')
+		/*
+		  The cookieless allowlist is only read once the library runs, so it
+		  arrives with it rather than on every page's first load.
+		*/
+		const [{ default: posthog }, { toCookielessEvent }] = await Promise.all([
+			import('posthog-js'),
+			import('./cookieless-events')
+		])
 
 		posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_TOKEN, {
 			api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
@@ -60,16 +68,23 @@ export async function loadPostHog(
 			defaults: '2026-01-30',
 			// Add tracing headers so server-side middleware can correlate events.
 			__add_tracing_headers: [window.location.host, 'localhost'],
-			// Nothing is sent to PostHog until the user grants analytics consent.
-			// posthog-js defaults `opt_out_capturing_by_default` to false, which would
-			// leave capturing live from init: on a first visit ConsentProvider has no
-			// decision to apply yet, so it never calls opt_out_capturing() and events
-			// would flow before the banner is answered. Opting out here is what makes
-			// the "only after you opt in" promise in the privacy policy true.
+			/*
+			  Until the visitor accepts analytics, PostHog counts without
+			  cookies. `opt_out_capturing_by_default` makes "not answered yet"
+			  the same as "declined", and `cookieless_mode: 'on_reject'` counts
+			  both: nothing is stored on the device, no session or replay runs,
+			  and PostHog derives the visitor id on its servers from a daily
+			  salted hash. Which events go out, and with what, is decided in
+			  `before_send` below (`cookieless-events.ts`). Without the opt-out
+			  default, posthog-js would capture fully from init on a first visit,
+			  before the banner is answered.
+
+			  Accepting switches persistence to 'localStorage+cookie' and opts in
+			  (`analytics-consent.ts`). Cookieless events also need the project
+			  setting "cookieless server hash mode", or PostHog drops them.
+			*/
+			cookieless_mode: 'on_reject',
 			opt_out_capturing_by_default: true,
-			// Memory-only until consent, so nothing is written to the device either.
-			// ConsentProvider switches persistence to 'localStorage+cookie' and calls
-			// opt_in_capturing() once the user accepts analytics.
 			persistence: 'memory',
 			capture_pageview: false,
 			// A drag on a 3D viewer is not a frustrated click: see the module.
@@ -89,6 +104,10 @@ export async function loadPostHog(
 			before_send: (event) => {
 				if (!event) return event
 
+				// Without consent only the allowlist leaves, already cut down.
+				if (event.properties.$cookieless_mode === true)
+					return toCookielessEvent(event)
+
 				/*
 				  Session replay is excluded, and not because it is safe. A `$snapshot`
 				  carries a whole rrweb payload, and walking one on every snapshot
@@ -99,22 +118,26 @@ export async function loadPostHog(
 				*/
 				if (event.event === '$snapshot') return event
 
-				return redactUrlSecretsFromProperties(event)
+				/*
+				  Added here rather than with `register()`: opting in or out
+				  of cookieless counting resets PostHog, and a reset drops
+				  registered properties.
+				*/
+				return redactUrlSecretsFromProperties({
+					...event,
+					properties: { ...event.properties, client_type: 'web' }
+				})
 			}
 		})
-		posthog.register({ client_type: 'web' })
 
 		/*
 		  Stored consent is applied before the client is handed to React, so
 		  the first `$pageview` (captured once the client arrives) already
-		  goes out for a returning consenter. Only ever opts IN: with no
-		  cookie, or analytics declined, the opt-out above stands.
+		  goes out in full for a returning consenter. Without a grant this
+		  also withdraws one PostHog still remembers from an earlier visit.
 		  ConsentProvider stays responsible for reacting to changes.
 		*/
-		if (consented) {
-			posthog.set_config({ persistence: 'localStorage+cookie' })
-			posthog.opt_in_capturing()
-		}
+		applyAnalyticsConsent(posthog, consented === true)
 
 		return posthog
 	} catch (error) {

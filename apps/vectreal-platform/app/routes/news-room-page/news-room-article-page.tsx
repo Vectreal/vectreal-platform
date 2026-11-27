@@ -16,7 +16,6 @@ import { ArticleCtaPanel } from '../../components/layout-components/article-cta-
 import { ArticleHero } from '../../components/layout-components/article-hero'
 import { ScheduledLabel } from '../../components/layout-components/scheduled-label'
 import { notFoundMeta, routeErrorMeta } from '../../components/not-found'
-import { useConsentedCapture } from '../../hooks/use-consented-capture'
 import { useDocToc } from '../../hooks/use-doc-toc'
 import { markdownTwinLink } from '../../lib/markdown/markdown-twin'
 import { getArticleBody } from '../../lib/news/news-article-body'
@@ -136,7 +135,6 @@ function NewsRoomArticle({
 	const { article, adjacent, related } = loaderData
 	const posthog = usePostHog()
 	const { consent } = useConsent()
-	const captureConsented = useConsentedCapture()
 	const ArticleComponent = getArticleBody(article.bodyId)
 	const contentRef = useRef<HTMLDivElement | null>(null)
 	const viewTrackedRef = useRef(false)
@@ -147,23 +145,18 @@ function NewsRoomArticle({
 	const [copied, setCopied] = useState(false)
 
 	useEffect(() => {
-		if (!consent?.analytics || viewTrackedRef.current) {
+		// Counted with or without consent: see `cookieless-events.ts`.
+		if (!posthog || viewTrackedRef.current) {
 			return
 		}
 
 		viewTrackedRef.current = true
-		posthog?.capture('newsroom_article_viewed', {
+		posthog.capture('newsroom_article_viewed', {
 			slug: article.slug,
 			category: article.category,
 			reading_time_minutes: article.readingTimeMinutes
 		})
-	}, [
-		article.category,
-		article.readingTimeMinutes,
-		article.slug,
-		consent?.analytics,
-		posthog
-	])
+	}, [article.category, article.readingTimeMinutes, article.slug, posthog])
 
 	useEffect(() => {
 		if (!consent?.analytics) {
@@ -363,7 +356,8 @@ function NewsRoomArticle({
 					htmlPath={`/news-room/${article.slug}`}
 					title={article.title}
 					onAction={(action) =>
-						captureConsented('newsroom_cta_clicked', {
+						// Counted with or without consent: see `cookieless-events.ts`.
+						posthog?.capture('newsroom_cta_clicked', {
 							slug: article.slug,
 							destination: article.cta.kind,
 							action

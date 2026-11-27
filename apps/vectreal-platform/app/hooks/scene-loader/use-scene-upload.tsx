@@ -1,3 +1,4 @@
+import { modelFormatForFileName } from '@vctrl/core/model-formats'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useSetAtom } from 'jotai/react'
 import { useCallback, useRef, useState } from 'react'
@@ -155,13 +156,15 @@ export function useSceneUpload() {
 			if (notice) toast.warning(notice)
 			else toast.success(`Loaded ${result.file.name}`)
 
-			if (consent?.analytics) {
-				posthog?.capture('scene_upload_succeeded', {
-					file_format:
-						result.file.name.split('.').pop()?.toLowerCase() ?? 'unknown',
-					duration_ms: Date.now() - startedAt
-				})
-			}
+			/*
+			  Counted with or without consent: see `cookieless-events.ts`. The
+			  format comes from the accepted list rather than the file name,
+			  which without a dot would be sent whole.
+			*/
+			posthog?.capture('scene_upload_succeeded', {
+				file_format: modelFormatForFileName(result.file.name)?.id ?? 'unknown',
+				duration_ms: Date.now() - startedAt
+			})
 
 			return result
 		},

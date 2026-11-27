@@ -1,12 +1,17 @@
 // @vitest-environment jsdom
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { createRoutesStub } from 'react-router'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
 	ConsentProvider,
 	useConsent
 } from '../../components/consent/consent-context'
+import {
+	CONSENT_COOKIE_NAME,
+	CONSENT_POLICY_VERSION,
+	encodeConsentCookieValue
+} from '../consent/consent-cookie'
 import {
 	deferPostHog,
 	PostHogProvider,
@@ -14,6 +19,7 @@ import {
 } from './posthog-react'
 
 import type { PostHog } from 'posthog-js'
+import type { ReactNode } from 'react'
 
 /*
   The library arrives after hydration (`posthog-browser.ts`), so a page's
@@ -34,7 +40,10 @@ function fakeLibrary() {
 		(...args: unknown[]) =>
 			calls.push([name, args])
 	const posthog = {
+		config: {},
+		reloadFeatureFlags: record('reloadFeatureFlags'),
 		capture: record('capture'),
+		set_config: record('set_config'),
 		opt_in_capturing: record('opt_in_capturing'),
 		reset: record('reset')
 	} as unknown as PostHog
@@ -47,7 +56,7 @@ describe('deferPostHog', () => {
 		const { promise, resolve } = deferred()
 		const { client, loaded } = deferPostHog(promise)
 
-		client.opt_in_capturing()
+		client.setAnalyticsConsent(true)
 		client.capture('$pageview', { a: 1 })
 		client.reset()
 		expect(calls).toEqual([])
@@ -56,11 +65,12 @@ describe('deferPostHog', () => {
 		await loaded
 
 		expect(calls.map(([name]) => name)).toEqual([
+			'set_config',
 			'opt_in_capturing',
 			'capture',
 			'reset'
 		])
-		expect(calls[1][1][1]).toMatchObject({ a: 1 })
+		expect(calls[2][1][1]).toMatchObject({ a: 1 })
 	})
 
 	// A visitor who navigates before the library arrives.
@@ -97,12 +107,12 @@ describe('deferPostHog', () => {
 		const { promise, resolve } = deferred()
 		const { client, loaded } = deferPostHog(promise)
 
-		client.set_config({ persistence: 'localStorage+cookie' })
-		client.opt_in_capturing()
+		client.setAnalyticsConsent(true)
+		client.reset()
 		resolve(posthog)
 		await loaded
 
-		expect(calls.map(([name]) => name)).toEqual(['opt_in_capturing'])
+		expect(calls.map(([name]) => name)).toEqual(['reset'])
 		error.mockRestore()
 	})
 
@@ -178,6 +188,8 @@ describe('ConsentProvider', () => {
 	// Accepted in the second before the library finished downloading.
 	it('opts a client in that arrives after the visitor accepted', async () => {
 		const client = {
+			config: {},
+			reloadFeatureFlags: vi.fn(),
 			set_config: vi.fn(),
 			opt_in_capturing: vi.fn(),
 			opt_out_capturing: vi.fn(),
@@ -219,5 +231,83 @@ describe('ConsentProvider', () => {
 		expect(client.opt_in_capturing.mock.invocationCallOrder[0]).toBeLessThan(
 			client.capture.mock.invocationCallOrder[0]
 		)
+	})
+
+	afterEach(() => {
+		document.cookie = `${CONSENT_COOKIE_NAME}=; max-age=0`
+	})
+
+	function Reject() {
+		const { saveConsent } = useConsent()
+		return (
+			<button
+				onClick={() =>
+					saveConsent({ functional: false, analytics: false, marketing: false })
+				}
+			>
+				reject
+			</button>
+		)
+	}
+
+	function renderConsent(client: PostHog, children: ReactNode) {
+		const Stub = createRoutesStub([
+			{
+				path: '/',
+				Component: () => <ConsentProvider>{children}</ConsentProvider>
+			},
+			{ path: '/api/consent', action: () => ({ ok: true }) }
+		])
+		render(
+			<PostHogProvider client={Promise.resolve(client)}>
+				<Stub initialEntries={['/']} />
+			</PostHogProvider>
+		)
+	}
+
+	function library(optedIn: boolean) {
+		return {
+			config: {},
+			reloadFeatureFlags: vi.fn(),
+			set_config: vi.fn(),
+			opt_in_capturing: vi.fn(),
+			opt_out_capturing: vi.fn(),
+			clear_opt_in_out_capturing: vi.fn(),
+			has_opted_in_capturing: vi.fn(() => optedIn),
+			capture: vi.fn()
+		}
+	}
+
+	it('withdraws an earlier grant when the visitor rejects analytics', async () => {
+		document.cookie = `${CONSENT_COOKIE_NAME}=${encodeConsentCookieValue({
+			version: CONSENT_POLICY_VERSION,
+			choices: {
+				necessary: true,
+				functional: false,
+				analytics: true,
+				marketing: false
+			}
+		})}`
+		const client = library(true)
+		renderConsent(client as unknown as PostHog, <Reject />)
+		await waitFor(() => expect(client.opt_in_capturing).toHaveBeenCalled())
+
+		act(() => screen.getByText('reject').click())
+
+		await waitFor(() => expect(client.opt_out_capturing).toHaveBeenCalled())
+		expect(client.clear_opt_in_out_capturing).toHaveBeenCalled()
+	})
+
+	// Opting out writes to storage: a visitor who never opted in is left alone.
+	it('does not opt out a visitor who never opted in when they reject', async () => {
+		const client = library(false)
+		renderConsent(client as unknown as PostHog, <Reject />)
+
+		act(() => screen.getByText('reject').click())
+
+		await waitFor(() =>
+			expect(client.has_opted_in_capturing).toHaveBeenCalled()
+		)
+		expect(client.opt_out_capturing).not.toHaveBeenCalled()
 	})
 })

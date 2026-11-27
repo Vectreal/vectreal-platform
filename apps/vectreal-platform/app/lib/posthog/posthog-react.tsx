@@ -8,6 +8,8 @@ import {
 	useSyncExternalStore
 } from 'react'
 
+import { applyAnalyticsConsent } from './analytics-consent'
+
 import type { PostHog } from 'posthog-js'
 
 /**
@@ -32,18 +34,21 @@ const METHODS = [
 	'captureException',
 	'identify',
 	'group',
-	'reset',
-	'set_config',
-	'opt_in_capturing',
-	'opt_out_capturing'
+	'reset'
 ] as const
 
 type Method = (typeof METHODS)[number]
 
-/** The calls the app makes. None answers: a queued call has nothing to say. */
+/**
+ * The calls the app makes. None answers: a queued call has nothing to say.
+ *
+ * Consent goes through `setAnalyticsConsent` (`analytics-consent.ts`)
+ * rather than PostHog's own opt-in and opt-out, so no component can store a
+ * refusal on the device of a visitor who declined.
+ */
 export type PostHogClient = {
 	[M in Method]: (...args: Parameters<PostHog[M]>) => void
-}
+} & { setAnalyticsConsent: (granted: boolean) => void }
 
 /*
   posthog-js reads the time and the page when an event is sent, so a queued
@@ -74,41 +79,57 @@ export function deferPostHog(load: Promise<PostHog | undefined>): {
 	client: PostHogClient
 	loaded: Promise<PostHog | undefined>
 } {
+	type Call = { name: string; run: (posthog: PostHog) => void }
 	let target: PostHog | undefined
-	let queue: Array<[Method, unknown[]]> | undefined = []
-
-	const call = (posthog: PostHog, method: Method, args: unknown[]) => {
-		;(posthog[method] as (...args: unknown[]) => unknown).apply(posthog, args)
-	}
+	let queue: Call[] | undefined = []
 
 	const loaded = load.then((posthog) => {
 		const pending = queue ?? []
 		queue = undefined
 		target = posthog
 		if (posthog)
-			for (const [method, args] of pending) {
+			for (const { name, run } of pending) {
 				/*
 				  One call failing (Safari throws on storage with site data
 				  blocked) must not take the rest of the queue with it.
 				*/
 				try {
-					call(posthog, method, args)
+					run(posthog)
 				} catch (error) {
-					console.error(`PostHog ${method} failed.`, error)
+					console.error(`PostHog ${name} failed.`, error)
 				}
 			}
 		return posthog
 	})
 
-	const client = Object.fromEntries(
-		METHODS.map((method) => [
-			method,
-			(...args: unknown[]) => {
-				if (target) call(target, method, args)
-				else queue?.push([method, atCallTime(method, args)])
-			}
-		])
-	) as PostHogClient
+	const send = (call: Call) => {
+		if (target) call.run(target)
+		else queue?.push(call)
+	}
+
+	const client = {
+		...Object.fromEntries(
+			METHODS.map((method) => [
+				method,
+				(...args: unknown[]) => {
+					const queued = target ? args : atCallTime(method, args)
+					send({
+						name: method,
+						run: (posthog) =>
+							(posthog[method] as (...args: unknown[]) => unknown).apply(
+								posthog,
+								queued
+							)
+					})
+				}
+			])
+		),
+		setAnalyticsConsent: (granted: boolean) =>
+			send({
+				name: 'setAnalyticsConsent',
+				run: (posthog) => applyAnalyticsConsent(posthog, granted)
+			})
+	} as PostHogClient
 
 	return { client, loaded }
 }
