@@ -59,6 +59,14 @@ const SceneControls = memo((props: SceneControlsProps) => {
 		onChange,
 		enabledOverride,
 		inputLocked = false,
+		// The camera layer writes the limits: it anchors them on the camera in
+		// view and scales them with the fit, which a prop here would undo.
+		minDistance: _cameraOwnsMinDistance,
+		maxDistance: _cameraOwnsMaxDistance,
+		minPolarAngle: _cameraOwnsMinPolarAngle,
+		maxPolarAngle: _cameraOwnsMaxPolarAngle,
+		minAzimuthAngle: _cameraOwnsMinAzimuthAngle,
+		maxAzimuthAngle: _cameraOwnsMaxAzimuthAngle,
 		...rest
 	} = {
 		...defaultControlsOptions,

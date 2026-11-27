@@ -136,4 +136,19 @@ describe('the publisher route wires the restore', () => {
 		)
 		expect(arrival.slice(0, 400)).toContain('viewArrived()')
 	})
+
+	it('frees the editor from each camera’s limits outside Preview', () => {
+		const route = readFileSync(
+			join(
+				import.meta.dirname,
+				'../../../routes/publisher-page/publisher.$sceneId.tsx'
+			),
+			'utf8'
+		)
+		// As a live prop of the viewer, not a comment or a dead copy.
+		const viewer = route.slice(route.indexOf('<ClientVectrealViewer'))
+		expect(viewer.slice(0, viewer.indexOf('/>'))).toMatch(
+			/^\s*freeCamera=\{!isPreviewMode\}$/m
+		)
+	})
 })
