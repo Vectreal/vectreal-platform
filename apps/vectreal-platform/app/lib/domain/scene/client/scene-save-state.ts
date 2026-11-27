@@ -1,5 +1,5 @@
 export type SaveAvailabilityReason =
-	'ready' | 'no-model' | 'no-user' | 'no-unsaved-changes'
+	'ready' | 'opening' | 'no-model' | 'no-user' | 'no-unsaved-changes'
 
 export interface SaveAvailabilityState {
 	canSave: boolean
@@ -9,15 +9,26 @@ export interface SaveAvailabilityState {
 interface SaveAvailabilityArgs {
 	/** Whether a model is on the stage. */
 	hasModel: boolean
+	/**
+	 * A saved scene is open and its model is not on the stage yet. What is open
+	 * is the stored scene, so there is nothing to save, and it is not the empty
+	 * stage `no-model` describes either.
+	 */
+	isOpeningSavedScene: boolean
 	userId?: string
 	hasChanges: boolean
 }
 
 export const resolveSaveAvailability = ({
 	hasModel,
+	isOpeningSavedScene,
 	userId,
 	hasChanges
 }: SaveAvailabilityArgs): SaveAvailabilityState => {
+	if (isOpeningSavedScene) {
+		return { canSave: false, reason: 'opening' }
+	}
+
 	/*
 	  First, ahead of the account. The header is on screen before anything is
 	  loaded, and a signed-out visitor with an empty stage would otherwise be

@@ -58,7 +58,7 @@ Caption to use beneath image: "The same renderer that powers the Vectreal Publis
 
 ### What You'll Build
 
-A functioning React component that loads a published Vectreal scene and renders it inside your application - orbit controls, environment lighting, and screenshot capture wired up. The pattern works in any React 18 or 19 app, including SSR frameworks like React Router v7, Next.js, and Remix.
+A functioning React component that loads a published Vectreal scene and renders it inside your application - orbit controls, environment lighting, and screenshot capture wired up. The pattern works in any React 19 app, including SSR frameworks like React Router v7, Next.js, and Remix.
 
 If you prefer to skim the result first, the working example sits at the bottom of this post. Otherwise, start at the top and build it with us.
 
@@ -70,7 +70,7 @@ A short, honest list:
 
 | Requirement | Version | Notes |
 |---|---|---|
-| React | 18 or 19 | Declared as a peer dependency |
+| React | 19 | Declared as a peer dependency |
 | Three.js | latest matching the peer range | Declared as a peer dependency; install it alongside `@vctrl/viewer` so your project resolves one copy |
 | A published Vectreal scene | - | If you don't have one yet, [the Publisher walkthrough](https://vectreal.com/news-room/the-vectreal-publisher-walkthrough) gets you there in a few minutes |
 
@@ -464,7 +464,7 @@ A short, honest list of what you should know before shipping:
 
 | Topic | Status |
 |---|---|
-| React 18 / 19 | Both supported |
+| React 19 | Required: React Three Fiber 9, which the viewer renders with, needs it |
 | Three.js peer dep | Install alongside `@vctrl/viewer`, one copy per project |
 | SSR | Supported via the client-only pattern shown above |
 | WebXR / AR | Three.js supports WebXR, but a first-class viewer prop is on the roadmap, not yet shipped |
