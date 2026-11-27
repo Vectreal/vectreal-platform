@@ -14,10 +14,12 @@ import { renderHook } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { describe, expect, it } from 'vitest'
 
+import { newSceneCameraOptions } from '../../constants/viewer-defaults'
 import { lastSavedSettingsAtom } from '../../lib/stores/publisher-config-store'
 import {
 	animationAtom,
 	animationDriftAtom,
+	cameraAtom,
 	hotspotsAtom,
 	lightingAtom
 } from '../../lib/stores/scene-settings-store'
@@ -128,5 +130,25 @@ describe('a scene\u2019s animation settings', () => {
 
 		expect(store.get(animationAtom)).toBeUndefined()
 		expect(store.get(animationDriftAtom)).toBeNull()
+	})
+})
+
+describe('a new scene', () => {
+	it('opens with them before any reset, as a generation does', () => {
+		expect(createStore().get(cameraAtom)).toBe(newSceneCameraOptions)
+	})
+
+	it('starts with the new-scene cameras, which carry the default limits', () => {
+		const store = createStore()
+		store.set(cameraAtom, { cameras: [{ cameraId: 'old', name: 'Old' }] })
+		const { result } = renderHook(() => useResetSceneState(), {
+			wrapper: ({ children }: { children: ReactNode }) => (
+				<Provider store={store}>{children}</Provider>
+			)
+		})
+
+		result.current()
+
+		expect(store.get(cameraAtom)).toBe(newSceneCameraOptions)
 	})
 })

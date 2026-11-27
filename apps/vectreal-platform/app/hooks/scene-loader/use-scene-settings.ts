@@ -5,6 +5,7 @@ import { useCallback } from 'react'
 import {
 	defaultBoundsOptions,
 	defaultCameraOptions,
+	newSceneCameraOptions,
 	defaultControlsOptions,
 	defaultEnvOptions,
 	defaultLighting,
@@ -208,7 +209,7 @@ export function useResetSceneState() {
 		setEnv(defaultEnvOptions)
 		setLighting(defaultLighting)
 		setInteractions(undefined)
-		setCamera(defaultCameraOptions)
+		setCamera(newSceneCameraOptions)
 		setControls(defaultControlsOptions)
 		setShadows(defaultShadowsOptions)
 		setNormalization(defaultNormalizationOptions)

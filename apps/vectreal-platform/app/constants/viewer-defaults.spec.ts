@@ -1,4 +1,4 @@
-import { LEGACY_LIGHTING_DEFAULTS } from '@vctrl/core'
+import { defaultCameraConstraints, LEGACY_LIGHTING_DEFAULTS } from '@vctrl/core'
 import { defaultShadowsOptions as viewerShadowDefaults } from '@vctrl/viewer'
 import { resolveSceneViewCameras } from '@vctrl/viewer/hotspots'
 import { describe, expect, it } from 'vitest'
@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest'
 import {
 	defaultEnvOptions,
 	defaultShadowsOptions,
+	newSceneCameraOptions,
 	normalizeShadowOptions,
 	withSceneSettingsDefaults
 } from './viewer-defaults'
@@ -179,6 +180,20 @@ describe('when interaction starts', () => {
 		expect(
 			withSceneSettingsDefaults({ presentation: { showInfoPopover: true } })
 				.presentation.interactionStart
+		).toBeUndefined()
+	})
+})
+
+describe('camera limits', () => {
+	it("hold a new scene's first camera to the defaults", () => {
+		expect(newSceneCameraOptions.cameras?.[0]?.constraints).toEqual(
+			defaultCameraConstraints(0)
+		)
+	})
+
+	it('stay unset for a scene saved without cameras', () => {
+		expect(
+			withSceneSettingsDefaults({}).camera.cameras?.[0]?.constraints
 		).toBeUndefined()
 	})
 })

@@ -20,6 +20,7 @@ import { createSceneInputSchema } from '@vctrl/sdk'
 
 import {
 	defaultEnvOptions,
+	newSceneCameraOptions,
 	withSceneSettingsDefaults
 } from '../../../constants/viewer-defaults'
 import { agentActorFrom } from '../../../lib/domain/agent/agent-actor-context'
@@ -156,9 +157,10 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 					projectId,
 					userId: actor.userId,
 					meta: { name, description: '', thumbnailUrl: '' },
-					// The look an agent's scene always had, with its map compressed as
-					// every new scene's is.
+					// The look an agent's scene always had, with its map compressed and
+					// its cameras limited as every new scene's are.
 					settings: withSceneSettingsDefaults({
+						camera: newSceneCameraOptions,
 						environment: {
 							...defaultEnvOptions,
 							environmentQuality: 'compressed'
