@@ -21,9 +21,11 @@ import type { ConvertPair } from '../../convert/convert-pairs'
  * announcing itself otherwise. That is why a refusal is reported rather than
  * only a success: the files we cannot read are the more interesting half.
  *
- * WHAT IT CANNOT TELL US. PostHog is `opt_out_capturing_by_default`, so a
- * visitor who ignores the cookie banner emits nothing - and people who land,
- * read and leave are exactly the population this question is about. Every
+ * WHAT IT CANNOT TELL US. This event is sent only with analytics consent: a
+ * visitor who ignores the cookie banner is counted without cookies, and only
+ * the events in `cookieless-events.ts` leave for them, this one not among
+ * them - and people who land, read and leave are exactly the population this
+ * question is about. Every
  * number from this event is a **rate** among consenting visitors, never a
  * count of arrivals. Read it beside Search Console impressions, not instead of
  * them.

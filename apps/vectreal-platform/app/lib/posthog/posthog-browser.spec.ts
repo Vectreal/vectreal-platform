@@ -28,10 +28,14 @@ const LOADER = join(import.meta.dirname, 'posthog-browser.ts')
 const { evaluated, client } = vi.hoisted(() => ({
 	evaluated: vi.fn(),
 	client: {
+		config: {},
 		init: vi.fn(),
-		register: vi.fn(),
+		reloadFeatureFlags: vi.fn(),
 		set_config: vi.fn(),
-		opt_in_capturing: vi.fn()
+		opt_in_capturing: vi.fn(),
+		opt_out_capturing: vi.fn(),
+		clear_opt_in_out_capturing: vi.fn(),
+		has_opted_in_capturing: vi.fn(() => false)
 	}
 }))
 
@@ -77,11 +81,12 @@ describe('loadPostHog', () => {
 	})
 
 	it.each(['/', '/preview/p1/s1', '/publisher'])(
-		'starts PostHog opted out on a first-party page (%s)',
+		'starts PostHog counting without cookies on a first-party page (%s)',
 		async (pathname) => {
 			expect(await load(pathname)).toBe(client)
 			expect(client.init).toHaveBeenCalledTimes(1)
 			expect(client.init.mock.calls[0][1]).toMatchObject({
+				cookieless_mode: 'on_reject',
 				opt_out_capturing_by_default: true,
 				persistence: 'memory',
 				capture_pageview: false,
@@ -90,6 +95,8 @@ describe('loadPostHog', () => {
 				capture_dead_clicks: DEAD_CLICKS_CONFIG
 			})
 			expect(client.opt_in_capturing).not.toHaveBeenCalled()
+			// Declining is never reported: opting out writes a cookie.
+			expect(client.opt_out_capturing).not.toHaveBeenCalled()
 		}
 	)
 
@@ -109,6 +116,43 @@ describe('loadPostHog', () => {
 		})
 
 		expect(JSON.stringify(sent)).not.toContain('vctrl_liveSecret')
+		expect(sent.properties.client_type).toBe('web')
+	})
+
+	// Without consent only the cookieless allowlist leaves.
+	it('cuts down every event PostHog flags as cookieless', async () => {
+		await load('/')
+		const { before_send } = client.init.mock.calls[0][1]
+
+		expect(
+			before_send({
+				event: '$autocapture',
+				properties: { $cookieless_mode: true }
+			})
+		).toBeNull()
+		expect(
+			before_send({
+				event: '$pageview',
+				properties: {
+					$cookieless_mode: true,
+					$current_url:
+						'https://vectreal.com/auth/confirm-pending?email=a%40b.c'
+				}
+			}).properties.$current_url
+		).toBe('https://vectreal.com/auth/confirm-pending')
+	})
+
+	/*
+	  The visitor's own cookie is the record. A grant PostHog still holds
+	  from an earlier visit is withdrawn when that cookie does not say yes.
+	*/
+	it('withdraws a grant PostHog remembers but the consent cookie does not', async () => {
+		client.has_opted_in_capturing.mockReturnValueOnce(true)
+
+		expect(await load('/')).toBe(client)
+		expect(client.opt_out_capturing).toHaveBeenCalledTimes(1)
+		expect(client.clear_opt_in_out_capturing).toHaveBeenCalledTimes(1)
+		expect(client.opt_in_capturing).not.toHaveBeenCalled()
 	})
 
 	// Before the client reaches React, so the first `$pageview` is not dropped.
@@ -124,9 +168,9 @@ describe('loadPostHog', () => {
 		})}`
 
 		expect(await load('/')).toBe(client)
-		expect(client.set_config).toHaveBeenCalledWith({
-			persistence: 'localStorage+cookie'
-		})
+		expect(client.set_config).toHaveBeenCalledWith(
+			expect.objectContaining({ persistence: 'localStorage+cookie' })
+		)
 		expect(client.opt_in_capturing).toHaveBeenCalledTimes(1)
 	})
 

@@ -14,9 +14,11 @@ import { useSceneUpload } from './use-scene-upload'
 
 import type { ReactElement } from 'react'
 
-const { load, resetSceneState, loader } = vi.hoisted(() => ({
+const { load, resetSceneState, loader, posthog } = vi.hoisted(() => ({
 	load: vi.fn(),
 	resetSceneState: vi.fn(),
+	// One client, as the real hook returns.
+	posthog: { capture: vi.fn() },
 	// The loader's rendered state, which the subject is read against.
 	loader: { status: 'loading', source: 'url' } as {
 		status: string
@@ -31,10 +33,13 @@ vi.mock('@vctrl/hooks/use-load-model', async (importActual) => ({
 vi.mock('./use-scene-settings', () => ({
 	useResetSceneState: () => resetSceneState
 }))
+// No analytics consent: the banner has not been answered.
 vi.mock('../../components/consent/consent-context', () => ({
 	useConsent: () => ({ consent: null })
 }))
-vi.mock('../../lib/posthog/posthog-react', () => ({ usePostHog: () => null }))
+vi.mock('../../lib/posthog/posthog-react', () => ({
+	usePostHog: () => posthog
+}))
 vi.mock('../../lib/persistence/pending-scene-idb', () => ({
 	clearPendingSceneDraft: vi.fn(async () => undefined)
 }))
@@ -57,6 +62,7 @@ beforeEach(() => {
 	load.mockReset()
 	Object.assign(loader, { status: 'loading', source: 'url' })
 	resetSceneState.mockReset()
+	posthog.capture.mockReset()
 	vi.mocked(toast.error).mockReset()
 	vi.mocked(toast.success).mockReset()
 	vi.mocked(toast.warning).mockReset()
@@ -72,6 +78,42 @@ describe('useSceneUpload', () => {
 		expect(load).toHaveBeenCalledWith(SOURCE)
 		expect(resetSceneState).toHaveBeenCalledTimes(1)
 		expect(toast.success).toHaveBeenCalledWith('Loaded rocket.glb')
+	})
+
+	/*
+	  A load is a step of the funnel counted without consent
+	  (`cookieless-events.ts`); a refusal carries the loader's message and is
+	  sent only with consent.
+	*/
+	it('reports a model that loaded without analytics consent, not a refusal', async () => {
+		load.mockResolvedValueOnce(outcome('ready'))
+		load.mockResolvedValueOnce(outcome('error', { error: new Error('bad') }))
+		const { result } = renderHook(() => useSceneUpload())
+
+		await act(() => result.current.openModel(SOURCE))
+		await act(() => result.current.openModel(SOURCE))
+
+		expect(posthog.capture.mock.calls.map(([event]) => event)).toEqual([
+			'scene_upload_succeeded'
+		])
+		expect(posthog.capture.mock.calls[0][1]).toMatchObject({
+			file_format: 'glb'
+		})
+	})
+
+	// A name without a known extension is the visitor's own words.
+	it('reports the format, never the file name', async () => {
+		load.mockResolvedValue({
+			...outcome('ready'),
+			file: { name: 'Jane Doe living room' }
+		})
+		const { result } = renderHook(() => useSceneUpload())
+
+		await act(() => result.current.openModel(SOURCE))
+
+		expect(posthog.capture.mock.calls[0][1]).toMatchObject({
+			file_format: 'unknown'
+		})
 	})
 
 	it('says which images a glTF opened without, in place of "Loaded"', async () => {

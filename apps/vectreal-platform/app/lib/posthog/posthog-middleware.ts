@@ -1,4 +1,7 @@
-import { getPosthogClient } from './posthog-client.server'
+import {
+	distinctIdFromRequest,
+	getPosthogClient
+} from './posthog-client.server'
 
 import type { Route } from '../../+types/root'
 import type { PostHog } from 'posthog-node'
@@ -31,7 +34,7 @@ export const posthogMiddleware: Route.MiddlewareFunction = async (
 	}
 
 	const sessionId = request.headers.get('X-POSTHOG-SESSION-ID') ?? undefined
-	const distinctId = request.headers.get('X-POSTHOG-DISTINCT-ID') ?? undefined
+	const distinctId = distinctIdFromRequest(request)
 
 	;(context as PostHogContext).posthog = posthog
 

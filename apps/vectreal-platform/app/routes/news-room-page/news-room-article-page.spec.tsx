@@ -30,8 +30,10 @@ vi.mock('../../lib/posthog/posthog-react', async (importOriginal) => {
 vi.mock('@shared/components/hooks/use-mobile', () => ({
 	useIsMobile: () => false
 }))
+// Set by the test that reads without analytics consent.
+let analyticsConsent = true
 vi.mock('../../components/consent/consent-context', () => ({
-	useConsent: () => ({ consent: { analytics: true } })
+	useConsent: () => ({ consent: { analytics: analyticsConsent } })
 }))
 /* The bodies are lazy MDX chunks; what is measured here is the page around them. */
 vi.mock('../../lib/news/news-article-body', () => ({
@@ -228,5 +230,68 @@ describe('a newsroom article read before PostHog has loaded', () => {
 				(props) => props.milestone_percent
 			)
 		).toEqual([25])
+	})
+})
+
+/*
+  The view and the call to action are counted without consent, cut down to
+  what `cookieless-events.ts` allows; the reading depth is not.
+*/
+describe('a newsroom article read without analytics consent', () => {
+	afterEach(() => {
+		cleanup()
+		analyticsConsent = true
+	})
+
+	it('reports the view and the call to action, not the reading', async () => {
+		capture.mockClear()
+		analyticsConsent = false
+		Object.defineProperty(document.documentElement, 'scrollHeight', {
+			configurable: true,
+			value: 2000
+		})
+		Object.defineProperty(window, 'innerHeight', {
+			configurable: true,
+			value: 1000
+		})
+		scrollTo(0)
+		const article = getNewsArticles().find(
+			({ cta }) => !['agent', 'convert', 'free-model'].includes(cta.kind)
+		)
+		if (!article) throw new Error('no article leading to the Publisher')
+		const Stub = createRoutesStub([
+			{
+				path: '/news-room/:slug',
+				HydrateFallback: () => null,
+				Component: NewsRoomArticlePage as never,
+				loader: loader as never
+			},
+			{ path: '*', Component: () => null }
+		])
+
+		await act(async () => {
+			render(<Stub initialEntries={[`/news-room/${article.slug}`]} />)
+		})
+		act(() => scrollTo(1000))
+		const cta = [...document.querySelectorAll('a')].find(
+			(link) => link.textContent === 'Open the Publisher'
+		)
+		if (!cta) throw new Error('no call to action')
+		await act(async () => {
+			fireEvent.click(cta)
+		})
+
+		expect(eventsFor('newsroom_article_viewed', article.slug)).toHaveLength(1)
+		expect(eventsFor('newsroom_cta_clicked', article.slug)).toEqual([
+			{ slug: article.slug, destination: article.cta.kind, action: 'primary' }
+		])
+		expect(
+			eventsFor('newsroom_article_scroll_milestone', article.slug)
+		).toEqual([])
+		// Reported when the page goes, so it has to go first.
+		cleanup()
+		expect(eventsFor('newsroom_article_read_completed', article.slug)).toEqual(
+			[]
+		)
 	})
 })

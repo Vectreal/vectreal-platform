@@ -57,6 +57,9 @@ export function getPosthogClient(): null | PostHog {
 	return sharedPosthogClient
 }
 
+/** posthog-js's `COOKIELESS_SENTINEL_VALUE`. */
+const COOKIELESS_DISTINCT_ID = '$posthog_cookieless'
+
 /**
  * The distinct id the browser is reporting under, if it told us.
  *
@@ -64,7 +67,14 @@ export function getPosthogClient(): null | PostHog {
  * (`__add_tracing_headers` in `posthog-browser.ts`). Passing it through ties a
  * server-side exception to the session that provoked it, which is the
  * difference between "something 500'd" and "this is what the user was doing".
+ *
+ * A visitor counted without cookies sends PostHog's shared placeholder, which
+ * PostHog swaps for a hash only on events flagged cookieless. Passed on, it
+ * would file every such visitor's exception under one person, so it counts
+ * as no id at all.
  */
 export function distinctIdFromRequest(request: Request): string | undefined {
-	return request.headers.get('X-POSTHOG-DISTINCT-ID') ?? undefined
+	const distinctId = request.headers.get('X-POSTHOG-DISTINCT-ID')
+	if (!distinctId || distinctId === COOKIELESS_DISTINCT_ID) return undefined
+	return distinctId
 }
