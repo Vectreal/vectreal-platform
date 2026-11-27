@@ -1,17 +1,27 @@
+import { Button } from '@shared/components/ui/button'
 import { Toggle } from '@shared/components/ui/toggle'
 import {
 	ToggleGroup,
 	ToggleGroupItem
 } from '@shared/components/ui/toggle-group'
-import { useAtom } from 'jotai/react'
-import { Focus, Gauge, RotateCw, SlidersHorizontal, ZoomIn } from 'lucide-react'
+import { useAtom, useSetAtom } from 'jotai/react'
+import {
+	Eye,
+	Focus,
+	Gauge,
+	RotateCw,
+	SlidersHorizontal,
+	ZoomIn
+} from 'lucide-react'
 import { memo, useCallback, useState } from 'react'
 
 import {
 	INTERACTION_FEELS,
 	type InteractionFeel
 } from '../../../../constants/viewer-defaults'
+import { enterPreviewModeAtom } from '../../../../lib/stores/publisher-config-store'
 import { controlsAtom } from '../../../../lib/stores/scene-settings-store'
+import { PREVIEW_TOGGLE_ID } from '../../shell/tool-bar'
 import { DrillDown, DrillDownTrigger, DrillDownView } from '../drill-down'
 import { FieldSlider } from '../field-slider'
 import { SettingGroup } from '../sidebar-section'
@@ -66,6 +76,7 @@ function matchingFeel(controls: ControlsProps): InteractionFeel | '' {
 const InteractionControlsSettingsPanel = memo(() => {
 	const [controls, setControls] = useAtom(controlsAtom)
 	const [path, setPath] = useState<string[]>([])
+	const enterPreviewMode = useSetAtom(enterPreviewModeAtom)
 	const feel = matchingFeel(controls)
 
 	const setControl = useCallback(
@@ -93,7 +104,10 @@ const InteractionControlsSettingsPanel = memo(() => {
 
 	return (
 		<DrillDown path={path} onPathChange={setPath} rootTitle="Interaction">
-			<DrillDownView id="root">
+			<DrillDownView
+				id="root"
+				caption="These settings apply to visitors and in Preview. The editor always moves freely."
+			>
 				<div className="grid grid-cols-3 gap-2">
 					<Toggle
 						layout="tile"
@@ -157,6 +171,22 @@ const InteractionControlsSettingsPanel = memo(() => {
 						label="Advanced"
 					/>
 				</div>
+
+				<Button
+					variant="secondary"
+					className="w-full"
+					onClick={() => {
+						enterPreviewMode()
+						// Preview closes this panel with the button in it; focus goes to
+						// the toggle that leaves preview again.
+						requestAnimationFrame(() =>
+							document.getElementById(PREVIEW_TOGGLE_ID)?.focus()
+						)
+					}}
+				>
+					<Eye className="size-4" />
+					Try in Preview
+				</Button>
 			</DrillDownView>
 
 			<DrillDownView

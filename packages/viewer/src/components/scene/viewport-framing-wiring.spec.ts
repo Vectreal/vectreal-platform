@@ -227,7 +227,7 @@ describe('captures render the pose the viewer shows at their aspect', () => {
 	it('never clamps against the live, view-fitted limits', () => {
 		expect(capture).not.toMatch(/limits: controls\s*[},]/)
 		expect(capture).toContain(
-			'captureOrbitLimits(limits, distanceLimits ?? {}, 1)'
+			'captureOrbitLimits(limits, captureDistanceLimits, 1)'
 		)
 	})
 })

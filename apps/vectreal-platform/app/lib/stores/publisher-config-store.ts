@@ -6,10 +6,12 @@ import {
 import { atom } from 'jotai'
 import { selectAtom } from 'jotai/utils'
 
+import { EDITOR_CONTROLS } from '../../constants/viewer-defaults'
 import { resolveDefaultSceneCameraId } from '../domain/scene/scene-camera'
 import {
 	activeHotspotIdAtom,
 	cameraAtom,
+	controlsAtom,
 	environmentAtom,
 	exitHotspotCameraAtom,
 	lightingAtom,
@@ -217,6 +219,15 @@ const exitPreviewModeAtom = atom(null, (get, set) => {
 	}
 	if (returnToCameraId) set(selectedCameraIdAtom, returnToCameraId)
 })
+
+/**
+ * How the Publisher's viewport moves. The scene's interaction settings shape
+ * the published experience, so they apply in preview; the editor always moves
+ * freely (`EDITOR_CONTROLS`).
+ */
+const viewportControlsAtom = atom((get) =>
+	get(isPreviewModeAtom) ? get(controlsAtom) : EDITOR_CONTROLS
+)
 
 /**
  * A camera the Camera tool should open on, left by a link from another tool
@@ -440,6 +451,7 @@ export {
 	isPreviewModeAtom,
 	enterPreviewModeAtom,
 	exitPreviewModeAtom,
+	viewportControlsAtom,
 	cameraToolOpenRequestAtom,
 	openCameraInCameraToolAtom,
 	openHotspotInHotspotToolAtom,

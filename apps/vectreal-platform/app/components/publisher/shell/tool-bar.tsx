@@ -35,6 +35,9 @@ const restingClassName =
 	'text-muted-foreground hover:text-foreground hover:bg-foreground/5'
 const activeClassName = 'bg-foreground text-background'
 
+/** The Preview toggle, which a control that enters preview hands focus to. */
+export const PREVIEW_TOGGLE_ID = 'publisher-preview-toggle'
+
 /**
  * The publisher's tools, as one labelled row floating over the top-left of the
  * stage.
@@ -139,6 +142,7 @@ export const ToolBar = memo(() => {
 			</AnimatePresence>
 
 			<button
+				id={PREVIEW_TOGGLE_ID}
 				type="button"
 				aria-pressed={isPreviewMode}
 				onClick={isPreviewMode ? exitPreviewMode : enterPreviewMode}
