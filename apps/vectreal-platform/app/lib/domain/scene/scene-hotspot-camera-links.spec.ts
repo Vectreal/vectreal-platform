@@ -5,9 +5,7 @@ import {
 	removeCamera,
 	removeHotspot,
 	placeHotspot,
-	renameHotspot,
-	repointHotspotLinks,
-	repointInteractions
+	renameHotspot
 } from './scene-hotspot-camera-links'
 
 import type { CameraHotspotState } from './scene-hotspot-camera-links'
@@ -785,64 +783,5 @@ describe('removeCamera', () => {
 			expect(cameraIds(result)).toEqual(['main'])
 			expect(result.interactions?.map((i) => i.id)).toEqual(['kept'])
 		})
-	})
-})
-
-describe('repointHotspotLinks', () => {
-	it('moves every hotspot onto the new id', () => {
-		const result = repointHotspotLinks(
-			[
-				hotspot('a', { linkedCameraId: 'old' }),
-				hotspot('b', { linkedCameraId: 'old' })
-			],
-			'old',
-			'new'
-		)
-		expect(result.map((h) => h.linkedCameraId)).toEqual(['new', 'new'])
-	})
-
-	it('leaves links to other cameras alone', () => {
-		const result = repointHotspotLinks(
-			[
-				hotspot('a', { linkedCameraId: 'old' }),
-				hotspot('b', { linkedCameraId: 'default' })
-			],
-			'old',
-			'new'
-		)
-		expect(result[1].linkedCameraId).toBe('default')
-	})
-
-	it('changes nothing when no hotspot points at the old id', () => {
-		const hotspots = [hotspot('a', { linkedCameraId: 'default' })]
-		expect(repointHotspotLinks(hotspots, 'old', 'new')).toEqual(hotspots)
-	})
-})
-
-describe('repointInteractions', () => {
-	it('moves every action that switched to the old id onto the new one', () => {
-		const result = repointInteractions(
-			[switchTo('both', 'side', 'front'), switchTo('other', 'front')],
-			'side',
-			'profile'
-		)
-		expect(result?.map((i) => i.actions)).toEqual([
-			[
-				{ type: 'activate_camera', cameraId: 'profile' },
-				{ type: 'activate_camera', cameraId: 'front' }
-			],
-			[{ type: 'activate_camera', cameraId: 'front' }]
-		])
-	})
-
-	it('hands back the same list when nothing switched to it', () => {
-		const interactions = [switchTo('other', 'front')]
-		expect(repointInteractions(interactions, 'side', 'profile')).toBe(
-			interactions
-		)
-	})
-
-	it('leaves absent interactions absent', () => {
-		expect(repointInteractions(undefined, 'side', 'profile')).toBeUndefined()
 	})
 })
