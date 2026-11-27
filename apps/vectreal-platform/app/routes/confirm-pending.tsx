@@ -26,6 +26,10 @@ import {
 	getSafeNextPath,
 	newAccountDestination
 } from '../lib/domain/auth/auth-redirect.server'
+import {
+	clearConfirmPendingEmail,
+	readConfirmPendingEmail
+} from '../lib/domain/auth/confirm-pending-email.server'
 import { resendCooldownFor } from '../lib/domain/auth/resend-cooldown'
 import { ensureValidCsrfFormData } from '../lib/http/csrf.server'
 import { recordRateLimitAttempt } from '../lib/http/rate-limit.server'
@@ -72,10 +76,17 @@ export async function loader({ request }: Route.LoaderArgs) {
 	// Already confirmed - send straight to onboarding (first-time) or dashboard
 	// (the onboarding page is idempotent; existing users skip through it quickly)
 	if (user?.email_confirmed_at) {
-		return redirect(newAccountDestination(next))
+		return redirect(newAccountDestination(next), {
+			headers: { 'Set-Cookie': await clearConfirmPendingEmail() }
+		})
 	}
 
-	const email = url.searchParams.get('email') ?? ''
+	/*
+	  Masked here, so the address itself never reaches the page: not its URL
+	  (`confirm-pending-email.server.ts` says why), and not its HTML, where
+	  session replay would record it. The resend reads it from the cookie.
+	*/
+	const email = await readConfirmPendingEmail(request)
 
 	/*
 	  `next` rides through this screen into the resent confirmation link. It
@@ -83,7 +94,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	  hardcoded `/onboarding`, so the screen looked like it honoured a return
 	  path and did not; the resend now rebuilds the link with it.
 	*/
-	return data({ email, next })
+	return data({ maskedEmail: email && maskEmail(email), next })
 }
 
 // ─── Action ───────────────────────────────────────────────────────────────────
@@ -93,8 +104,8 @@ export async function action({ request }: Route.ActionArgs) {
 	const csrfCheck = await ensureValidCsrfFormData(request, formData)
 	if (csrfCheck) return csrfCheck
 
-	const email = formData.get('email')
-	if (!email || typeof email !== 'string' || !email.includes('@')) {
+	const email = await readConfirmPendingEmail(request)
+	if (!email) {
 		return data<ActionData>(
 			{ error: 'Invalid email address.' },
 			{ status: 400 }
@@ -161,14 +172,15 @@ export async function action({ request }: Route.ActionArgs) {
 function maskEmail(email: string): string {
 	const [local, domain] = email.split('@')
 	if (!local || !domain) return email
-	const visible = local.length > 2 ? local[0] : local
-	return `${visible}${'*'.repeat(Math.min(local.length - 1, 4))}@${domain}`
+	// At least one star: a one- or two-letter local part was shown whole.
+	const stars = Math.max(1, Math.min(local.length - 1, 4))
+	return `${local[0]}${'*'.repeat(stars)}@${domain}`
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ConfirmPending() {
-	const { email, next } = useLoaderData<typeof loader>()
+	const { maskedEmail, next } = useLoaderData<typeof loader>()
 	const fetcher = useFetcher<ActionData>()
 	const { turnstileToken, hasTurnstile } = useOutletContext<AuthLayoutContext>()
 
@@ -243,10 +255,8 @@ export default function ConfirmPending() {
 					}}
 				>
 					We sent a confirmation link to{' '}
-					{email ? (
-						<span className="text-foreground font-medium">
-							{maskEmail(email)}
-						</span>
+					{maskedEmail ? (
+						<span className="text-foreground font-medium">{maskedEmail}</span>
 					) : (
 						'your email address'
 					)}
@@ -265,7 +275,6 @@ export default function ConfirmPending() {
 				>
 					<fetcher.Form method="post">
 						<AuthenticityTokenInput />
-						<input type="hidden" name="email" value={email} />
 						<input type="hidden" name="next" value={next} />
 						{turnstileToken && (
 							<input

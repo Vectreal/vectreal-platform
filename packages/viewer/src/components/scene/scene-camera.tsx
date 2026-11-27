@@ -10,6 +10,7 @@ import {
 	cameraSelectionSignature,
 	DEFAULT_CAMERA,
 	DEFAULT_SCENE_TRANSITION,
+	isLensOnlyEdit,
 	resolveCameraPose,
 	type CameraSelectionSignature,
 	type OpeningPose,
@@ -612,10 +613,20 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 
 		// Only animate when switching between cameras; apply property edits instantly
 		// so sidebar changes don't re-trigger the transition for the active camera.
-		if (inView?.cameraId === selectionKey) {
-			// Without the opening pose: an edit to the camera in view, such as its
-			// field of view, must not pull a camera with no pose of its own back to
-			// where the scene opened.
+		if (
+			inView?.cameraId === selectionKey &&
+			flight.progress() === null &&
+			isLensOnlyEdit(inView.signature, signature)
+		) {
+			// A new lens is applied where the view is: an author who orbited away
+			// and then changes the field of view keeps the view they were exploring.
+			const activeCamera = sceneCamera as PerspectiveCamera
+			activeCamera.fov = selection.targetFov
+			activeCamera.updateProjectionMatrix()
+			invalidate()
+		} else if (inView?.cameraId === selectionKey) {
+			// Without the opening pose: an edit to the camera in view must not pull
+			// a camera with no pose of its own back to where the scene opened.
 			applyCameraInstantly(
 				resolveCameraSelection(
 					cameras,
@@ -639,6 +650,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		cameras,
 		controls?.target,
 		flight,
+		invalidate,
 		onInteractionEvent,
 		openingPose,
 		sceneCamera,

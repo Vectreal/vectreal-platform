@@ -95,7 +95,8 @@ export async function loadPostHog(
 			  contains a live API key - and PostHog attaches URLs (`$current_url`,
 			  `$referrer`) to every event, not just `$pageview`. PostHog never
 			  starts on `/embed` itself; this still keeps a key from leaving in any
-			  URL an event carries from the rest of the site.
+			  URL an event carries from the rest of the site. The same rule keeps
+			  every email address out of every event (`redact-url-secrets.ts`).
 
 			  Here rather than at a capture site: this runs for every event, including
 			  the properties PostHog adds itself, so there is no list of call sites to
@@ -104,9 +105,16 @@ export async function loadPostHog(
 			before_send: (event) => {
 				if (!event) return event
 
-				// Without consent only the allowlist leaves, already cut down.
-				if (event.properties.$cookieless_mode === true)
-					return toCookielessEvent(event)
+				/*
+				  Without consent only the allowlist leaves, already cut down.
+				  Redacted all the same: an email address is kept out of every
+				  event, and the path and campaign values the allowlist keeps
+				  are still strings someone else chose.
+				*/
+				if (event.properties.$cookieless_mode === true) {
+					const cookieless = toCookielessEvent(event)
+					return cookieless && redactUrlSecretsFromProperties(cookieless)
+				}
 
 				/*
 				  Session replay is excluded, and not because it is safe. A `$snapshot`

@@ -35,6 +35,7 @@ import {
 	getSafeNextPath,
 	newAccountDestination
 } from '../../lib/domain/auth/auth-redirect.server'
+import { redirectToConfirmPending } from '../../lib/domain/auth/confirm-pending-email.server'
 import { classifySignupFailure } from '../../lib/domain/auth/signup-failure'
 import {
 	validateSignup,
@@ -205,13 +206,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 			return redirect(newAccountDestination(next))
 		}
 
-		const confirmPendingUrl = new URL(
-			'/auth/confirm-pending',
-			new URL(request.url).origin
-		)
-		confirmPendingUrl.searchParams.set('email', normalizedEmail)
-		confirmPendingUrl.searchParams.set('next', next)
-		return redirect(confirmPendingUrl.toString())
+		return redirectToConfirmPending(request, normalizedEmail, next)
 	}
 
 	if (signupError) {
