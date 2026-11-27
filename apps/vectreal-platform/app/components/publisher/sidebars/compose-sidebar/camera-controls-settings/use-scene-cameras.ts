@@ -12,9 +12,7 @@ import {
 } from '../../../../../lib/domain/scene/scene-camera'
 import {
 	interactionSwitchesTo,
-	removeCamera,
-	repointHotspotLinks,
-	repointInteractions
+	removeCamera
 } from '../../../../../lib/domain/scene/scene-hotspot-camera-links'
 import {
 	viewLensAtom,
@@ -268,50 +266,28 @@ export function useSceneCameras() {
 		setInteractions
 	])
 
-	/** Renaming re-derives the id from the name, so hotspot links follow it. */
+	/**
+	 * Renaming changes the name and nothing else. The id stays the one the
+	 * camera was created with: hotspot links, interactions and embed hosts
+	 * calling `activate_camera` all name it, and a selection that moved with
+	 * the id flew the view back to the camera's saved pose.
+	 */
 	const renameSelected = useCallback(
 		(nextName: string) => {
-			const oldId = selectedCamera?.cameraId
-			if (!oldId) return
+			const id = selectedCamera?.cameraId
+			if (!id) return
 
-			const newId = deriveUniqueSlug(
-				nextName,
-				cameras.map((entry) => entry.cameraId),
-				{ excludeId: oldId, fallback: 'camera' }
-			)
-
-			setCamera(
-				withDefaultCameraFlag({
-					...normalizedCamera,
-					activeCameraId:
-						normalizedCamera.activeCameraId === oldId
-							? newId
-							: normalizedCamera.activeCameraId,
-					cameras: cameras.map((entry) =>
-						entry.cameraId === oldId
-							? { ...entry, cameraId: newId, name: nextName }
-							: entry
+			setCamera((prev) => {
+				const normalized = normalizeCameraState(prev)
+				return withDefaultCameraFlag({
+					...normalized,
+					cameras: (normalized.cameras ?? []).map((entry) =>
+						entry.cameraId === id ? { ...entry, name: nextName } : entry
 					)
 				})
-			)
-
-			if (newId !== oldId) {
-				setSelectedCameraId(newId)
-				setHotspots(repointHotspotLinks(hotspots, oldId, newId))
-				setInteractions(repointInteractions(interactions, oldId, newId))
-			}
+			})
 		},
-		[
-			cameras,
-			hotspots,
-			interactions,
-			normalizedCamera,
-			selectedCamera?.cameraId,
-			setCamera,
-			setHotspots,
-			setInteractions,
-			setSelectedCameraId
-		]
+		[selectedCamera?.cameraId, setCamera]
 	)
 
 	/**
