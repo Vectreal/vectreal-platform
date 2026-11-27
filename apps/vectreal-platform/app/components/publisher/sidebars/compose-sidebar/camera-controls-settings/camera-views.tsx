@@ -3,9 +3,10 @@ import { Input } from '@shared/components/ui/input'
 import { Slider, type SliderPreset } from '@shared/components/ui/slider'
 import { Reorder, useReducedMotion } from 'framer-motion'
 import { useAtomValue } from 'jotai/react'
-import { ArrowUpToLine, Camera, Link, Plus, Trash2 } from 'lucide-react'
+import { ArrowUpToLine, Camera, Frame, Link, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { describeCameraLimits } from '../../../../../lib/domain/scene/camera-limits'
 import { canEditCameraSettingsAtom } from '../../../../../lib/stores/publisher-config-store'
 import { DrillDownTrigger } from '../../drill-down'
 import { SettingGroup, SettingRow } from '../../sidebar-section'
@@ -314,6 +315,15 @@ export function CameraDetail({
 				value={cameras.viewFov ?? 60}
 				onValueChange={cameras.setFov}
 			/>
+
+			{cameras.limits && (
+				<DrillDownTrigger
+					to="limits"
+					icon={<Frame />}
+					label="Limits"
+					summary={describeCameraLimits(cameras.limits)}
+				/>
+			)}
 
 			<div className="grid grid-cols-2 gap-2">
 				{/*

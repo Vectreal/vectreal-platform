@@ -70,4 +70,29 @@ describe('setting the opening view', () => {
 			})
 		})
 	})
+
+	it('keeps the opening camera’s limits taking in the view it now opens on', async () => {
+		const store = createStore()
+		store.set(cameraAtom, {
+			cameras: [
+				{
+					cameraId: 'cam-main',
+					name: 'Main',
+					constraints: { tilt: { lowest: 0, highest: 5 } }
+				}
+			]
+		})
+		const wrapper = ({ children }: { children: ReactNode }) => (
+			<Provider store={store}>{children}</Provider>
+		)
+
+		const { result } = renderHook(() => useOpeningViewCapture(), { wrapper })
+		await act(() => result.current.setOpeningView({ announce: false }))
+
+		// The view looks from 11.3° above the horizon.
+		expect(store.get(cameraAtom).cameras?.[0]?.constraints?.tilt).toEqual({
+			lowest: 0,
+			highest: 12
+		})
+	})
 })

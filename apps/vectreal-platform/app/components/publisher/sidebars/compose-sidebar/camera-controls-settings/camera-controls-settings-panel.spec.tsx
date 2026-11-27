@@ -17,6 +17,7 @@ import {
 } from '../../../../../lib/stores/publisher-config-store'
 import {
 	cameraAtom,
+	controlsAtom,
 	hotspotsAtom,
 	interactionsAtom,
 	selectedCameraIdAtom
@@ -254,7 +255,12 @@ describe('CameraControlsSettingsPanel with a moved view', () => {
 		store.set(cameraAtom, {
 			cameras: [
 				{ cameraId: 'front', name: 'Front', fov: 50 },
-				{ cameraId: 'side', name: 'Side', fov: 50 }
+				{
+					cameraId: 'side',
+					name: 'Side',
+					fov: 50,
+					constraints: { pan: false, tilt: { lowest: 0, highest: 10 } }
+				}
 			]
 		})
 		const execute = vi.fn()
@@ -313,7 +319,9 @@ describe('CameraControlsSettingsPanel with a moved view', () => {
 		await waitFor(() => expect(store.get(cameraAtom).cameras).toHaveLength(3))
 		expect(store.get(cameraAtom).cameras?.[2]).toMatchObject({
 			position: snapshot.position,
-			fov: 35
+			fov: 35,
+			// Side's limits, the angles widened to take in the new view (35.3°).
+			constraints: { pan: false, tilt: { lowest: 0, highest: 36 } }
 		})
 	})
 
@@ -513,5 +521,97 @@ describe('CameraControlsSettingsPanel ordering the cameras', () => {
 			'disabled',
 			true
 		)
+	})
+})
+
+describe('CameraControlsSettingsPanel limits', () => {
+	const sceneWithLimits = () => {
+		const store = createStore()
+		store.set(cameraAtom, {
+			cameras: [
+				{
+					cameraId: 'front',
+					name: 'Front',
+					position: [0, 0, 5],
+					target: [0, 0, 0]
+				},
+				{
+					cameraId: 'top',
+					name: 'Top',
+					// Looking down from 60° above the horizon.
+					position: [0, 5 * Math.sin(Math.PI / 3), 5 * Math.cos(Math.PI / 3)],
+					target: [0, 0, 0]
+				}
+			]
+		})
+		store.set(controlsAtom, { enableZoom: false, maxPolarAngle: Math.PI / 2 })
+		return store
+	}
+
+	const openLimits = async (camera: RegExp) => {
+		fireEvent.click(await screen.findByRole('button', { name: camera }))
+		fireEvent.click(await screen.findByRole('button', { name: /^Limits/ }))
+		await screen.findByRole('heading', { name: 'Limits' })
+	}
+
+	it('shows the scene-wide limits a camera without its own follows, and writes none', async () => {
+		const store = sceneWithLimits()
+		renderPanel(store)
+		await openLimits(/^Front/)
+
+		const zoom = screen.getByRole('switch', { name: /^Zoom/ })
+		expect(zoom.getAttribute('aria-checked')).toBe('false')
+		expect(
+			store.get(cameraAtom).cameras?.every((c) => c.constraints === undefined)
+		).toBe(true)
+	})
+
+	it('writes the camera’s own limits on the first change, carrying over the rest', async () => {
+		const store = sceneWithLimits()
+		renderPanel(store)
+		await openLimits(/^Front/)
+
+		fireEvent.click(screen.getByRole('switch', { name: /^Pan/ }))
+
+		expect(
+			store.get(cameraAtom).cameras?.find((c) => c.cameraId === 'front')
+				?.constraints
+		).toEqual({
+			zoom: { enabled: false },
+			pan: false,
+			tilt: { lowest: 0, highest: 90 }
+		})
+	})
+
+	it('keeps the camera’s own view inside the angles it writes', async () => {
+		const store = sceneWithLimits()
+		// Scene-wide, nothing above 50°; the top camera looks from 60°.
+		store.set(controlsAtom, { minPolarAngle: (40 * Math.PI) / 180 })
+		renderPanel(store)
+		await openLimits(/^Top/)
+
+		fireEvent.click(screen.getByRole('switch', { name: /^Pan/ }))
+
+		expect(
+			store.get(cameraAtom).cameras?.find((c) => c.cameraId === 'top')
+				?.constraints?.tilt?.highest
+		).toBe(60)
+	})
+
+	it('gives every camera these limits, each taking in its own view', async () => {
+		const store = sceneWithLimits()
+		// Front's angles stop at 50°; Top looks from 60°.
+		store.set(controlsAtom, { minPolarAngle: (40 * Math.PI) / 180 })
+		renderPanel(store)
+		await openLimits(/^Front/)
+		fireEvent.click(screen.getByRole('switch', { name: /^Pan/ }))
+
+		fireEvent.click(
+			screen.getByRole('button', { name: /Apply to all cameras/ })
+		)
+
+		const top = store.get(cameraAtom).cameras?.find((c) => c.cameraId === 'top')
+		expect(top?.constraints?.pan).toBe(false)
+		expect(top?.constraints?.tilt).toEqual({ lowest: 0, highest: 60 })
 	})
 })
