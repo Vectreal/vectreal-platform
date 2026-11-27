@@ -1,4 +1,5 @@
 import { hasAnalyticsConsent } from '../../consent/consent-cookie'
+import { redactUrlSecretsFromProperties } from '../../posthog/redact-url-secrets'
 
 import type { PostHog } from 'posthog-node'
 
@@ -29,6 +30,11 @@ export type ServerAnalyticsEvent =
  *
  * Absent or unparseable consent means no, so a visitor who never answered the
  * banner is never reported on.
+ *
+ * Properties go through the same redaction as the browser's `before_send`,
+ * which posthog-node has no equivalent of: `referrer` and `utm_source` are
+ * whatever the visitor's link said, and an email address stays out of
+ * analytics whichever side sends it.
  */
 export function captureServerEvent(
 	posthog: PostHog | undefined,
@@ -41,6 +47,9 @@ export function captureServerEvent(
 	posthog?.capture({
 		distinctId,
 		event: event.name,
-		properties: { client_type: 'web', ...event.props }
+		properties: redactUrlSecretsFromProperties({
+			client_type: 'web',
+			...event.props
+		})
 	})
 }

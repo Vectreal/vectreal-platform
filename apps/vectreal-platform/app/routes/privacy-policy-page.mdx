@@ -76,7 +76,7 @@ Vectreal uses cookies and similar storage mechanisms for core operation and, wit
 | `ph_*` | Analytics | PostHog product analytics; set only after analytics consent | Cookie and local storage |
 | `vr_referral` | Marketing | Remembers how you arrived (referrer, campaign source) for attribution; set only after marketing consent | Local storage |
 
-Before you grant analytics consent, PostHog keeps nothing on your device: no cookies, no local storage and no session storage. Session replay, surveys and identification do not run, and events raised by our servers, including sign-in, sign-up, and contact form events, are not sent. If you are signed in, your user ID, email address, and name are sent to PostHog only after you grant analytics consent; being signed in is not by itself treated as consent.
+Before you grant analytics consent, PostHog keeps nothing on your device: no cookies, no local storage and no session storage. Session replay, surveys and identification do not run, and events raised by our servers, including sign-in, sign-up, and contact form events, are not sent. If you are signed in, your user ID and name are sent to PostHog only after you grant analytics consent; being signed in is not by itself treated as consent.
 
 ### Counting Without Consent
 
@@ -125,7 +125,7 @@ We share personal data only as needed with processors and service providers ("su
 | Stripe | Billing and payment processing | Billing identifiers and payment data you enter at checkout |
 | Cloudflare | Network delivery and bot protection (Turnstile) | IP address and request metadata |
 | Fly.io | Application hosting | Data processed while operating the service |
-| PostHog | Product analytics with consent; cookieless visit counting without it (Section 4) | With consent: usage events and, for signed-in users, user ID, email, and name. Without consent: the events listed in Section 4, plus IP address and user agent processed transiently to compute the daily hash |
+| PostHog | Product analytics with consent; cookieless visit counting without it (Section 4) | With consent: usage events and, for signed-in users, user ID and name. Without consent: the events listed in Section 4, plus IP address and user agent processed transiently to compute the daily hash |
 | Resend | Transactional and support email delivery | Recipient email, name, and message content |
 | Google / GitHub | Optional single sign-on | Identity data you authorize during sign-in |
 
