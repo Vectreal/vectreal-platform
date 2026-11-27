@@ -286,6 +286,14 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	controlsOptions?: ControlsProps
 
 	/**
+	 * The controls a visitor gets, for a host whose own `controlsOptions` are
+	 * not theirs (an editor that moves freely). Captures, such as thumbnails
+	 * and opening views, clamp to these so the image is the view a visitor
+	 * opens on. Defaults to `controlsOptions`.
+	 */
+	captureControlsOptions?: ControlsProps
+
+	/**
 	 * How the scene is lit: an environment map and up to three studio lights,
 	 * from which every shadow follows. Wins over `envOptions` and
 	 * `shadowsOptions`; see `LightingSettings` in `@vctrl/core`.
@@ -695,6 +703,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		boundsOptions,
 		cameraOptions,
 		controlsOptions,
+		captureControlsOptions,
 		lighting,
 		envOptions,
 		shadowsOptions,
@@ -1554,6 +1563,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 														onRawDiagonalComputed={onRawDiagonalComputed}
 														clipExtents={clipExtents}
 														distanceLimits={orbitDistanceLimits}
+														captureControls={captureControlsOptions}
 														framingReset={resetCameraFraming}
 														openingPose={openingPose}
 														storedView={storedView}

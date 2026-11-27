@@ -28,7 +28,8 @@ import {
 	openingFramedAtom,
 	sceneMetaAtom,
 	openComposeToolAtom,
-	stageLightingAtom
+	stageLightingAtom,
+	viewportControlsAtom
 } from '../../lib/stores/publisher-config-store'
 import { comparedModelAtom } from '../../lib/stores/scene-optimization-store'
 import {
@@ -114,6 +115,7 @@ const PublisherPage = () => {
 	// affordance below scopes to it, so no tool's handles outlive its drawer.
 	const openComposeTool = useAtomValue(openComposeToolAtom)
 	const isPreviewMode = useAtomValue(isPreviewModeAtom)
+	const viewportControls = useAtomValue(viewportControlsAtom)
 	const openHotspotInHotspotTool = useSetAtom(openHotspotInHotspotToolAtom)
 	const loadingThumbnail = toViewerLoadingThumbnail(
 		sceneMeta.thumbnailUrl,
@@ -274,7 +276,9 @@ const PublisherPage = () => {
 					*/
 					showAnimationControls={isPreviewMode}
 					cameraOptions={cameraOptions}
-					controlsOptions={controls}
+					controlsOptions={viewportControls}
+					// Thumbnails and opening views are what a visitor opens on.
+					captureControlsOptions={controls}
 					lighting={lighting}
 					envOptions={environment}
 					shadowsOptions={shadows}

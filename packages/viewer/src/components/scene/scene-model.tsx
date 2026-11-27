@@ -24,6 +24,7 @@ import {
 import { resolveClipPlanes, type ClipExtentRegistry } from './clip-planes'
 import { useModelFrame, type ModelKey } from './model-frame'
 import { worldBounds } from './model-measurement'
+import { defaultControlsOptions } from './scene-controls'
 import {
 	buildCaptureCamera,
 	captureOrbitLimits,
@@ -41,6 +42,7 @@ import type {
 } from '../../types/viewer-types'
 import type {
 	CameraProps,
+	ControlsProps,
 	NormalizationOptions,
 	SceneBackdrop
 } from '@vctrl/core'
@@ -104,6 +106,11 @@ interface ModelProps {
 	openingPose: RefObject<OpeningPose | null>
 	/** The host's orbit distance limits, before the viewport fit scales them. */
 	distanceLimits?: OrbitDistanceLimits
+	/**
+	 * The controls a visitor gets, when the live ones are not theirs (see
+	 * `captureControlsOptions` on the viewer). A capture clamps to these.
+	 */
+	captureControls?: ControlsProps
 	/**
 	 * Filled by `SceneCamera` with a read of the view on screen as a camera
 	 * stores it. A viewport capture renders that pose fitted to its output.
@@ -268,6 +275,7 @@ const SceneModel = memo((props: ModelProps) => {
 		onRawDiagonalComputed,
 		clipExtents,
 		distanceLimits,
+		captureControls,
 		framingReset,
 		openingPose,
 		storedView
@@ -378,7 +386,28 @@ const SceneModel = memo((props: ModelProps) => {
 				target: controls?.target?.clone() ?? new Vector3(),
 				fov: activeCamera.fov
 			}
-			const limits = controls ?? null
+			// A capture is the view a visitor opens on, so it clamps to the
+			// visitor's limits, filled from the defaults `SceneControls` gives a
+			// visitor and then OrbitControls' own.
+			const limits: OrbitLimits | null =
+				controls && captureControls
+					? {
+							minPolarAngle: captureControls.minPolarAngle ?? 0,
+							maxPolarAngle:
+								captureControls.maxPolarAngle ??
+								defaultControlsOptions.maxPolarAngle,
+							minAzimuthAngle: captureControls.minAzimuthAngle ?? -Infinity,
+							maxAzimuthAngle: captureControls.maxAzimuthAngle ?? Infinity,
+							minDistance: controls.minDistance,
+							maxDistance: controls.maxDistance
+						}
+					: (controls ?? null)
+			const captureDistanceLimits: OrbitDistanceLimits = captureControls
+				? {
+						minDistance: captureControls.minDistance,
+						maxDistance: captureControls.maxDistance
+					}
+				: (distanceLimits ?? {})
 
 			// The pose the capture renders at, through a camera of its own (see
 			// `buildCaptureCamera`) shaped like the output. A stored camera and
@@ -403,7 +432,7 @@ const SceneModel = memo((props: ModelProps) => {
 						outputAspect,
 						openingPose.current,
 						limits,
-						distanceLimits ?? {}
+						captureDistanceLimits
 					)
 				}
 			} else if (options.mode === 'viewport') {
@@ -419,7 +448,7 @@ const SceneModel = memo((props: ModelProps) => {
 						outputAspect,
 						null,
 						limits,
-						distanceLimits ?? {}
+						captureDistanceLimits
 					)
 				}
 			} else {
@@ -443,7 +472,7 @@ const SceneModel = memo((props: ModelProps) => {
 						fov: activeCamera.fov,
 						lookAt: framing.target,
 						limits: limits
-							? captureOrbitLimits(limits, distanceLimits ?? {}, 1)
+							? captureOrbitLimits(limits, captureDistanceLimits, 1)
 							: undefined
 					}
 				}
@@ -511,6 +540,7 @@ const SceneModel = memo((props: ModelProps) => {
 			backdrop,
 			camera,
 			cameraOptions,
+			captureControls,
 			controls,
 			distanceLimits,
 			fitClipPlanes,

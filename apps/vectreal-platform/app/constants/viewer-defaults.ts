@@ -246,3 +246,17 @@ export function withSceneSettingsDefaults(settings: SceneSettings) {
 		presentation: settings.presentation ?? defaultPresentationOptions
 	}
 }
+
+/*
+  How the Publisher's own viewport moves, whatever the scene's interaction
+  settings say. Those shape the published experience and apply in Preview; the
+  author composing the scene can always orbit all the way round, zoom and pan,
+  and the model never turns by itself under a hotspot being placed.
+*/
+export const EDITOR_CONTROLS: ControlsProps = {
+	...defaultControlsOptions,
+	maxPolarAngle: Math.PI,
+	autoRotate: false,
+	enableZoom: true,
+	focusOnDoubleClick: true
+}

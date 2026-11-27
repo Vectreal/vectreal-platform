@@ -12,7 +12,10 @@ import { resolveEnvironmentFiles } from '@vctrl/core'
 import { createStore } from 'jotai'
 import { describe, expect, it } from 'vitest'
 
-import { defaultEnvOptions } from '../../constants/viewer-defaults'
+import {
+	defaultEnvOptions,
+	EDITOR_CONTROLS
+} from '../../constants/viewer-defaults'
 import {
 	enterPreviewModeAtom,
 	environmentLoadFailedAtom,
@@ -27,11 +30,13 @@ import {
 	openHotspotInHotspotToolAtom,
 	processAtom,
 	processInitialState,
-	stageLightingAtom
+	stageLightingAtom,
+	viewportControlsAtom
 } from './publisher-config-store'
 import {
 	activeHotspotIdAtom,
 	cameraAtom,
+	controlsAtom,
 	environmentAtom,
 	exitHotspotCameraAtom,
 	hotspotCameraModeAtom,
@@ -394,5 +399,36 @@ describe('comparing environment qualities', () => {
 			activeComposeTool: 'hotspots'
 		}))
 		expect(store.get(comparedEnvironmentQualityAtom)).toBeNull()
+	})
+})
+
+describe('viewportControlsAtom', () => {
+	const restricted = {
+		enableZoom: false,
+		autoRotate: true,
+		maxPolarAngle: Math.PI / 4
+	}
+
+	it('moves the editor freely, whatever the scene allows visitors', () => {
+		const store = createStore()
+		store.set(controlsAtom, restricted)
+
+		expect(store.get(viewportControlsAtom)).toBe(EDITOR_CONTROLS)
+		expect(EDITOR_CONTROLS).toMatchObject({
+			enableZoom: true,
+			autoRotate: false,
+			maxPolarAngle: Math.PI
+		})
+	})
+
+	it('applies the scene interaction in preview', () => {
+		const store = createStore()
+		store.set(controlsAtom, restricted)
+		store.set(enterPreviewModeAtom)
+
+		expect(store.get(viewportControlsAtom)).toBe(restricted)
+
+		store.set(exitPreviewModeAtom)
+		expect(store.get(viewportControlsAtom)).toBe(EDITOR_CONTROLS)
 	})
 })
