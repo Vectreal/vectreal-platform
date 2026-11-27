@@ -51,15 +51,16 @@ const Str = ({ children }: { children: string }) => (
 
 /*
   The code is what the Result pane runs, so it has to be code that works as
-  written: `three` is the viewer's peer and has to be installed alongside it,
-  `model` takes a loaded scene rather than a URL, and the camera is Draco
-  compressed, so the loader is pointed at a decoder the site serves itself.
+  written: `three` and `@react-three/fiber` are the viewer's peers and have to
+  be installed alongside it, `model` takes a loaded scene rather than a URL,
+  and the camera is Draco compressed, so the loader is pointed at a decoder
+  the site serves itself.
 */
 const Code = () => (
 	<code>
 		<Comment>{'# Install the viewer and what your code imports\n'}</Comment>
 		{'pnpm add '}
-		<Str>{'@vctrl/viewer three @react-three/drei\n\n'}</Str>
+		<Str>{'@vctrl/viewer three @react-three/fiber @react-three/drei\n\n'}</Str>
 		<Keyword>{'import'}</Keyword>
 		{' { useGLTF } '}
 		<Keyword>{'from'}</Keyword>

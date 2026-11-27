@@ -55,7 +55,6 @@
 	},
 	"dependencies": {
 		"@react-three/drei": "catalog:",
-		"@react-three/fiber": "catalog:",
 		"@vctrl/core": "workspace:^",
 		"n8ao": "^1.10.3",
 		"postprocessing": "catalog:",
@@ -64,10 +63,12 @@
 		"three-mesh-bvh": "catalog:"
 	},
 	"peerDependencies": {
+		"@react-three/fiber": "catalog:",
 		"three": "catalog:",
 		"react": "^19.0.0"
 	},
 	"devDependencies": {
+		"@react-three/fiber": "catalog:",
 		"@shared/components": "workspace:*",
 		"@shared/utils": "workspace:*"
 	}
