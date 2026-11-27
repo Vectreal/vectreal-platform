@@ -166,4 +166,24 @@ describe('captureServerEvent', () => {
 			expect(posthog.capture).not.toHaveBeenCalled()
 		})
 	})
+
+	// posthog-node has no `before_send`; the visitor controls `referrer`.
+	it('removes email addresses from what it sends', () => {
+		const posthog = makePostHog()
+		captureServerEvent(
+			posthog,
+			requestWithConsent({ analytics: true }),
+			'user-123',
+			{
+				name: 'user_signed_up',
+				props: {
+					method: 'email',
+					referrer: 'https://news.example/p?ref=jane.doe%40example.com'
+				}
+			}
+		)
+		expect(JSON.stringify(vi.mocked(posthog.capture).mock.calls)).not.toMatch(
+			/jane\.doe/
+		)
+	})
 })
