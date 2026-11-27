@@ -12,8 +12,7 @@ import { useAnnouncer } from '../reorder-list'
 import {
 	CAMERA_REORDER_HINT_ID,
 	CameraDetail,
-	CameraList,
-	TransitionSettings
+	CameraList
 } from './camera-views'
 import { useSceneCameras } from './use-scene-cameras'
 
@@ -88,14 +87,6 @@ const CameraControlsSettingsPanel = memo(() => {
 						announce={announce}
 						onDeleted={() => onPathChange([])}
 					/>
-				</DrillDownView>
-
-				<DrillDownView
-					id="transitions"
-					title="Transitions"
-					caption="How the view moves when a viewer switches cameras."
-				>
-					<TransitionSettings />
 				</DrillDownView>
 			</DrillDown>
 		</>

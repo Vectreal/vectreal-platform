@@ -26,7 +26,6 @@ import {
 	resolveSceneAltText,
 	shouldShowFullscreenButton,
 	shouldShowInfoPopover,
-	shouldShowInteractionHint,
 	shouldUnloadWhenOffscreen,
 	withCompressTexturesForGpu,
 	shouldShowLoadingThumbnail
@@ -69,8 +68,7 @@ import {
 	SidebarSection,
 	SidebarSectionContent
 } from '../../sidebar-section'
-import { InteractionStartSetting } from './interaction-start-setting'
-import { useSceneViewReturnSetting } from './use-scene-view-return-setting'
+import { ViewerLanguageSetting } from './viewer-language-setting'
 
 import type {
 	PublishSceneResponse,
@@ -114,7 +112,6 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 	const publishExport = usePublishExport()
 	const store = useStore()
 	const showPublishedFinish = useShowPublishedFinish()
-	const sceneViewReturn = useSceneViewReturnSetting()
 	const exporterRef = useRef<ModelExporter>(new ModelExporter())
 	const isOriginalPreset = optimizationsMatch(optimizations, originalPreset)
 	const compressTextures = useCompressesTexturesForGpu()
@@ -404,13 +401,6 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 		[setPresentation]
 	)
 
-	const handleToggleInteractionHint = useCallback(
-		(showInteractionHint: boolean) => {
-			setPresentation((previous) => ({ ...previous, showInteractionHint }))
-		},
-		[setPresentation]
-	)
-
 	const handleAltTextChange = useCallback(
 		(altText: string) => {
 			// Cleared, the field goes, so emptying it leaves the scene as saved.
@@ -480,24 +470,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 						label="Show scene info"
 						description="Adds an info button to the viewer, opening this scene's name and description. Applies to embeds and preview links as soon as you save."
 					/>
-					<Toggle
-						checked={sceneViewReturn.shown}
-						onCheckedChange={sceneViewReturn.setShown}
-						disabled={!sceneViewReturn.available}
-						label="Back to scene view"
-						description={
-							sceneViewReturn.available
-								? 'Offers visitors a way back, by button or Escape, after a hotspot flies the camera to its own view. Applies to embeds and preview links as soon as you save.'
-								: 'Shown once a hotspot has its own camera.'
-						}
-					/>
-					<Toggle
-						checked={shouldShowInteractionHint(presentation)}
-						onCheckedChange={handleToggleInteractionHint}
-						label="Show how to interact"
-						description="Tells visitors how to move the scene, briefly, when it first appears. Applies to embeds and preview links as soon as you save."
-					/>
-					<InteractionStartSetting
+					<ViewerLanguageSetting
 						presentation={presentation}
 						onChange={setPresentation}
 					/>
