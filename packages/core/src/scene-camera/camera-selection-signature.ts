@@ -74,3 +74,24 @@ function triple(value: unknown): [number, number, number] | null {
 	if (!value.every((axis) => Number.isFinite(axis))) return null
 	return [value[0], value[1], value[2]]
 }
+
+/**
+ * Whether going from `previous` to `next` changed the lens and nothing else.
+ *
+ * The selection effect asks this of an edit to the camera in view. A new lens
+ * is applied where the view is, so an author who orbited away and then changes
+ * the field of view keeps the view they were exploring. Any other edit, or none,
+ * is a pose the viewer puts back on screen.
+ */
+export function isLensOnlyEdit(
+	previous: CameraSelectionSignature,
+	next: CameraSelectionSignature
+): boolean {
+	const { fov: previousFov, ...previousPose } = JSON.parse(previous)
+	const { fov: nextFov, ...nextPose } = JSON.parse(next)
+	return (
+		typeof nextFov === 'number' &&
+		previousFov !== nextFov &&
+		JSON.stringify(previousPose) === JSON.stringify(nextPose)
+	)
+}
