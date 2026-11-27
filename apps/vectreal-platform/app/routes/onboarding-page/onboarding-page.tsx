@@ -238,7 +238,6 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 			{user?.id && (
 				<PostHogIdentify
 					userId={user.id}
-					email={user.email}
 					name={user.user_metadata?.full_name}
 				/>
 			)}

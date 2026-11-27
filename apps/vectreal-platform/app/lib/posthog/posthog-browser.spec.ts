@@ -119,6 +119,42 @@ describe('loadPostHog', () => {
 		expect(sent.properties.client_type).toBe('web')
 	})
 
+	/*
+	  Email addresses are kept out of analytics whatever the visitor chose.
+	  With consent the full event goes out, so the rule has to run on it; the
+	  identify call PostHog turns into `$set` is one of those events.
+	*/
+	it('removes email addresses from a consented event', async () => {
+		await load('/')
+		const { before_send } = client.init.mock.calls[0][1]
+
+		const sent = before_send({
+			event: '$identify',
+			properties: {
+				$current_url: 'https://vectreal.com/x?email=jane.doe%40example.com',
+				$set: { email: 'jane.doe@example.com' }
+			}
+		})
+
+		expect(JSON.stringify(sent)).not.toMatch(/jane\.doe/)
+	})
+
+	it('removes email addresses from a cookieless event', async () => {
+		await load('/')
+		const { before_send } = client.init.mock.calls[0][1]
+
+		const sent = before_send({
+			event: '$pageview',
+			properties: {
+				$cookieless_mode: true,
+				$pathname: '/u/jane.doe@example.com',
+				$current_url: 'https://vectreal.com/u/jane.doe@example.com'
+			}
+		})
+
+		expect(JSON.stringify(sent)).not.toMatch(/jane\.doe/)
+	})
+
 	// Without consent only the cookieless allowlist leaves.
 	it('cuts down every event PostHog flags as cookieless', async () => {
 		await load('/')

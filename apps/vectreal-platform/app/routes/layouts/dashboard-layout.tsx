@@ -173,11 +173,7 @@ const DashboardLayout = () => {
 	*/
 	return (
 		<Provider>
-			<PostHogIdentify
-				userId={actor.id}
-				email={actor.email ?? undefined}
-				name={actor.name}
-			/>
+			<PostHogIdentify userId={actor.id} name={actor.name} />
 			{/*
 				  The shell owns the viewport height so the inset can scroll its own
 				  content. Without this the wrapper grows with the page and the inset's
