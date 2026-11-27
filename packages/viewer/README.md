@@ -15,6 +15,10 @@ npm install @vctrl/viewer
 pnpm add @vctrl/viewer
 ```
 
+**Peer dependencies:** `react` 19, `three` and `@react-three/fiber`. npm and pnpm
+install them automatically. If your package manager doesn't install peer
+dependencies automatically (e.g. Yarn), add them to your own dependencies.
+
 **Module format:** ES modules only. Import it from any bundler or browser.
 
 ---
