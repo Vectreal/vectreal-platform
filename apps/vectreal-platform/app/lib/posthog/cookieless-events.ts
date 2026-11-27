@@ -15,8 +15,8 @@ import type { CaptureResult } from 'posthog-js'
  *
  * Each event keeps its own properties below plus `SHARED`: the page path,
  * campaign parameters, the referring site, and what PostHog needs to accept
- * and hash the event. Dropped on every event: query strings (the address on
- * `/auth/confirm-pending?email=` is an email address), the referrer's path,
+ * and hash the event. Dropped on every event: query strings (a query is
+ * where a page address carries anything personal), the referrer's path,
  * screen and viewport size, language, timezone, page title and person
  * properties.
  */

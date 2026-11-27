@@ -7,6 +7,7 @@ import {
 	getSafeNextPath,
 	newAccountDestination
 } from '../../../lib/domain/auth/auth-redirect.server'
+import { clearConfirmPendingEmail } from '../../../lib/domain/auth/confirm-pending-email.server'
 import { createSupabaseClient } from '../../../lib/supabase.server'
 import { Route } from './+types/confirm'
 
@@ -46,7 +47,10 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 			}
 
 			const destination = type === 'signup' ? newAccountDestination(next) : next
-			return redirect(destination)
+			// Confirmed: the address the confirm-pending screen held is done with.
+			return redirect(destination, {
+				headers: { 'Set-Cookie': await clearConfirmPendingEmail() }
+			})
 		}
 
 		console.warn('[auth/confirm] OTP verification failed', {

@@ -27,6 +27,7 @@ import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { captureServerEvent } from '../../lib/domain/analytics/server-events.server'
 import { getSafeNextPath } from '../../lib/domain/auth/auth-redirect.server'
+import { redirectToConfirmPending } from '../../lib/domain/auth/confirm-pending-email.server'
 import {
 	AUTH_ERROR_MESSAGES,
 	classifySigninFailure,
@@ -191,16 +192,11 @@ export async function action({ request, context }: Route.ActionArgs) {
 		  someone whose confirmation email never arrived.
 		*/
 		if (failure.code === 'email_not_confirmed') {
-			const confirmPendingUrl = new URL(
-				'/auth/confirm-pending',
-				new URL(request.url).origin
-			)
-			confirmPendingUrl.searchParams.set('email', normalizedEmail)
-			confirmPendingUrl.searchParams.set(
-				'next',
+			return redirectToConfirmPending(
+				request,
+				normalizedEmail,
 				getSafeNextPath(new URL(request.url).searchParams.get('next'))
 			)
-			return redirect(confirmPendingUrl.toString())
 		}
 
 		return data<SigninActionData>(
