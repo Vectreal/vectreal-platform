@@ -64,10 +64,13 @@ const BUDGETS_KB: Record<string, number> = {
  * The embed, which runs on merchants' pages, on phones, cold every time.
  * Three.js is its job, so only the size is checked. Measured on 9 Nov 2026
  * at 833.7 KB, once posthog-js left it and app code stopped sharing one
- * catch-all chunk (`vite.config.ts`); 1,054 KB before.
+ * catch-all chunk (`vite.config.ts`); 1,054 KB before. Raised from 845 to
+ * 850 on 27 Nov 2026 at 845.2 KB, for the read check that drops a camera's
+ * unreadable stored limits (#1461): a soft tracker, and validation is never
+ * cut to fit it.
  */
 const EMBED_ROUTE = 'routes/embed-page/embed-scene'
-const EMBED_BUDGET_KB = 845
+const EMBED_BUDGET_KB = 850
 
 /**
  * The share of its budget at which a route starts to warn: 3% is about 12 KB on

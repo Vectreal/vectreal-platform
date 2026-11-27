@@ -37,6 +37,17 @@ export {
 } from './camera-flight'
 export { clampToOrbitLimits, type OrbitLimits } from './orbit-limits'
 export {
+	DEFAULT_HIGHEST_TILT,
+	DEFAULT_ZOOM_FACTOR,
+	defaultCameraConstraints,
+	orbitAnchor,
+	orbitLimitsFor,
+	resolveCameraConstraints,
+	type LegacyCameraControls,
+	type OrbitAnchor,
+	type ResolvedCameraConstraints
+} from './camera-constraints'
+export {
 	CameraFraming,
 	framingScale,
 	isFramingAspect,

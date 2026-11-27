@@ -105,6 +105,47 @@ export type CameraConfig = PerspectiveCameraProps & {
 	 * a finite positive number reads as absent (`isFramingAspect`).
 	 */
 	framingAspect?: number
+	/**
+	 * How far a visitor may move away from this view. A camera that has them
+	 * owns all of its limits, and a kind left out is not limited. A camera
+	 * without them (every camera saved before they existed) is held to the
+	 * scene-wide controls instead (`resolveCameraConstraints`).
+	 */
+	constraints?: CameraConstraints
+}
+
+/**
+ * The limits a camera holds a visitor to. Zoom and orbit are relative to the
+ * camera's own view, so they keep their meaning when the view is saved again;
+ * tilt is absolute, so a floor stays a floor. Angles are in degrees.
+ */
+export interface CameraConstraints {
+	zoom?: {
+		/** The visitor can zoom at all. Absent means yes. */
+		enabled?: boolean
+		/** How many times closer than the camera's own distance (at least 1). */
+		closer?: number
+		/** How many times farther than the camera's own distance (at least 1). */
+		farther?: number
+	}
+	/**
+	 * The visitor can move the orbit point. Absent means yes. The viewer keeps
+	 * the orbit point inside the model either way.
+	 */
+	pan?: boolean
+	/** Elevation above the horizon: 0 is level, 90 looks straight down. */
+	tilt?: {
+		lowest?: number
+		highest?: number
+	}
+	/**
+	 * How far the visitor may turn around the orbit point, to the camera's own
+	 * left and right (0 to 180 each). Absent means all the way round.
+	 */
+	orbit?: {
+		left: number
+		right: number
+	}
 }
 
 /**
