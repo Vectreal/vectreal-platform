@@ -53,14 +53,6 @@ export const CAMERA_CONTROLS_FIELDS: FieldConfig[] = [
 		max: 3,
 		step: 0.05,
 		formatValue: (value) => value.toFixed(2)
-	},
-	{
-		key: 'maxPolarAngle',
-		label: 'Vertical Limit',
-		min: 0,
-		max: Math.PI,
-		step: 0.01,
-		formatValue: (value) => `${((value * 180) / Math.PI).toFixed(0)}°`
 	}
 ]
 

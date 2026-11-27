@@ -16,6 +16,7 @@ import {
 	normalizationAtom
 } from '../../../lib/stores/scene-settings-store'
 import { usePublisherViewerCapture } from '../publisher-viewer-capture-context'
+import { applySnapshotToCamera } from '../sidebars/compose-sidebar/camera-controls-settings/camera-state'
 
 import type { ModelFile } from '@vctrl/hooks/use-load-model'
 import type { ViewerInteractionEvent } from '@vctrl/viewer'
@@ -91,14 +92,7 @@ export function useOpeningViewCapture() {
 						...previous,
 						cameras: previous.cameras?.map((entry) =>
 							entry.cameraId === defaultCameraId
-								? {
-										...entry,
-										position: snapshot.position,
-										rotation: snapshot.rotation,
-										target: snapshot.target,
-										fov: snapshot.fov,
-										framingAspect: snapshot.framingAspect
-									}
+								? applySnapshotToCamera(entry, snapshot)
 								: entry
 						)
 					}

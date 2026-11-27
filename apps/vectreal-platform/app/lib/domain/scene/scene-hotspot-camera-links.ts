@@ -10,10 +10,12 @@
 
 import { framingScale } from '@vctrl/core'
 
+import { cameraElevation, withElevationInTilt } from './camera-limits'
 import { applyDefaultCameraFlag, isLastSceneCamera } from './scene-camera'
 
 import type { CameraLike } from './scene-camera'
 import type {
+	CameraConfig,
 	CameraProps,
 	HotspotDefinition,
 	SceneInteractionDefinition
@@ -343,6 +345,27 @@ export function relinkHotspot(
  * one label with no way to tell them apart.
  */
 /**
+ * A camera turned to look at `target`. Its angle limits widen to take in the
+ * view it now has (`withElevationInTilt`), so a visitor arriving there is not
+ * moved off it.
+ */
+function reaimCamera<Camera extends CameraConfig>(
+	camera: Camera,
+	target: [number, number, number]
+): Camera {
+	const aimed = { ...camera, target }
+	return aimed.constraints
+		? {
+				...aimed,
+				constraints: withElevationInTilt(
+					aimed.constraints,
+					cameraElevation(aimed)
+				)
+			}
+		: aimed
+}
+
+/**
  * Moves a hotspot, and takes the camera it owns along with it.
  *
  * A hotspot camera exists to look at its hotspot, so a marker that moves and a
@@ -385,7 +408,7 @@ export function placeHotspot(
 			...state.camera,
 			cameras: (state.camera.cameras ?? []).map((entry) =>
 				entry.cameraId === ownedCameraId
-					? { ...entry, target: worldPosition }
+					? reaimCamera(entry, worldPosition)
 					: entry
 			)
 		},

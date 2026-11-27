@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { normalizeTransition } from './camera-state'
+import { applySnapshotToCamera, normalizeTransition } from './camera-state'
 
 describe('normalizeTransition', () => {
 	it('reads a scene with no transition as a smooth one-second Smart move', () => {
@@ -61,5 +61,26 @@ describe('normalizeTransition', () => {
 		expect(
 			normalizeTransition({ type: 'none', duration: 400, easing: 'linear' })
 		).toEqual({ type: 'none' })
+	})
+})
+
+describe('applySnapshotToCamera', () => {
+	it('widens a camera’s tilt range to the view it now holds', () => {
+		const camera = applySnapshotToCamera(
+			{
+				cameraId: 'a',
+				name: 'A',
+				constraints: { tilt: { lowest: 0, highest: 85 } }
+			},
+			{
+				position: [0, -5, 5],
+				rotation: [0, 0, 0],
+				target: [0, 0, 0],
+				fov: 50,
+				framingAspect: 16 / 9,
+				viewportAspect: 16 / 9
+			}
+		)
+		expect(camera.constraints?.tilt?.lowest).toBe(-45)
 	})
 })

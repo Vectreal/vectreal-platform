@@ -459,6 +459,29 @@ describe('placeHotspot', () => {
 		).toEqual(AT)
 	})
 
+	it('widens the camera’s angle limits to the view the new aim gives it', () => {
+		const limited = camera('cam-a', {
+			kind: 'hotspot',
+			position: [0, 0, 5],
+			target: [0, 0, 0],
+			constraints: { tilt: { lowest: 0, highest: 10 } }
+		})
+		const result = placeHotspot(
+			{
+				camera: { cameras: [limited] },
+				hotspots: [hotspot('a', { linkedCameraId: 'cam-a' })]
+			},
+			'a',
+			// Below the camera: it now looks down at 45°.
+			[0, -5, 0]
+		)
+
+		expect(result.camera.cameras?.[0]?.constraints?.tilt).toEqual({
+			lowest: 0,
+			highest: 45
+		})
+	})
+
 	it('leaves where the camera stands, and only where it looks', () => {
 		// Moving a marker says where the point of interest is, not where the author
 		// wants to stand to see it.

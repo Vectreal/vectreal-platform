@@ -9,6 +9,7 @@ import {
 	useDrillDownNavigation
 } from '../../drill-down'
 import { useAnnouncer } from '../reorder-list'
+import { CameraLimitsView } from './camera-limits-view'
 import {
 	CAMERA_REORDER_HINT_ID,
 	CameraDetail,
@@ -87,6 +88,14 @@ const CameraControlsSettingsPanel = memo(() => {
 						announce={announce}
 						onDeleted={() => onPathChange([])}
 					/>
+				</DrillDownView>
+
+				<DrillDownView
+					id="limits"
+					title="Limits"
+					caption="How far visitors can move from this camera's view, in Preview and once published. The editor always moves freely."
+				>
+					<CameraLimitsView cameras={cameras} />
 				</DrillDownView>
 			</DrillDown>
 		</>

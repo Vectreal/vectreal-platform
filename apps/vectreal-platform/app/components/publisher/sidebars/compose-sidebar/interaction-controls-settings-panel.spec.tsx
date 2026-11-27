@@ -171,3 +171,14 @@ describe('the Interaction tool, between cameras', () => {
 		expect(store.get(presentationAtom).showSceneViewReturn).toBe(false)
 	})
 })
+
+describe('the Interaction tool, moving', () => {
+	it('leaves zoom and angle limits to each camera, and says so', () => {
+		renderPanel()
+		expect(screen.queryByRole('switch', { name: /^Zoom/ })).toBeNull()
+		expect(screen.queryByRole('button', { name: /^Advanced/ })).toBeNull()
+		expect(
+			screen.getByText(/Zoom, pan and angle limits are set on each camera\./)
+		).toBeTruthy()
+	})
+})
