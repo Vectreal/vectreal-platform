@@ -5,13 +5,13 @@ import {
 import { useAtom, useAtomValue } from 'jotai/react'
 import { useCallback, useMemo } from 'react'
 
-import { redactSettingsForEmbed } from '../../../../../lib/domain/scene/embed-settings-policy'
-import { shouldShowSceneViewReturn } from '../../../../../lib/domain/scene/scene-presentation'
+import { redactSettingsForEmbed } from '../../../../lib/domain/scene/embed-settings-policy'
+import { shouldShowSceneViewReturn } from '../../../../lib/domain/scene/scene-presentation'
 import {
 	cameraAtom,
 	hotspotsAtom,
 	presentationAtom
-} from '../../../../../lib/stores/scene-settings-store'
+} from '../../../../lib/stores/scene-settings-store'
 
 /**
  * The author's say over the viewer's way back from a hotspot's camera

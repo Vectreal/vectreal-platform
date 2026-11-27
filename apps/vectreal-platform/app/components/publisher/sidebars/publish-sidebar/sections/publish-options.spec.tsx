@@ -36,8 +36,6 @@ import {
 	optimizationRuntimeAtom
 } from '../../../../../lib/stores/scene-optimization-store'
 import {
-	cameraAtom,
-	hotspotsAtom,
 	lightingAtom,
 	presentationAtom
 } from '../../../../../lib/stores/scene-settings-store'
@@ -225,36 +223,6 @@ describe('the publish panel', () => {
 		).toBeNull()
 	})
 
-	it("offers the way back from a hotspot's camera only once one exists", () => {
-		renderPanel(balancedPreset)
-		expect(
-			screen.getByRole('switch', { name: /Back to scene view/ })
-		).toBeDisabled()
-	})
-
-	it("hides the way back from a hotspot's camera when switched off", () => {
-		const store = renderPanel(balancedPreset, (store) => {
-			store.set(cameraAtom, {
-				cameras: [
-					{ cameraId: 'front', name: 'Front' },
-					{ cameraId: 'knob-camera', kind: 'hotspot', name: 'Knob' }
-				]
-			})
-			store.set(hotspotsAtom, [
-				{
-					id: 'knob',
-					name: 'Knob',
-					worldPosition: [0, 0, 0],
-					linkedCameraId: 'knob-camera'
-				} as never
-			])
-		})
-		const toggle = screen.getByRole('switch', { name: /Back to scene view/ })
-		expect(toggle).toBeChecked()
-		fireEvent.click(toggle)
-		expect(store.get(presentationAtom).showSceneViewReturn).toBe(false)
-	})
-
 	it('forgets the choice once it is switched back to the default', () => {
 		const store = renderPanel(balancedPreset)
 		fireEvent.click(textureSwitch())
@@ -272,14 +240,6 @@ describe('the publish panel', () => {
 		expect(store.get(presentationAtom).showFullscreenButton).toBe(true)
 	})
 
-	it('shows visitors how to interact on a new scene, until the author turns it off', () => {
-		const store = renderPanel(balancedPreset)
-		const toggle = screen.getByRole('switch', { name: /Show how to interact/ })
-		expect(toggle).toBeChecked()
-		fireEvent.click(toggle)
-		expect(store.get(presentationAtom).showInteractionHint).toBe(false)
-	})
-
 	it('unloads the scene off-screen by default, until the author keeps it loaded', () => {
 		const store = renderPanel(balancedPreset)
 		const toggle = screen.getByRole('switch', {
@@ -290,24 +250,13 @@ describe('the publish panel', () => {
 		expect(store.get(presentationAtom).unloadWhenOffscreen).toBe(false)
 	})
 
-	it('waits for a tap on a new scene, and asks the viewer language whatever the start', () => {
+	it('asks the viewer language', () => {
 		const store = renderPanel(balancedPreset)
-		const start = screen.getByRole('radiogroup', { name: 'Start moving' })
-		expect(
-			within(start).getByRole('radio', { name: 'After a tap' })
-		).toBeChecked()
-
 		const language = screen.getByRole('radiogroup', { name: 'Viewer language' })
 		fireEvent.click(within(language).getByRole('radio', { name: 'Deutsch' }))
 		expect(store.get(presentationAtom).locale).toBe('de')
 		fireEvent.click(within(language).getByRole('radio', { name: 'Browser' }))
 		expect(store.get(presentationAtom)).not.toHaveProperty('locale')
-
-		fireEvent.click(within(start).getByRole('radio', { name: 'Right away' }))
-		expect(store.get(presentationAtom).interactionStart).toBe('immediate')
-		expect(
-			screen.getByRole('radiogroup', { name: 'Viewer language' })
-		).toBeTruthy()
 	})
 
 	it('stores alt text for the viewer, and forgets it once cleared', () => {

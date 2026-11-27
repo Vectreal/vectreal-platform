@@ -51,7 +51,7 @@ const COMPOSE_TOOL_DEFINITIONS: ComposeToolDefinition[] = [
 		label: 'Camera',
 		shortLabel: 'Camera',
 		description:
-			'Manage saved cameras, field of view, and animated transitions.',
+			'Save and order the views your scene opens on and switches between.',
 		icon: Camera,
 		component: CameraControlsSettings
 	},
@@ -59,8 +59,7 @@ const COMPOSE_TOOL_DEFINITIONS: ComposeToolDefinition[] = [
 		value: 'interaction-controls',
 		label: 'Interaction',
 		shortLabel: 'Interaction',
-		description:
-			'Configure how viewers orbit, zoom, and move around the scene.',
+		description: 'How visitors move around the scene. Try it in Preview.',
 		icon: MousePointer2,
 		component: InteractionControlsSettings
 	},

@@ -1,15 +1,9 @@
 import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
 import { Slider, type SliderPreset } from '@shared/components/ui/slider'
-import { Toggle } from '@shared/components/ui/toggle'
-import {
-	ToggleGroup,
-	ToggleGroupItem
-} from '@shared/components/ui/toggle-group'
-import { DEFAULT_SCENE_TRANSITION } from '@vctrl/core'
 import { Reorder, useReducedMotion } from 'framer-motion'
 import { useAtomValue } from 'jotai/react'
-import { ArrowUpToLine, Camera, Link, Plus, Route, Trash2 } from 'lucide-react'
+import { ArrowUpToLine, Camera, Link, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { canEditCameraSettingsAtom } from '../../../../../lib/stores/publisher-config-store'
@@ -22,27 +16,14 @@ import {
 	useReorderDraft,
 	type ReorderOutcome
 } from '../reorder-list'
-import {
-	TRANSITION_EASING_OPTIONS,
-	TRANSITION_TYPE_OPTIONS
-} from './camera-state'
-import { useCameraSwitcherSetting } from './use-camera-switcher-setting'
-import { useSceneTransition } from './use-scene-transition'
 
 import type { SceneCameras } from './use-scene-cameras'
-import type { CameraTransitionEasing, CameraTransitionType } from '@vctrl/core'
 import type { ReactNode } from 'react'
 
 const FOV_PRESETS: SliderPreset[] = [
 	{ value: 35, label: 'Telephoto' },
 	{ value: 60, label: 'Standard' },
 	{ value: 90, label: 'Wide' }
-]
-
-const DURATION_PRESETS: SliderPreset[] = [
-	{ value: 0, label: 'Instant' },
-	{ value: 500, label: 'Quick' },
-	{ value: 2000, label: 'Slow' }
 ]
 
 /** Camera editing is read-only in preview, where cameras are only reviewed. */
@@ -195,14 +176,12 @@ function CameraRows({
 	)
 }
 
-/** The drill-down's root: every camera, the switcher, and the way into transitions. */
+/**
+ * The drill-down's root: every camera, in the order visitors step through.
+ * How visitors move between them is set in the Interaction tool.
+ */
 export function CameraList({ cameras, announce }: CamerasProps) {
 	const isLocked = useIsCameraEditingLocked()
-	const { transition } = useSceneTransition()
-	const switcher = useCameraSwitcherSetting()
-	const transitionLabel = TRANSITION_TYPE_OPTIONS.find(
-		(option) => option.value === transition.type
-	)?.label
 
 	return (
 		<>
@@ -226,25 +205,6 @@ export function CameraList({ cameras, announce }: CamerasProps) {
 			>
 				<CameraRows cameras={cameras} announce={announce} isLocked={isLocked} />
 			</SettingGroup>
-
-			<Toggle
-				label="Camera switcher"
-				description={
-					switcher.available
-						? 'Lets visitors step between these cameras in the published scene.'
-						: 'Shown once the scene has two cameras to switch between.'
-				}
-				checked={switcher.shown}
-				disabled={isLocked || !switcher.available}
-				onCheckedChange={switcher.setShown}
-			/>
-
-			<DrillDownTrigger
-				to="transitions"
-				icon={<Route />}
-				label="Transitions"
-				summary={transitionLabel}
-			/>
 		</>
 	)
 }
@@ -390,67 +350,6 @@ export function CameraDetail({
 					Delete
 				</Button>
 			</div>
-		</>
-	)
-}
-
-/** How the view moves when a viewer switches cameras. */
-export function TransitionSettings() {
-	const isLocked = useIsCameraEditingLocked()
-	const { transition, setType, setDuration, setEasing } = useSceneTransition()
-
-	return (
-		<>
-			<ToggleGroup
-				type="single"
-				aria-label="Transition type"
-				value={transition.type}
-				disabled={isLocked}
-				onValueChange={(value) => {
-					if (value) setType(value as CameraTransitionType)
-				}}
-			>
-				{TRANSITION_TYPE_OPTIONS.map((option) => (
-					<ToggleGroupItem key={option.value} value={option.value}>
-						{option.label}
-					</ToggleGroupItem>
-				))}
-			</ToggleGroup>
-
-			{transition.type !== 'none' && (
-				<>
-					<Slider
-						label="Duration"
-						min={0}
-						max={5000}
-						step={50}
-						presets={DURATION_PRESETS}
-						formatValue={(value) => `${Math.round(value)} ms`}
-						disabled={isLocked}
-						value={transition.duration ?? DEFAULT_SCENE_TRANSITION.duration}
-						onValueChange={setDuration}
-					/>
-
-					<SettingGroup label="Easing">
-						<ToggleGroup
-							type="single"
-							aria-label="Transition easing"
-							value={transition.easing ?? DEFAULT_SCENE_TRANSITION.easing}
-							disabled={isLocked}
-							onValueChange={(value) => {
-								if (value) setEasing(value as CameraTransitionEasing)
-							}}
-							className="grid grid-cols-2"
-						>
-							{TRANSITION_EASING_OPTIONS.map((option) => (
-								<ToggleGroupItem key={option.value} value={option.value}>
-									{option.label}
-								</ToggleGroupItem>
-							))}
-						</ToggleGroup>
-					</SettingGroup>
-				</>
-			)}
 		</>
 	)
 }

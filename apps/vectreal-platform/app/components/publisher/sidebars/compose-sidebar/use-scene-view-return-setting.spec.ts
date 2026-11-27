@@ -12,7 +12,7 @@ import {
 	cameraAtom,
 	hotspotsAtom,
 	presentationAtom
-} from '../../../../../lib/stores/scene-settings-store'
+} from '../../../../lib/stores/scene-settings-store'
 import { useSceneViewReturnSetting } from './use-scene-view-return-setting'
 
 import type { CameraConfig, HotspotDefinition } from '@vctrl/core'

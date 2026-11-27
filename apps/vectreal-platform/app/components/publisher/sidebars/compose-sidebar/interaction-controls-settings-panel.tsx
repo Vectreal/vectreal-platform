@@ -9,6 +9,7 @@ import {
 	Eye,
 	Focus,
 	Gauge,
+	Route,
 	RotateCw,
 	SlidersHorizontal,
 	ZoomIn
@@ -19,16 +20,26 @@ import {
 	INTERACTION_FEELS,
 	type InteractionFeel
 } from '../../../../constants/viewer-defaults'
-import { controlsAtom } from '../../../../lib/stores/scene-settings-store'
+import { shouldShowInteractionHint } from '../../../../lib/domain/scene/scene-presentation'
+import {
+	controlsAtom,
+	presentationAtom
+} from '../../../../lib/stores/scene-settings-store'
 import { PREVIEW_TOGGLE_ID } from '../../shell/tool-bar'
 import { usePreviewToggle } from '../../shell/use-preview-toggle'
 import { DrillDown, DrillDownTrigger, DrillDownView } from '../drill-down'
 import { FieldSlider } from '../field-slider'
-import { SettingGroup } from '../sidebar-section'
+import { SettingGroup, SidebarSection } from '../sidebar-section'
+import { TRANSITION_TYPE_OPTIONS } from './camera-controls-settings/camera-state'
 import {
 	CAMERA_CONTROLS_FIELDS,
 	defaultControlsOptions
 } from './camera-controls-settings/constants'
+import { TransitionSettings } from './camera-controls-settings/transition-settings'
+import { useCameraSwitcherSetting } from './camera-controls-settings/use-camera-switcher-setting'
+import { useSceneTransition } from './camera-controls-settings/use-scene-transition'
+import { StartMovingSetting } from './start-moving-setting'
+import { useSceneViewReturnSetting } from './use-scene-view-return-setting'
 
 import type { FieldConfig } from '../../../../types/settings-field'
 import type { ControlsProps } from '@vctrl/core'
@@ -77,6 +88,13 @@ const InteractionControlsSettingsPanel = memo(() => {
 	const [controls, setControls] = useAtom(controlsAtom)
 	const [path, setPath] = useState<string[]>([])
 	const { enterPreview } = usePreviewToggle()
+	const [presentation, setPresentation] = useAtom(presentationAtom)
+	const switcher = useCameraSwitcherSetting()
+	const sceneViewReturn = useSceneViewReturnSetting()
+	const { transition } = useSceneTransition()
+	const transitionLabel = TRANSITION_TYPE_OPTIONS.find(
+		(option) => option.value === transition.type
+	)?.label
 	const feel = matchingFeel(controls)
 
 	const setControl = useCallback(
@@ -108,69 +126,121 @@ const InteractionControlsSettingsPanel = memo(() => {
 				id="root"
 				caption="These settings apply to visitors and in Preview. The editor always moves freely."
 			>
-				<div className="grid grid-cols-3 gap-2">
+				<SidebarSection title="Moving">
+					<div className="grid grid-cols-3 gap-2">
+						<Toggle
+							layout="tile"
+							label="Zoom"
+							icon={<ZoomIn />}
+							checked={!!controls.enableZoom}
+							onCheckedChange={(enabled) => setControl('enableZoom', enabled)}
+						/>
+						<Toggle
+							layout="tile"
+							label="Auto rotate"
+							icon={<RotateCw />}
+							checked={!!controls.autoRotate}
+							onCheckedChange={(enabled) => setControl('autoRotate', enabled)}
+						/>
+						<Toggle
+							layout="tile"
+							label="Double-click focus"
+							icon={<Focus />}
+							checked={!!controls.focusOnDoubleClick}
+							onCheckedChange={(enabled) =>
+								setControl('focusOnDoubleClick', enabled)
+							}
+						/>
+					</div>
+
+					<SettingGroup
+						label="Feel"
+						description={
+							feel
+								? 'How closely the scene follows a viewer dragging it.'
+								: 'Custom. Pick a feel to replace the fine-tuned values.'
+						}
+					>
+						<ToggleGroup
+							type="single"
+							aria-label="Feel"
+							value={feel}
+							onValueChange={(next) => {
+								if (!next) return
+								setControls((prev) => ({
+									...prev,
+									enableDamping: true,
+									...INTERACTION_FEELS[next as InteractionFeel]
+								}))
+							}}
+						>
+							{(Object.keys(FEEL_LABELS) as InteractionFeel[]).map((key) => (
+								<ToggleGroupItem key={key} value={key}>
+									{FEEL_LABELS[key]}
+								</ToggleGroupItem>
+							))}
+						</ToggleGroup>
+					</SettingGroup>
+
+					<div className="space-y-2">
+						<DrillDownTrigger
+							to="fine-tune"
+							icon={<Gauge />}
+							label="Fine-tune"
+						/>
+						<DrillDownTrigger
+							to="advanced"
+							icon={<SlidersHorizontal />}
+							label="Advanced"
+						/>
+					</div>
+				</SidebarSection>
+
+				<SidebarSection title="Starting">
+					<StartMovingSetting />
 					<Toggle
-						layout="tile"
-						label="Zoom"
-						icon={<ZoomIn />}
-						checked={!!controls.enableZoom}
-						onCheckedChange={(enabled) => setControl('enableZoom', enabled)}
+						checked={shouldShowInteractionHint(presentation)}
+						onCheckedChange={(showInteractionHint) =>
+							setPresentation((previous) => ({
+								...previous,
+								showInteractionHint
+							}))
+						}
+						label="Show how to interact"
+						description="Tells visitors how to move the scene, briefly, when it first appears. Applies to embeds and preview links as soon as you save."
+					/>
+				</SidebarSection>
+
+				<SidebarSection title="Between cameras">
+					<Toggle
+						label="Camera switcher"
+						description={
+							switcher.available
+								? 'Lets visitors step between the cameras in the published scene.'
+								: 'Shown once the scene has two cameras to switch between.'
+						}
+						checked={switcher.shown}
+						disabled={!switcher.available}
+						onCheckedChange={switcher.setShown}
+					/>
+					<DrillDownTrigger
+						to="transitions"
+						icon={<Route />}
+						label="Transitions"
+						summary={transitionLabel}
 					/>
 					<Toggle
-						layout="tile"
-						label="Auto rotate"
-						icon={<RotateCw />}
-						checked={!!controls.autoRotate}
-						onCheckedChange={(enabled) => setControl('autoRotate', enabled)}
-					/>
-					<Toggle
-						layout="tile"
-						label="Double-click focus"
-						icon={<Focus />}
-						checked={!!controls.focusOnDoubleClick}
-						onCheckedChange={(enabled) =>
-							setControl('focusOnDoubleClick', enabled)
+						checked={sceneViewReturn.shown}
+						onCheckedChange={sceneViewReturn.setShown}
+						disabled={!sceneViewReturn.available}
+						label="Back to scene view"
+						description={
+							sceneViewReturn.available
+								? 'Offers visitors a way back, by button or Escape, after a hotspot flies the camera to its own view. Applies to embeds and preview links as soon as you save.'
+								: 'Shown once a hotspot has its own camera.'
 						}
 					/>
-				</div>
-
-				<SettingGroup
-					label="Feel"
-					description={
-						feel
-							? 'How closely the scene follows a viewer dragging it.'
-							: 'Custom. Pick a feel to replace the fine-tuned values.'
-					}
-				>
-					<ToggleGroup
-						type="single"
-						aria-label="Feel"
-						value={feel}
-						onValueChange={(next) => {
-							if (!next) return
-							setControls((prev) => ({
-								...prev,
-								enableDamping: true,
-								...INTERACTION_FEELS[next as InteractionFeel]
-							}))
-						}}
-					>
-						{(Object.keys(FEEL_LABELS) as InteractionFeel[]).map((key) => (
-							<ToggleGroupItem key={key} value={key}>
-								{FEEL_LABELS[key]}
-							</ToggleGroupItem>
-						))}
-					</ToggleGroup>
-				</SettingGroup>
-
-				<div className="space-y-2">
-					<DrillDownTrigger to="fine-tune" icon={<Gauge />} label="Fine-tune" />
-					<DrillDownTrigger
-						to="advanced"
-						icon={<SlidersHorizontal />}
-						label="Advanced"
-					/>
-				</div>
+				</SidebarSection>
 
 				<Button
 					variant="secondary"
@@ -187,6 +257,14 @@ const InteractionControlsSettingsPanel = memo(() => {
 					<Eye className="size-4" />
 					Try in Preview
 				</Button>
+			</DrillDownView>
+
+			<DrillDownView
+				id="transitions"
+				title="Transitions"
+				caption="How the view moves when a visitor switches cameras."
+			>
+				<TransitionSettings />
 			</DrillDownView>
 
 			<DrillDownView
