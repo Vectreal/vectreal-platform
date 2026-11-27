@@ -29,6 +29,7 @@ import {
 	sceneMetaAtom,
 	openComposeToolAtom,
 	stageLightingAtom,
+	viewArrivedAtom,
 	viewportControlsAtom
 } from '../../lib/stores/publisher-config-store'
 import { comparedModelAtom } from '../../lib/stores/scene-optimization-store'
@@ -116,6 +117,7 @@ const PublisherPage = () => {
 	const openComposeTool = useAtomValue(openComposeToolAtom)
 	const isPreviewMode = useAtomValue(isPreviewModeAtom)
 	const viewportControls = useAtomValue(viewportControlsAtom)
+	const viewArrived = useSetAtom(viewArrivedAtom)
 	const openHotspotInHotspotTool = useSetAtom(openHotspotInHotspotToolAtom)
 	const loadingThumbnail = toViewerLoadingThumbnail(
 		sceneMeta.thumbnailUrl,
@@ -187,6 +189,7 @@ const PublisherPage = () => {
 		(event: ViewerInteractionEvent) => {
 			if (event.type === 'camera_changed' && event.cameraId) {
 				setSelectedCameraId(event.cameraId)
+				viewArrived()
 			}
 			if (event.type === 'animation_state_changed') {
 				setAnimationStatus({
@@ -212,7 +215,8 @@ const PublisherPage = () => {
 			file,
 			setFailedEnvironmentFiles,
 			setOpeningFramed,
-			setSelectedCameraId
+			setSelectedCameraId,
+			viewArrived
 		]
 	)
 

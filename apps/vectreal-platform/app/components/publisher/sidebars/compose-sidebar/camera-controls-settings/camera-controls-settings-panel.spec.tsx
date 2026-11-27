@@ -6,11 +6,14 @@
  */
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
+import { useEffect } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 import {
 	cameraToolOpenRequestAtom,
-	openCameraInCameraToolAtom
+	openCameraInCameraToolAtom,
+	viewLensAtom,
+	viewMovedAtom
 } from '../../../../../lib/stores/publisher-config-store'
 import {
 	cameraAtom,
@@ -18,8 +21,13 @@ import {
 	interactionsAtom,
 	selectedCameraIdAtom
 } from '../../../../../lib/stores/scene-settings-store'
-import { PublisherViewerCaptureProvider } from '../../../publisher-viewer-capture-context'
+import {
+	PublisherViewerCaptureProvider,
+	usePublisherViewerCapture
+} from '../../../publisher-viewer-capture-context'
 import CameraControlsSettingsPanel from './camera-controls-settings-panel'
+
+import type { SceneCameraSnapshot } from '@vctrl/viewer'
 
 const { toastInfo } = vi.hoisted(() => ({ toastInfo: vi.fn() }))
 vi.mock('sonner', () => ({
@@ -218,30 +226,105 @@ describe('CameraControlsSettingsPanel deleting a camera', () => {
 })
 
 /**
- * Capturing the default camera writes the opening view, which can fail: the
- * viewer may not have registered its capture yet. The button only says the view
- * was captured when it was.
+ * The view moved off the selected camera: the panel offers to save it, and a
+ * lens tried out on it stays off the camera until then.
  */
-describe('CameraControlsSettingsPanel capturing the current view', () => {
-	it('does not report a capture that failed', async () => {
-		const store = sceneWithTwoCameras()
-		renderPanel(store)
+describe('CameraControlsSettingsPanel with a moved view', () => {
+	const snapshot: SceneCameraSnapshot = {
+		position: [4, 4, 4],
+		rotation: [0, 0, 0],
+		target: [1, 1, 1],
+		fov: 35,
+		framingAspect: 16 / 9,
+		viewportAspect: 16 / 9
+	}
 
-		fireEvent.click(await screen.findByRole('button', { name: /^Front/ }))
-		await screen.findByRole('heading', { name: 'Front' })
+	/** Stands in for the viewer: its capture and its command executor. */
+	function FakeViewer({ execute }: { execute: (command: unknown) => void }) {
+		const capture = usePublisherViewerCapture()
+		useEffect(() => {
+			capture.registerSceneCameraSnapshotCapture(async () => snapshot)
+			capture.registerCommandExecutor({ execute })
+		}, [capture, execute])
+		return null
+	}
+
+	const renderMoved = async (moved: boolean) => {
+		const store = createStore()
+		store.set(cameraAtom, {
+			cameras: [
+				{ cameraId: 'front', name: 'Front', fov: 50 },
+				{ cameraId: 'side', name: 'Side', fov: 50 }
+			]
+		})
+		const execute = vi.fn()
+		render(
+			<Provider store={store}>
+				<PublisherViewerCaptureProvider>
+					<FakeViewer execute={execute} />
+					<CameraControlsSettingsPanel />
+				</PublisherViewerCaptureProvider>
+			</Provider>
+		)
+		fireEvent.click(await screen.findByRole('button', { name: /^Side/ }))
+		await screen.findByRole('heading', { name: 'Side' })
+		act(() => store.set(viewMovedAtom, moved))
+		return { store, execute }
+	}
+
+	const sideFov = (store: ReturnType<typeof createStore>) =>
+		store.get(cameraAtom).cameras?.find((c) => c.cameraId === 'side')?.fov
+
+	it('offers nothing to save while the view is on the camera', async () => {
+		await renderMoved(false)
+		expect(
+			screen.queryByRole('button', { name: 'Save as new camera' })
+		).toBeNull()
+		expect(screen.queryByRole('button', { name: /to this view/ })).toBeNull()
+	})
+
+	it('tries a lens out on the view, not the camera', async () => {
+		const { store } = await renderMoved(true)
+		const slider = screen.getByRole('slider', { name: 'Field of view' })
+		fireEvent.keyDown(slider, { key: 'ArrowRight' })
+
+		expect(store.get(viewLensAtom)).toBe(51)
+		expect(sideFov(store)).toBe(50)
+	})
+
+	it('writes the view into the camera on Update', async () => {
+		const { store } = await renderMoved(true)
 		fireEvent.click(
-			screen.getByRole('button', { name: 'Set camera to current view' })
+			screen.getByRole('button', { name: 'Update “Side” to this view' })
 		)
 
-		// The capture settles over a few microtasks; give it every chance to
-		// report success before asserting it did not.
-		await waitFor(() =>
-			expect(
-				screen.getByRole('button', { name: 'Set camera to current view' })
-			).toBeTruthy()
-		)
-		await new Promise((resolve) => setTimeout(resolve, 0))
-		expect(screen.queryByText('View captured')).toBeNull()
+		await waitFor(() => expect(store.get(viewMovedAtom)).toBe(false))
+		const side = store
+			.get(cameraAtom)
+			.cameras?.find((c) => c.cameraId === 'side')
+		expect(side?.position).toEqual(snapshot.position)
+		expect(side?.fov).toBe(35)
+	})
+
+	it('saves the view as a new camera', async () => {
+		const { store } = await renderMoved(true)
+		fireEvent.click(screen.getByRole('button', { name: 'Save as new camera' }))
+
+		await waitFor(() => expect(store.get(cameraAtom).cameras).toHaveLength(3))
+		expect(store.get(cameraAtom).cameras?.[2]).toMatchObject({
+			position: snapshot.position,
+			fov: 35
+		})
+	})
+
+	it('flies back to the camera as saved', async () => {
+		const { execute } = await renderMoved(true)
+		fireEvent.click(screen.getByRole('button', { name: 'Back to camera' }))
+
+		expect(execute).toHaveBeenCalledWith({
+			type: 'activate_camera',
+			cameraId: 'side'
+		})
 	})
 })
 
