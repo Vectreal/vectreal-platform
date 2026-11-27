@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
-import { cameraSelectionSignature } from './camera-selection-signature'
+import {
+	cameraSelectionSignature,
+	isLensOnlyEdit
+} from './camera-selection-signature'
 
 import type { CameraConfig } from '../types'
 
@@ -85,5 +88,41 @@ describe('cameraSelectionSignature', () => {
 	it('signs a camera that is not in the list at all', () => {
 		expect(() => sign([camera()], 'missing')).not.toThrow()
 		expect(sign([camera()], 'missing')).toBe(sign([], 'missing'))
+	})
+})
+
+describe('isLensOnlyEdit', () => {
+	const pose: Partial<CameraConfig> = { position: [0, 1, 2], target: [0, 0, 0] }
+
+	it('is true when only the field of view changed', () => {
+		expect(
+			isLensOnlyEdit(
+				sign([camera({ ...pose, fov: 50 })]),
+				sign([camera({ ...pose, fov: 30 })])
+			)
+		).toBe(true)
+	})
+
+	it('is false when the pose changed with the lens', () => {
+		expect(
+			isLensOnlyEdit(
+				sign([camera({ ...pose, fov: 50 })]),
+				sign([camera({ ...pose, position: [0, 1, 9], fov: 30 })])
+			)
+		).toBe(false)
+	})
+
+	it('is false when nothing changed', () => {
+		const same = sign([camera({ ...pose, fov: 50 })])
+		expect(isLensOnlyEdit(same, same)).toBe(false)
+	})
+
+	it('is false when the lens was removed', () => {
+		expect(
+			isLensOnlyEdit(
+				sign([camera({ ...pose, fov: 50 })]),
+				sign([camera({ ...pose })])
+			)
+		).toBe(false)
 	})
 })
