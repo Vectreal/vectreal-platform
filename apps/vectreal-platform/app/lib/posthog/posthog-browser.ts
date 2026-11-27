@@ -1,4 +1,9 @@
 import { readConsentCookie } from '../consent/consent-cookie'
+import {
+	deploymentProperties,
+	environmentFromHostname,
+	sendsExceptions
+} from '../observability/deployment'
 import { isThirdPartySurface } from '../third-party-surface'
 import { applyAnalyticsConsent } from './analytics-consent'
 import { DEAD_CLICKS_CONFIG, RAGECLICK_CONFIG } from './frustration-signals'
@@ -51,6 +56,7 @@ export async function loadPostHog(
 		  through ConsentProvider's own queued calls, in order.
 		*/
 		const consented = readConsentCookie()?.choices.analytics
+		const environment = environmentFromHostname(window.location.hostname)
 
 		/*
 		  The cookieless allowlist is only read once the library runs, so it
@@ -106,6 +112,16 @@ export async function loadPostHog(
 				if (!event) return event
 
 				/*
+				  Every exception, whether `useErrorReport` sent it or PostHog
+				  caught it on its own, says which deployment it came from, and
+				  a development machine sends none (`deployment.ts`). Here
+				  rather than in the hook because this is the one place both
+				  pass through.
+				*/
+				const isException = event.event === '$exception'
+				if (isException && !sendsExceptions(environment)) return null
+
+				/*
 				  Without consent only the allowlist leaves, already cut down.
 				  Redacted all the same: an email address is kept out of every
 				  event, and the path and campaign values the allowlist keeps
@@ -133,7 +149,11 @@ export async function loadPostHog(
 				*/
 				return redactUrlSecretsFromProperties({
 					...event,
-					properties: { ...event.properties, client_type: 'web' }
+					properties: {
+						...event.properties,
+						client_type: 'web',
+						...(isException ? deploymentProperties(environment) : {})
+					}
 				})
 			}
 		})

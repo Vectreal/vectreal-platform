@@ -2,6 +2,11 @@ import {
 	distinctIdFromRequest,
 	getPosthogClient
 } from '../posthog/posthog-client.server'
+import {
+	deploymentProperties,
+	environmentFromFlyApp,
+	sendsExceptions
+} from './deployment'
 import { buildErrorReport } from './error-report'
 
 import type { ErrorProperties } from './error-report'
@@ -83,9 +88,18 @@ export function reportServerError(
 	// eslint-disable-next-line no-console -- the single reporting sink
 	console.error(report.error, report.properties)
 
+	/*
+	  Read per report rather than once, so nothing caches a value from before
+	  the environment was set. Fly sets `FLY_APP_NAME` on every machine; a
+	  laptop, a worktree's dev server or a CI job has none and is development.
+	*/
+	const environment = environmentFromFlyApp(process.env.FLY_APP_NAME)
+	if (!sendsExceptions(environment)) return
+
 	getPosthogClient()?.captureException(
 		report.error,
 		request ? distinctIdFromRequest(request) : undefined,
-		report.properties
+		// Last, so a caller's property cannot relabel where a report came from.
+		{ ...report.properties, ...deploymentProperties(environment) }
 	)
 }
