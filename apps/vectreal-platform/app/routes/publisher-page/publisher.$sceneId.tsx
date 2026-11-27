@@ -125,6 +125,7 @@ const PublisherPage = () => {
 		commandExecutor,
 		registerSceneScreenshotCapture,
 		registerSceneCameraSnapshotCapture,
+		registerSceneCameraSnapshotRestore,
 		registerShadowBakeCapture,
 		registerCommandExecutor,
 		registerHotspotPositionSetter
@@ -340,6 +341,7 @@ const PublisherPage = () => {
 					loadingThumbnail={loadingThumbnail}
 					onScreenshotCaptureReady={registerSceneScreenshotCapture}
 					onCameraSnapshotCaptureReady={registerSceneCameraSnapshotCapture}
+					onCameraSnapshotRestoreReady={registerSceneCameraSnapshotRestore}
 					onCommandExecutorReady={registerCommandExecutor}
 					onRawDiagonalComputed={setRawDiagonal}
 					onInteractionEvent={handleInteractionEvent}

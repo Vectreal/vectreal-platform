@@ -4,7 +4,7 @@ import {
 	ToggleGroup,
 	ToggleGroupItem
 } from '@shared/components/ui/toggle-group'
-import { useAtom, useSetAtom } from 'jotai/react'
+import { useAtom } from 'jotai/react'
 import {
 	Eye,
 	Focus,
@@ -19,9 +19,9 @@ import {
 	INTERACTION_FEELS,
 	type InteractionFeel
 } from '../../../../constants/viewer-defaults'
-import { enterPreviewModeAtom } from '../../../../lib/stores/publisher-config-store'
 import { controlsAtom } from '../../../../lib/stores/scene-settings-store'
 import { PREVIEW_TOGGLE_ID } from '../../shell/tool-bar'
+import { usePreviewToggle } from '../../shell/use-preview-toggle'
 import { DrillDown, DrillDownTrigger, DrillDownView } from '../drill-down'
 import { FieldSlider } from '../field-slider'
 import { SettingGroup } from '../sidebar-section'
@@ -76,7 +76,7 @@ function matchingFeel(controls: ControlsProps): InteractionFeel | '' {
 const InteractionControlsSettingsPanel = memo(() => {
 	const [controls, setControls] = useAtom(controlsAtom)
 	const [path, setPath] = useState<string[]>([])
-	const enterPreviewMode = useSetAtom(enterPreviewModeAtom)
+	const { enterPreview } = usePreviewToggle()
 	const feel = matchingFeel(controls)
 
 	const setControl = useCallback(
@@ -175,8 +175,8 @@ const InteractionControlsSettingsPanel = memo(() => {
 				<Button
 					variant="secondary"
 					className="w-full"
-					onClick={() => {
-						enterPreviewMode()
+					onClick={async () => {
+						await enterPreview()
 						// Preview closes this panel with the button in it; focus goes to
 						// the toggle that leaves preview again.
 						requestAnimationFrame(() =>

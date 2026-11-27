@@ -28,6 +28,7 @@ import {
 
 import { applyInitialFraming } from './initial-framing'
 import { prefersReducedMotion } from './reduced-motion'
+import { viewCaptureCamera } from './screenshot-pose'
 import { useCameraFlight } from './use-camera-flight'
 import { viewportAspectOf } from './viewport-aspect'
 
@@ -38,7 +39,8 @@ import type {
 } from '../../types/viewer-interactions'
 import type {
 	SceneCameraSnapshot,
-	SceneCameraSnapshotCapture
+	SceneCameraSnapshotCapture,
+	SceneCameraSnapshotRestore
 } from '../../types/viewer-types'
 import type { InitialFramingControls } from './initial-framing'
 
@@ -62,6 +64,9 @@ interface SceneCameraProps extends CameraProps {
 	onInitialFramingComplete?: () => void
 	onCameraSnapshotCaptureReady?: (
 		capture: null | SceneCameraSnapshotCapture
+	) => void
+	onCameraSnapshotRestoreReady?: (
+		restore: null | SceneCameraSnapshotRestore
 	) => void
 	onInteractionEvent?: (event: ViewerInteractionEvent) => void
 	onCommandExecutorReady?: (executor: null | ViewerCommandExecutor) => void
@@ -172,6 +177,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		model,
 		onInitialFramingComplete,
 		onCameraSnapshotCaptureReady,
+		onCameraSnapshotRestoreReady,
 		onCommandExecutorReady,
 		onInteractionEvent,
 		openingPose,
@@ -345,6 +351,50 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		},
 		[controls, flight, invalidate, sceneCamera, syncDistanceLimits]
 	)
+
+	/*
+	  A snapshot back on screen, resolved like any stored camera so it is
+	  fitted to the live viewport. Held for the next frame: a host restoring
+	  as it changes the selection or the controls has those land first, so the
+	  flight a selection starts cannot land over the view and the old limits
+	  cannot clamp it. It names no camera, so the camera in view stays the one
+	  the view last went to.
+	*/
+	const pendingRestore = useRef<null | {
+		view: SceneCameraSnapshot
+		onApplied?: () => void
+	}>(null)
+
+	const restoreCameraSnapshot = useCallback<SceneCameraSnapshotRestore>(
+		(view, onApplied) => {
+			pendingRestore.current = { view, onApplied }
+			invalidate()
+		},
+		[invalidate]
+	)
+
+	useFrame(() => {
+		const pending = pendingRestore.current
+		if (!pending) return
+		pendingRestore.current = null
+		const viewCamera = viewCaptureCamera(pending.view)
+		applyCameraInstantly(
+			resolveCameraSelection(
+				[viewCamera],
+				viewCamera.cameraId,
+				controls?.target ?? new Vector3(0, 0, 0),
+				sceneCamera as PerspectiveCamera
+			)
+		)
+		pending.onApplied?.()
+	})
+
+	useEffect(() => {
+		onCameraSnapshotRestoreReady?.(restoreCameraSnapshot)
+		return () => {
+			onCameraSnapshotRestoreReady?.(null)
+		}
+	}, [onCameraSnapshotRestoreReady, restoreCameraSnapshot])
 
 	const startTransition = useCallback(
 		(selection: ResolvedCameraSelection) => {

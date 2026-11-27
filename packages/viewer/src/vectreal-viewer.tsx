@@ -131,6 +131,7 @@ import type {
 	BakedShadow,
 	SceneCameraSnapshot,
 	SceneCameraSnapshotCapture,
+	SceneCameraSnapshotRestore,
 	SceneScreenshotCapture,
 	ShadowBakeCapture,
 	ViewerCommand,
@@ -144,6 +145,7 @@ export type {
 	BakedShadow,
 	SceneCameraSnapshot,
 	SceneCameraSnapshotCapture,
+	SceneCameraSnapshotRestore,
 	SceneScreenshotCapture,
 	SceneScreenshotOptions,
 	ShadowBakeCapture,
@@ -633,6 +635,15 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	) => void
 
 	/**
+	 * Callback that receives a function for putting the view back on a pose the
+	 * snapshot capture read, for a host that steps away from a free view (an
+	 * editor's preview) and returns to it.
+	 */
+	onCameraSnapshotRestoreReady?: (
+		restore: null | SceneCameraSnapshotRestore
+	) => void
+
+	/**
 	 * Callback invoked when the viewer emits runtime interaction events.
 	 */
 	onInteractionEvent?: (event: ViewerInteractionEvent) => void
@@ -744,6 +755,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		onScreenshot,
 		onScreenshotCaptureReady,
 		onCameraSnapshotCaptureReady,
+		onCameraSnapshotRestoreReady,
 		onInteractionEvent,
 		onCommandExecutorReady,
 		onRawDiagonalComputed,
@@ -1528,6 +1540,9 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 												model={model}
 												onCameraSnapshotCaptureReady={
 													onCameraSnapshotCaptureReady
+												}
+												onCameraSnapshotRestoreReady={
+													onCameraSnapshotRestoreReady
 												}
 												onCommandExecutorReady={cameraLayer.register}
 												onInitialFramingComplete={handleInitialFramingComplete}

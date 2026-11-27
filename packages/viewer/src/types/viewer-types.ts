@@ -31,6 +31,18 @@ export interface SceneCameraSnapshot {
 export type SceneCameraSnapshotCapture =
 	() => Promise<null | SceneCameraSnapshot>
 
+/**
+ * Puts the view back on a pose a `SceneCameraSnapshotCapture` read, ending any
+ * flight. Applied on the next frame, so whatever the host changed in the same
+ * update (the camera it selects, the controls' limits) has landed first and
+ * cannot fly or clamp the view off it; `onApplied` runs once it is on screen.
+ * It names no camera, so the camera in view is unchanged.
+ */
+export type SceneCameraSnapshotRestore = (
+	view: SceneCameraSnapshot,
+	onApplied?: () => void
+) => void
+
 export type SceneScreenshotCapture = (
 	options?: SceneScreenshotOptions
 ) => Promise<null | string>

@@ -432,3 +432,38 @@ describe('viewportControlsAtom', () => {
 		expect(store.get(viewportControlsAtom)).toBe(EDITOR_CONTROLS)
 	})
 })
+
+describe('preview keeps the editor view', () => {
+	const view = {
+		position: [4, 4, 4] as [number, number, number],
+		rotation: [0, 0, 0] as [number, number, number],
+		target: [1, 1, 1] as [number, number, number],
+		fov: 40,
+		framingAspect: 16 / 9,
+		viewportAspect: 16 / 9
+	}
+
+	it('hands back the view entering recorded, with the selection put back', () => {
+		const store = createStore()
+		store.set(cameraAtom, {
+			cameras: [
+				{ cameraId: 'opening', name: 'Opening', initial: true },
+				{ cameraId: 'detail', name: 'Detail' }
+			]
+		})
+		store.set(selectedCameraIdAtom, 'detail')
+
+		store.set(enterPreviewModeAtom, view)
+		expect(store.get(selectedCameraIdAtom)).toBe('opening')
+		expect(store.set(exitPreviewModeAtom)).toBe(view)
+		expect(store.get(selectedCameraIdAtom)).toBe('detail')
+		// A second exit has nothing left to hand back.
+		expect(store.set(exitPreviewModeAtom)).toBeNull()
+	})
+
+	it('hands nothing back when entering read no view', () => {
+		const store = createStore()
+		store.set(enterPreviewModeAtom)
+		expect(store.set(exitPreviewModeAtom)).toBeNull()
+	})
+})
