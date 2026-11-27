@@ -56,6 +56,9 @@ ARG BUILD_VITE_PUBLIC_POSTHOG_UI_HOST=https://eu.posthog.com
 # Unset in CI, so deployed images report. Pass false to build one locally that
 # does not: the browser bundle bakes this in, see posthog-enabled.ts.
 ARG BUILD_VITE_PUBLIC_POSTHOG_ENABLED=
+# The commit being built, tagged onto every exception as `release`
+# (app/lib/observability/deployment.ts). Empty sends no release.
+ARG BUILD_VITE_PUBLIC_RELEASE=
 
 ENV CSRF_SECRET=${BUILD_CSRF_SECRET}
 ENV DATABASE_URL=${BUILD_DATABASE_URL}
@@ -66,6 +69,7 @@ ENV VITE_PUBLIC_POSTHOG_TOKEN=${BUILD_VITE_PUBLIC_POSTHOG_TOKEN}
 ENV VITE_PUBLIC_POSTHOG_HOST=${BUILD_VITE_PUBLIC_POSTHOG_HOST}
 ENV VITE_PUBLIC_POSTHOG_UI_HOST=${BUILD_VITE_PUBLIC_POSTHOG_UI_HOST}
 ENV VITE_PUBLIC_POSTHOG_ENABLED=${BUILD_VITE_PUBLIC_POSTHOG_ENABLED}
+ENV VITE_PUBLIC_RELEASE=${BUILD_VITE_PUBLIC_RELEASE}
 
 # Copy source and build application artifacts inside Docker. The client bundle
 # is built here rather than reused from CI because Vite bakes the PostHog build

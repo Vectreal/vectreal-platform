@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
  * The server sink, exercised rather than inspected.
@@ -45,6 +45,12 @@ describe('reportServerError', () => {
 	beforeEach(() => {
 		captureException.mockClear()
 		logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+		// Production unless a case says otherwise: development sends nothing.
+		vi.stubEnv('FLY_APP_NAME', 'vectreal-platform')
+	})
+
+	afterEach(() => {
+		vi.unstubAllEnvs()
 	})
 
 	it('captures an error thrown while serving a request', () => {
@@ -224,5 +230,63 @@ describe('reportServerError', () => {
 			JSON.stringify([error.message, error.stack, properties])
 		).not.toContain('vk_live_secret')
 		expect(JSON.stringify(logged.mock.calls)).not.toContain('vk_live_secret')
+	})
+
+	/*
+	  One PostHog project takes every deployment's exceptions, so each says
+	  which one it came from and which build. Fly names the app on every
+	  machine; the release is the commit the image was built from.
+	*/
+	it.each([
+		['vectreal-platform', 'production'],
+		['vectreal-platform-staging', 'staging']
+	])('tags a report from %s as %s', (app, environment) => {
+		vi.stubEnv('FLY_APP_NAME', app)
+		vi.stubEnv('VITE_PUBLIC_RELEASE', '4c5d1b22b')
+
+		reportServerError(new Error('boom'), serving('https://vectreal.io/pricing'))
+
+		expect(captureException.mock.calls[0][2]).toMatchObject({
+			environment,
+			release: '4c5d1b22b'
+		})
+	})
+
+	it('sends no release from a build that has none', () => {
+		vi.stubEnv('VITE_PUBLIC_RELEASE', '')
+
+		reportServerError(new Error('boom'), serving('https://vectreal.io/pricing'))
+
+		expect(captureException.mock.calls[0][2]).not.toHaveProperty('release')
+	})
+
+	/*
+	  A laptop, a worktree's dev server or a CI job runs with no Fly app. Its
+	  exceptions stay in its own log rather than opening issues next to
+	  production's.
+	*/
+	it.each([undefined, 'someone-elses-app'])(
+		'keeps a development report on the machine (FLY_APP_NAME=%s)',
+		(app) => {
+			vi.stubEnv('FLY_APP_NAME', app)
+
+			reportServerError(new Error('boom'), serving('https://localhost/pricing'))
+
+			expect(captureException).not.toHaveBeenCalled()
+			expect(logged).toHaveBeenCalledTimes(1)
+		}
+	)
+
+	it('does not let a call site relabel the environment', () => {
+		vi.stubEnv('VITE_PUBLIC_RELEASE', 'real')
+
+		reportServerError(new Error('boom'), {
+			properties: { environment: 'development', release: 'fake' }
+		})
+
+		expect(captureException.mock.calls[0][2]).toMatchObject({
+			environment: 'production',
+			release: 'real'
+		})
 	})
 })

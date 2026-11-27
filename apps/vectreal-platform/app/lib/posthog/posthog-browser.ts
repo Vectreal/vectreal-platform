@@ -3,7 +3,6 @@ import { isThirdPartySurface } from '../third-party-surface'
 import { applyAnalyticsConsent } from './analytics-consent'
 import { DEAD_CLICKS_CONFIG, RAGECLICK_CONFIG } from './frustration-signals'
 import { isPosthogEnabled } from './posthog-enabled'
-import { redactUrlSecretsFromProperties } from './redact-url-secrets'
 
 import type { PostHog } from 'posthog-js'
 
@@ -53,12 +52,12 @@ export async function loadPostHog(
 		const consented = readConsentCookie()?.choices.analytics
 
 		/*
-		  The cookieless allowlist is only read once the library runs, so it
-		  arrives with it rather than on every page's first load.
+		  What decides each event's fate only runs once the library does, so
+		  it arrives with it rather than on every page's first load.
 		*/
-		const [{ default: posthog }, { toCookielessEvent }] = await Promise.all([
+		const [{ default: posthog }, { createBeforeSend }] = await Promise.all([
 			import('posthog-js'),
-			import('./cookieless-events')
+			import('./before-send')
 		])
 
 		posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_TOKEN, {
@@ -75,7 +74,7 @@ export async function loadPostHog(
 			  both: nothing is stored on the device, no session or replay runs,
 			  and PostHog derives the visitor id on its servers from a daily
 			  salted hash. Which events go out, and with what, is decided in
-			  `before_send` below (`cookieless-events.ts`). Without the opt-out
+			  `before_send` (`before-send.ts`, `cookieless-events.ts`). Without the opt-out
 			  default, posthog-js would capture fully from init on a first visit,
 			  before the banner is answered.
 
@@ -90,52 +89,8 @@ export async function loadPostHog(
 			// A drag on a 3D viewer is not a frustrated click: see the module.
 			rageclick: RAGECLICK_CONFIG,
 			capture_dead_clicks: DEAD_CLICKS_CONFIG,
-			/*
-			  An embed authenticates by a `token` query parameter, so an embed URL
-			  contains a live API key - and PostHog attaches URLs (`$current_url`,
-			  `$referrer`) to every event, not just `$pageview`. PostHog never
-			  starts on `/embed` itself; this still keeps a key from leaving in any
-			  URL an event carries from the rest of the site. The same rule keeps
-			  every email address out of every event (`redact-url-secrets.ts`).
-
-			  Here rather than at a capture site: this runs for every event, including
-			  the properties PostHog adds itself, so there is no list of call sites to
-			  keep in step and no way for a new event to miss it.
-			*/
-			before_send: (event) => {
-				if (!event) return event
-
-				/*
-				  Without consent only the allowlist leaves, already cut down.
-				  Redacted all the same: an email address is kept out of every
-				  event, and the path and campaign values the allowlist keeps
-				  are still strings someone else chose.
-				*/
-				if (event.properties.$cookieless_mode === true) {
-					const cookieless = toCookielessEvent(event)
-					return cookieless && redactUrlSecretsFromProperties(cookieless)
-				}
-
-				/*
-				  Session replay is excluded, and not because it is safe. A `$snapshot`
-				  carries a whole rrweb payload, and walking one on every snapshot
-				  would cost far more than the rest of this does on a normal event.
-				  So the one page whose URL holds a key is never recorded at all:
-				  PostHog does not start on `/embed` (see the condition above).
-				  Everywhere else replay follows the project's remote config.
-				*/
-				if (event.event === '$snapshot') return event
-
-				/*
-				  Added here rather than with `register()`: opting in or out
-				  of cookieless counting resets PostHog, and a reset drops
-				  registered properties.
-				*/
-				return redactUrlSecretsFromProperties({
-					...event,
-					properties: { ...event.properties, client_type: 'web' }
-				})
-			}
+			// Redaction, the cookieless allowlist and exception tags: see the module.
+			before_send: createBeforeSend(window.location.hostname)
 		})
 
 		/*

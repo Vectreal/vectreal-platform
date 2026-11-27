@@ -82,6 +82,7 @@ jobs:
             BUILD_VITE_PUBLIC_POSTHOG_TOKEN=${{ secrets.VITE_PUBLIC_POSTHOG_TOKEN }}
             BUILD_VITE_PUBLIC_POSTHOG_HOST=${{ secrets.VITE_PUBLIC_POSTHOG_HOST }}
             BUILD_VITE_PUBLIC_POSTHOG_UI_HOST=${{ secrets.VITE_PUBLIC_POSTHOG_UI_HOST || 'https://eu.posthog.com' }}
+            BUILD_VITE_PUBLIC_RELEASE=${{ github.sha }}
 
       - name: Set up flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master

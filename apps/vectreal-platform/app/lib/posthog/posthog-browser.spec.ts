@@ -155,6 +155,64 @@ describe('loadPostHog', () => {
 		expect(JSON.stringify(sent)).not.toMatch(/jane\.doe/)
 	})
 
+	/*
+	  One PostHog project takes every deployment's exceptions, so each says
+	  where it came from. The browser knows only the host that served it.
+	  Vitest's jsdom instance moves the page to another host for a case.
+	*/
+	describe('exceptions', () => {
+		const page = (
+			globalThis as unknown as {
+				jsdom: { reconfigure: (options: { url: string }) => void }
+			}
+		).jsdom
+		const original = window.location.href
+
+		afterEach(() => {
+			page.reconfigure({ url: original })
+		})
+
+		const exception = { event: '$exception', properties: { $host: 'x' } }
+
+		it.each([
+			['https://vectreal.com/', 'production'],
+			['https://www.vectreal.com/pricing', 'production'],
+			['https://staging.vectreal.com/', 'staging'],
+			['https://vectreal-platform-staging.fly.dev/', 'staging']
+		])('tags one from %s as %s', async (url, environment) => {
+			page.reconfigure({ url })
+			vi.stubEnv('VITE_PUBLIC_RELEASE', '4c5d1b22b')
+			await load('/')
+			const { before_send } = client.init.mock.calls[0][1]
+
+			expect(before_send(exception).properties).toMatchObject({
+				environment,
+				release: '4c5d1b22b'
+			})
+		})
+
+		// A dev server, a worktree's preview, `nx start` on a laptop.
+		it('sends none from a development machine', async () => {
+			expect(window.location.hostname).toBe('localhost')
+			await load('/')
+			const { before_send } = client.init.mock.calls[0][1]
+
+			expect(before_send(exception)).toBeNull()
+			// Only exceptions: analytics someone switched on locally still flow.
+			expect(before_send({ event: '$pageview', properties: {} })).not.toBeNull()
+		})
+
+		it('leaves every other event untagged', async () => {
+			page.reconfigure({ url: 'https://vectreal.com/' })
+			await load('/')
+			const { before_send } = client.init.mock.calls[0][1]
+
+			expect(
+				before_send({ event: '$pageview', properties: {} }).properties
+			).not.toHaveProperty('environment')
+		})
+	})
+
 	// Without consent only the cookieless allowlist leaves.
 	it('cuts down every event PostHog flags as cookieless', async () => {
 		await load('/')
