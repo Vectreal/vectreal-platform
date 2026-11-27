@@ -79,7 +79,7 @@ export function usePublisherScene({
 	userId,
 	sceneManifest
 }: UsePublisherSceneArgs): PublisherScene {
-	const { status } = useModelContext()
+	const { status, source: loadingSource } = useModelContext()
 	const revalidator = useRevalidator()
 	const { requestSceneScreenshot, requestShadowBake } =
 		usePublisherViewerCapture()
@@ -214,6 +214,13 @@ export function usePublisherScene({
 	const { saveSceneSettings, saveAvailability } = useSceneSaveFlow({
 		scenePersistence: {
 			hasModel: status === 'ready',
+			// The scene's own load, or the moment before it starts. Not a draft
+			// restore, which loads unsaved work the same way, and not a drop.
+			isOpeningSavedScene:
+				openSceneId !== null &&
+				!isRestoringDraft &&
+				(status === 'empty' ||
+					(status === 'loading' && loadingSource === 'scene-data')),
 			userId,
 			currentSceneId,
 			setCurrentSceneId,
