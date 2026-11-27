@@ -17,6 +17,7 @@ export {
 } from './camera-settings'
 export {
 	cameraSelectionSignature,
+	isLensOnlyEdit,
 	type CameraSelectionSignature
 } from './camera-selection-signature'
 export { withOpeningPose, type OpeningPose } from './opening-pose'

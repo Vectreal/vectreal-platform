@@ -117,6 +117,133 @@ describe('redactUrlSecrets', () => {
 	})
 })
 
+/*
+  Email addresses are kept out of analytics and logs entirely. They reached
+  PostHog in the `/auth/confirm-pending?email=` URL, and can reach it in any
+  string: an error message, a caller's property, a search query.
+*/
+describe('redactUrlSecrets on email addresses', () => {
+	it('replaces a plain address wherever it sits in a string', () => {
+		expect(redactUrlSecrets('jane.doe@example.com')).toBe('redacted')
+		expect(
+			redactUrlSecrets('User jane.doe+news@mail.example.co.uk already exists')
+		).toBe('User redacted already exists')
+	})
+
+	it('replaces a percent-encoded address in a query string', () => {
+		// `searchParams.set` writes the `@` as `%40`, the `+` as `%2B`.
+		expect(
+			redactUrlSecrets(
+				'https://vectreal.com/auth/confirm-pending?email=jane%2Bx%40example.com&next=%2Fonboarding'
+			)
+		).toBe(
+			'https://vectreal.com/auth/confirm-pending?email=redacted&next=%2Fonboarding'
+		)
+	})
+
+	it('replaces an address with letters outside ASCII whole', () => {
+		expect(redactUrlSecrets('mail jürgen.ößer@müller-bau.de now')).toBe(
+			'mail redacted now'
+		)
+	})
+
+	it('replaces an address whose letters outside ASCII are encoded', () => {
+		const url = new URL('https://vectreal.com/x')
+		url.searchParams.set('email', 'jürgen.andré@müller.de')
+		url.searchParams.set('next', '/onboarding')
+
+		expect(redactUrlSecrets(url.toString())).toBe(
+			'https://vectreal.com/x?email=redacted&next=%2Fonboarding'
+		)
+	})
+
+	it('replaces an address encoded twice, inside a nested URL', () => {
+		// `next=/x?email=a%40b.com` serialized as a parameter value.
+		expect(
+			redactUrlSecrets('/sign-in?next=%2Fx%3Femail%3Djane%2540example.com')
+		).toBe('/sign-in?next=%2Fx%3Femail%3Dredacted')
+	})
+
+	it('replaces an address in a path and a fragment', () => {
+		expect(redactUrlSecrets('/u/jane@example.com#Jane@Example.COM')).toBe(
+			'/u/redacted#redacted'
+		)
+	})
+
+	it.each([
+		['Write to a@example.de.', 'Write to redacted'],
+		["user 'a@example.de' exists", 'user redacted exists'],
+		['{a@example.de}', 'redacted'],
+		['a@example.de- a@example.de~', 'redacted redacted'],
+		[
+			"No account for jane@example.com's workspace",
+			'No account for redacted workspace'
+		],
+		['user:jane@example.com|org1', 'user:redacted'],
+		['jane@example.com_old', 'redacted'],
+		['?email=jane%40example.com%27s&n=1', '?email=redacted&n=1'],
+		['jane@example.xn--p1ai', 'redacted']
+	])('replaces an address with punctuation after it: %s', (value, expected) => {
+		expect(redactUrlSecrets(value)).toBe(expected)
+	})
+
+	it('replaces every address, not only the first', () => {
+		expect(redactUrlSecrets('a@example.com,b@example.org')).toBe(
+			'redacted,redacted'
+		)
+	})
+
+	it('replaces both a token and an address in one URL', () => {
+		expect(
+			redactUrlSecrets('/e?token=vctrl_secret&email=a%40example.com')
+		).toBe('/e?token=redacted&email=redacted')
+	})
+
+	it('redacts consistently across repeated calls', () => {
+		for (let attempt = 0; attempt < 5; attempt += 1) {
+			expect(redactUrlSecrets('a@example.com'), `call ${attempt}`).toBe(
+				'redacted'
+			)
+		}
+	})
+
+	it.each([
+		'@vctrl/viewer',
+		'three@0.181.2',
+		'onClick@https://vectreal.com/assets/app.js:1:20',
+		'50% off',
+		'https://vectreal.com/pricing?utm_source=x'
+	])('leaves %s alone', (value) => {
+		expect(redactUrlSecrets(value)).toBe(value)
+	})
+
+	it.each([
+		['local part', `/${'a'.repeat(50_000)}@${'b'.repeat(50_000)}`],
+		['escape chain', `%${'25'.repeat(20_000)}@`],
+		['escapes', `${'%25'.repeat(30_000)}40`],
+		['dots', `a@${'.'.repeat(50_000)}`],
+		['dots before a letter', `a@${'.'.repeat(50_000)}x`]
+	])('stays fast on a hostile %s', (_name, hostile) => {
+		// The request log runs this on URLs a stranger chose.
+		const started = performance.now()
+		redactUrlSecrets(hostile)
+		expect(performance.now() - started).toBeLessThan(250)
+	})
+
+	it.each(['100%jane@example.com', '%zjane%40example.com'])(
+		'replaces %s after a stray percent sign',
+		(value) => {
+			expect(redactUrlSecrets(value)).not.toMatch(/jane/)
+		}
+	)
+
+	it('replaces an address with encoded punctuation in its local part', () => {
+		expect(redactUrlSecrets('?email=j%7Edoe%21x%40example.com&n=1')).toBe(
+			'?email=redacted&n=1'
+		)
+	})
+})
+
 describe('redactUrlSecretsFromProperties', () => {
 	it('redacts the property PostHog adds to every event', () => {
 		const event = redactUrlSecretsFromProperties({

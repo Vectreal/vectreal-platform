@@ -292,3 +292,34 @@ describe('a snapshot restore', () => {
 		expectOnView()
 	})
 })
+
+describe('a lens edit to the camera in view', () => {
+	it('keeps the view where the author orbited to', async () => {
+		const { rerender } = await mount()
+
+		// The author orbits and pans away from the camera in view.
+		const target = (three.state?.controls as { target: Vector3 }).target
+		camera.position.set(4, 4, 4)
+		target.set(1, 1, 1)
+		rerender({ cameras: [{ ...cameras()[0], fov: 30 }, cameras()[1]] })
+
+		expect(camera.fov).toBe(30)
+		expect(camera.position.distanceTo(new Vector3(4, 4, 4))).toBeLessThan(1e-6)
+		expect(target.distanceTo(new Vector3(1, 1, 1))).toBeLessThan(1e-6)
+	})
+
+	it('still puts the camera back when its pose was edited too', async () => {
+		const { rerender } = await mount()
+
+		camera.position.set(4, 4, 4)
+		rerender({
+			cameras: [
+				{ ...cameras()[0], position: [0, 0, 12], fov: 30 },
+				cameras()[1]
+			]
+		})
+
+		expect(camera.fov).toBe(30)
+		expect(camera.position.distanceTo(new Vector3(0, 0, 12))).toBeLessThan(1e-6)
+	})
+})
