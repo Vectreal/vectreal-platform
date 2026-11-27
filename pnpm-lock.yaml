@@ -864,9 +864,6 @@ importers:
       '@react-three/drei':
         specifier: 'catalog:'
         version: 10.7.9(@react-three/fiber@9.8.2(@types/react@19.2.18)(immer@11.1.16)(react-dom@19.2.9(react@19.2.9))(react@19.2.9)(three@0.185.1))(@types/react@19.2.18)(@types/three@0.185.4)(immer@11.1.16)(react-dom@19.2.9(react@19.2.9))(react@19.2.9)(three@0.185.1)
-      '@react-three/fiber':
-        specifier: 'catalog:'
-        version: 9.8.2(@types/react@19.2.18)(immer@11.1.16)(react-dom@19.2.9(react@19.2.9))(react@19.2.9)(three@0.185.1)
       '@vctrl/core':
         specifier: workspace:^
         version: link:../../build/packages/vctrl/core
@@ -892,6 +889,9 @@ importers:
         specifier: 'catalog:'
         version: 0.9.18(three@0.185.1)
     devDependencies:
+      '@react-three/fiber':
+        specifier: 'catalog:'
+        version: 9.8.2(@types/react@19.2.18)(immer@11.1.16)(react-dom@19.2.9(react@19.2.9))(react@19.2.9)(three@0.185.1)
       '@shared/components':
         specifier: workspace:*
         version: link:../../shared/components

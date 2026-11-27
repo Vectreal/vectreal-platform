@@ -35,6 +35,7 @@ import type { SceneSettings } from '@vctrl/core'
 const { modelContext, sceneDraft, sceneUpload } = vi.hoisted(() => ({
 	modelContext: {
 		status: 'ready',
+		source: 'scene-data',
 		load: vi.fn().mockResolvedValue({ status: 'idle' }),
 		reset: vi.fn(),
 		// The upload a just-saved scene still holds as its source.
@@ -171,6 +172,50 @@ describe('usePublisherScene', () => {
 			} finally {
 				modelContext.status = 'ready'
 			}
+		}
+	})
+
+	/* The stored scene is what is open, so it reads as saved for the whole load, never as an empty stage or as unsaved. */
+	it('reports a saved scene as opening until its model is on the stage', () => {
+		for (const status of ['empty', 'loading'] as const) {
+			modelContext.status = status
+			try {
+				const scene = open('scene-1', createManifest(null))
+
+				expect(
+					scene.samples.map((sample) => sample.saveAvailability),
+					status
+				).toEqual(
+					scene.samples.map(() => ({ canSave: false, reason: 'opening' }))
+				)
+			} finally {
+				modelContext.status = 'ready'
+			}
+		}
+	})
+
+	/* Both load over an open scene's route, and neither is the stored scene. */
+	it('never reads a drop or a restored draft as the saved scene opening', () => {
+		modelContext.status = 'loading'
+		modelContext.source = 'files'
+		try {
+			const drop = open('scene-1', createManifest(null))
+
+			expect(drop.latest().saveAvailability.reason).toBe('no-model')
+		} finally {
+			modelContext.status = 'ready'
+			modelContext.source = 'scene-data'
+		}
+
+		modelContext.status = 'loading'
+		sceneDraft.isRestoringDraft = true
+		try {
+			const draft = open('scene-1', createManifest(null))
+
+			expect(draft.latest().saveAvailability.reason).toBe('no-model')
+		} finally {
+			modelContext.status = 'ready'
+			sceneDraft.isRestoringDraft = false
 		}
 	})
 

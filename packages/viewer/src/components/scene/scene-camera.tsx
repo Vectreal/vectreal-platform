@@ -180,6 +180,27 @@ export function resolveCameraSelection(
 	}
 }
 
+/**
+ * Whether a camera stores where it stands: a position (`framing` is set only
+ * for one `resolveCameraPose` could use), or a rotation it could read.
+ */
+const hasOwnPose = (
+	cameras: CameraProps['cameras'],
+	selection: ResolvedCameraSelection
+): boolean => {
+	if (selection.framing) return true
+	const rotation: unknown = cameras?.find(
+		(entry) => entry.cameraId === selection.cameraId
+	)?.rotation
+	return Array.isArray(rotation)
+		? rotation.length >= 3
+		: typeof rotation === 'object' &&
+				rotation !== null &&
+				'x' in rotation &&
+				'y' in rotation &&
+				'z' in rotation
+}
+
 /** No limits: what the controls hold while a flight plays. */
 const OPEN_LIMITS: OrbitLimits = {
 	minPolarAngle: 0,
@@ -655,7 +676,8 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				model,
 				sceneCamera,
 				getThreeState().controls as InitialFramingControls | null,
-				boundsEnabled
+				boundsEnabled,
+				!hasOwnPose(cameras, selection)
 			)
 			const fitTarget = (
 				getThreeState().controls as InitialFramingControls | null
