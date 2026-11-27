@@ -157,6 +157,78 @@ describe('applyInitialFraming', () => {
 		}
 	)
 
+	describe('for a camera with no pose of its own', () => {
+		const box = new Box3(new Vector3(-1, 0, -1), new Vector3(1, 2, 1))
+		const center = box.getCenter(new Vector3())
+
+		it('approaches from level rather than from below', () => {
+			// The default camera: level with the origin, below the model's centre.
+			const camera = new PerspectiveCamera(60, 16 / 9)
+			camera.position.set(1, 0, 5)
+
+			applyInitialFraming(fakeBounds(box, 4), null, camera, null, true, true)
+
+			expect(camera.position.y).toBeCloseTo(center.y, 9)
+			expect(camera.position.distanceTo(center)).toBeCloseTo(4, 9)
+			// Same side of the model it was on.
+			expect(camera.position.x / camera.position.z).toBeCloseTo(1 / 5, 9)
+		})
+
+		it('keeps an approach from above', () => {
+			const camera = new PerspectiveCamera(60, 16 / 9)
+			camera.position.set(0, 4, 4)
+			const approach = camera.position.clone().sub(center).normalize()
+
+			applyInitialFraming(fakeBounds(box, 4), null, camera, null, true, true)
+
+			const after = camera.position.clone().sub(center).normalize()
+			expect(after.dot(approach)).toBeCloseTo(1, 9)
+		})
+
+		it("measures level along the camera's own up", () => {
+			// Z up: below the model is lower in z, whatever y says.
+			const camera = new PerspectiveCamera(60, 16 / 9)
+			// Of any length, as three.js allows.
+			camera.up.set(0, 0, 2)
+			camera.position.set(0, -5, -3)
+
+			applyInitialFraming(fakeBounds(box, 4), null, camera, null, true, true)
+
+			expect(camera.position.z).toBeCloseTo(center.z, 9)
+			expect(camera.position.y).toBeLessThan(center.y)
+		})
+
+		it('faces the model from the side when it stood straight below a Z-up camera', () => {
+			const camera = new PerspectiveCamera(60, 16 / 9)
+			camera.up.set(0, 0, 1)
+			camera.position.set(center.x, center.y, -5)
+
+			applyInitialFraming(fakeBounds(box, 4), null, camera, null, true, true)
+
+			expect(camera.position.toArray()).toEqual([4, center.y, center.z])
+		})
+
+		it('faces the model from the front when it stood straight below', () => {
+			const camera = new PerspectiveCamera(60, 16 / 9)
+			camera.position.set(0, -5, 0)
+
+			applyInitialFraming(fakeBounds(box, 4), null, camera, null, true, true)
+
+			expect(camera.position.toArray()).toEqual([0, 1, 4])
+		})
+	})
+
+	it('keeps a saved camera approaching from below', () => {
+		const box = new Box3(new Vector3(-1, 0, -1), new Vector3(1, 2, 1))
+		const center = box.getCenter(new Vector3())
+		const camera = new PerspectiveCamera(60, 16 / 9)
+		camera.position.set(0, -2, 5)
+
+		applyInitialFraming(fakeBounds(box, 4), null, camera, null, true)
+
+		expect(camera.position.y).toBeLessThan(center.y)
+	})
+
 	it("keeps the controls' distance limits, as drei's fit did", () => {
 		// A surface can set `maxDistance` through ControlsProps. Left unclamped,
 		// the controls' next per-frame update would move the camera after this
@@ -344,7 +416,7 @@ describe('SceneCamera frames the first view through applyInitialFraming', () => 
 		// commented-out call cannot satisfy the match. The one statement allowed
 		// between them is the fit's reset ahead of a bounds fit.
 		expect(source).toMatch(
-			/applyCameraInstantly\(selection\)\s*(?:\/\/[^\n]*\n\s*)*(?:const anchorsOnFit = [^\n]*\n\s*)?(?:if \(boundsEnabled\) \{\s*framing\.current\.reset\([^)]*\) \?\? 1\)\s*syncConstraints\(anchorsOnFit\)\s*\}\s*)?(?:\/\/[^\n]*\n\s*)*applyInitialFraming\(\s*bounds,\s*model,\s*sceneCamera,\s*getThreeState\(\)\.controls as InitialFramingControls \| null,\s*boundsEnabled\s*\)/
+			/applyCameraInstantly\(selection\)\s*(?:\/\/[^\n]*\n\s*)*(?:const anchorsOnFit = [^\n]*\n\s*)?(?:if \(boundsEnabled\) \{\s*framing\.current\.reset\([^)]*\) \?\? 1\)\s*syncConstraints\(anchorsOnFit\)\s*\}\s*)?(?:\/\/[^\n]*\n\s*)*applyInitialFraming\(\s*bounds,\s*model,\s*sceneCamera,\s*getThreeState\(\)\.controls as InitialFramingControls \| null,\s*boundsEnabled,\s*!hasOwnPose\(cameras, selection\)\s*\)/
 		)
 		// `get` reads the store when called; a selector returning the state
 		// would hand back this render's snapshot instead.

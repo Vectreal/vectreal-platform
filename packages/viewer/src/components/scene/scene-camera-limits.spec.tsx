@@ -59,14 +59,18 @@ vi.mock('@react-three/fiber', async () => {
 vi.mock('@react-three/drei', () => ({ useBounds: () => ({}) }))
 // A bounds fit stands the camera 3 from the model, closer than the opening
 // camera lets a visitor zoom; a stored camera is left be.
+// Each fit records whether it was asked to approach from level.
+const fits = vi.hoisted(() => [] as boolean[])
 vi.mock('./initial-framing', () => ({
 	applyInitialFraming: (
 		_bounds: unknown,
 		_model: unknown,
 		camera: { position: { set: (x: number, y: number, z: number) => void } },
 		controls: { update?: () => void } | null,
-		fitToBounds: boolean
+		fitToBounds: boolean,
+		fromLevel: boolean
 	) => {
+		fits.push(fromLevel)
 		if (!fitToBounds) return
 		camera.position.set(0, 0, 3)
 		controls?.update?.()
@@ -196,6 +200,7 @@ const limits = () => ({
 })
 
 beforeEach(() => {
+	fits.length = 0
 	clock = 0
 	executor = null
 	three.frames.clear()
@@ -318,6 +323,59 @@ describe('the order limits are written in', () => {
 				)
 		})
 		expect(camera.position.distanceTo(controls.target)).toBeCloseTo(4)
+	})
+})
+
+describe('the first framing', () => {
+	it('approaches from level for a camera with no pose of its own', async () => {
+		await mount({
+			cameras: [
+				{ cameraId: 'default', name: 'Default', fov: 60, initial: true }
+			],
+			activeCameraId: 'default',
+			boundsEnabled: true
+		})
+		expect(fits).toEqual([true])
+	})
+
+	it('keeps the side a saved camera looks from', async () => {
+		await mount({ boundsEnabled: true })
+		expect(fits).toEqual([false])
+	})
+
+	it('approaches from level for a camera whose stored pose is unusable', async () => {
+		await mount({
+			cameras: [
+				{
+					cameraId: 'broken',
+					name: 'Broken',
+					position: [1, 2] as unknown as [number, number, number],
+					rotation: [0.4] as unknown as [number, number, number],
+					fov: 60,
+					initial: true
+				}
+			],
+			activeCameraId: 'broken',
+			boundsEnabled: true
+		})
+		expect(fits).toEqual([true])
+	})
+
+	it('keeps the side a camera saved with only a rotation looks from', async () => {
+		await mount({
+			cameras: [
+				{
+					cameraId: 'turned',
+					name: 'Turned',
+					rotation: [0.4, 0, 0],
+					fov: 60,
+					initial: true
+				}
+			],
+			activeCameraId: 'turned',
+			boundsEnabled: true
+		})
+		expect(fits).toEqual([false])
 	})
 })
 
