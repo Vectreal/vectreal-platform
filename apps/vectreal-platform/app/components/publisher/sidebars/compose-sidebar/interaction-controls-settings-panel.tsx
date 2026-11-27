@@ -5,15 +5,7 @@ import {
 	ToggleGroupItem
 } from '@shared/components/ui/toggle-group'
 import { useAtom } from 'jotai/react'
-import {
-	Eye,
-	Focus,
-	Gauge,
-	Route,
-	RotateCw,
-	SlidersHorizontal,
-	ZoomIn
-} from 'lucide-react'
+import { Eye, Focus, Gauge, Route, RotateCw } from 'lucide-react'
 import { memo, useCallback, useState } from 'react'
 
 import {
@@ -57,13 +49,9 @@ const FINE_TUNE_KEYS = [
 	'zoomSpeed',
 	'autoRotateSpeed'
 ]
-const ADVANCED_KEYS = ['maxPolarAngle']
 
 const fineTuneFields = FINE_TUNE_KEYS.flatMap((key) =>
 	CAMERA_CONTROLS_FIELDS.filter((field) => field.key === key)
-)
-const advancedFields = CAMERA_CONTROLS_FIELDS.filter((field) =>
-	ADVANCED_KEYS.includes(field.key)
 )
 
 /** The feel whose every value the controls carry, or '' once any is tuned. */
@@ -124,17 +112,10 @@ const InteractionControlsSettingsPanel = memo(() => {
 		<DrillDown path={path} onPathChange={setPath} rootTitle="Interaction">
 			<DrillDownView
 				id="root"
-				caption="These settings apply to visitors and in Preview. The editor always moves freely."
+				caption="These settings apply to visitors and in Preview. The editor always moves freely. Zoom, pan and angle limits are set on each camera."
 			>
 				<SidebarSection title="Moving">
-					<div className="grid grid-cols-3 gap-2">
-						<Toggle
-							layout="tile"
-							label="Zoom"
-							icon={<ZoomIn />}
-							checked={!!controls.enableZoom}
-							onCheckedChange={(enabled) => setControl('enableZoom', enabled)}
-						/>
+					<div className="grid grid-cols-2 gap-2">
 						<Toggle
 							layout="tile"
 							label="Auto rotate"
@@ -187,11 +168,6 @@ const InteractionControlsSettingsPanel = memo(() => {
 							to="fine-tune"
 							icon={<Gauge />}
 							label="Fine-tune"
-						/>
-						<DrillDownTrigger
-							to="advanced"
-							icon={<SlidersHorizontal />}
-							label="Advanced"
 						/>
 					</div>
 				</SidebarSection>
@@ -275,18 +251,9 @@ const InteractionControlsSettingsPanel = memo(() => {
 				{fineTuneFields.map((field) =>
 					renderField(
 						field,
-						(field.key === 'autoRotateSpeed' && !controls.autoRotate) ||
-							(field.key === 'zoomSpeed' && !controls.enableZoom)
+						field.key === 'autoRotateSpeed' && !controls.autoRotate
 					)
 				)}
-			</DrillDownView>
-
-			<DrillDownView
-				id="advanced"
-				title="Advanced"
-				caption="How far viewers can orbit over the top of the model."
-			>
-				{advancedFields.map((field) => renderField(field))}
 			</DrillDownView>
 		</DrillDown>
 	)

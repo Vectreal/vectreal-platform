@@ -4,6 +4,11 @@ import { useCallback, useEffect, useMemo } from 'react'
 import { toast } from 'sonner'
 
 import {
+	cameraElevation,
+	cameraLimits,
+	withElevationInTilt
+} from '../../../../../lib/domain/scene/camera-limits'
+import {
 	applySceneCameraMove,
 	isLastSceneCamera,
 	partitionSceneCameras,
@@ -20,6 +25,7 @@ import {
 } from '../../../../../lib/stores/publisher-config-store'
 import {
 	cameraAtom,
+	controlsAtom,
 	exitHotspotCameraAtom,
 	hotspotCameraModeAtom,
 	hotspotsAtom,
@@ -40,6 +46,8 @@ import {
 } from './camera-state'
 import { defaultCameraOptions } from './constants'
 import { publishedSceneViewCameras } from './use-camera-switcher-setting'
+
+import type { CameraConstraints } from '@vctrl/core'
 
 /**
  * The scene's cameras, the one being edited, and every edit to them.
@@ -140,6 +148,43 @@ export function useSceneCameras() {
 		},
 		[selectedCameraId, setCamera]
 	)
+
+	const sceneControls = useAtomValue(controlsAtom)
+	/** What the selected camera holds a visitor to now (`cameraLimits`). */
+	const limits = selectedCamera
+		? cameraLimits(selectedCamera, sceneControls)
+		: undefined
+
+	/**
+	 * Writes the selected camera's own limits. Its tilt range always takes in
+	 * the view it is saved at, so a visitor arriving there is not moved.
+	 */
+	const setLimits = useCallback(
+		(next: CameraConstraints) =>
+			updateSelected((entry) => ({
+				...entry,
+				constraints: withElevationInTilt(next, cameraElevation(entry, hotspots))
+			})),
+		[hotspots, updateSelected]
+	)
+
+	/** Gives every camera, hotspot cameras too, the selected camera's limits. */
+	const applyLimitsToAll = useCallback(() => {
+		if (!limits) return
+		setCamera((prev) => {
+			const normalized = normalizeCameraState(prev)
+			return {
+				...normalized,
+				cameras: (normalized.cameras ?? []).map((entry) => ({
+					...entry,
+					constraints: withElevationInTilt(
+						limits,
+						cameraElevation(entry, hotspots)
+					)
+				}))
+			}
+		})
+	}, [hotspots, limits, setCamera])
 
 	/**
 	 * On the camera, a new lens is the camera's, and the view takes it where it
@@ -378,6 +423,9 @@ export function useSceneCameras() {
 		moveSelectedToTop,
 		setFov,
 		captureCurrentView,
+		limits,
+		setLimits,
+		applyLimitsToAll,
 		/** Whether the view has moved off the selected camera. */
 		isViewMoved,
 		/** The lens on screen: a moved view's own, else the camera's. */

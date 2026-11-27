@@ -1,6 +1,10 @@
 import { slugify } from '@shared/utils'
 import { DEFAULT_SCENE_TRANSITION } from '@vctrl/core'
 
+import {
+	cameraElevation,
+	withElevationInTilt
+} from '../../../../../lib/domain/scene/camera-limits'
 import { applyDefaultCameraFlag } from '../../../../../lib/domain/scene/scene-camera'
 import { defaultCameraOptions } from './constants'
 
@@ -57,6 +61,10 @@ export function normalizeTransition(
 	}
 }
 
+/**
+ * A camera holding a captured view. Every write of a view into a camera goes
+ * through here, so its limits always take in the view it is saved at.
+ */
 export function applySnapshotToCamera(
 	cameraEntry: CameraEntry,
 	snapshot: null | SceneCameraSnapshot
@@ -65,7 +73,7 @@ export function applySnapshotToCamera(
 		return cameraEntry
 	}
 
-	return {
+	const posed = {
 		...cameraEntry,
 		position: snapshot.position,
 		rotation: snapshot.rotation,
@@ -73,6 +81,16 @@ export function applySnapshotToCamera(
 		fov: snapshot.fov,
 		framingAspect: snapshot.framingAspect
 	}
+	// The view the camera now holds stays one a visitor can reach.
+	return posed.constraints
+		? {
+				...posed,
+				constraints: withElevationInTilt(
+					posed.constraints,
+					cameraElevation(posed)
+				)
+			}
+		: posed
 }
 
 /** The camera the editor is working on: the selection, else the active one, else the first. */
