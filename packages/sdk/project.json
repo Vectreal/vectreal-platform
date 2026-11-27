@@ -54,6 +54,14 @@
 				"configFile": "packages/sdk/vite.config.ts"
 			}
 		},
+		"check-size": {
+			"dependsOn": ["build-ci"],
+			"executor": "nx:run-commands",
+			"inputs": ["default", "{workspaceRoot}/check-package-size.mts"],
+			"options": {
+				"command": "pnpm exec tsx check-package-size.mts sdk"
+			}
+		},
 		"copy-md": {
 			"dependsOn": ["build"],
 			"executor": "nx:run-commands",
