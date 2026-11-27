@@ -6,20 +6,11 @@ import {
 	ToggleGroup,
 	ToggleGroupItem
 } from '@shared/components/ui/toggle-group'
-import { cn } from '@shared/utils'
 import { DEFAULT_SCENE_TRANSITION } from '@vctrl/core'
 import { Reorder, useReducedMotion } from 'framer-motion'
 import { useAtomValue } from 'jotai/react'
-import {
-	ArrowUpToLine,
-	Camera,
-	Check,
-	Link,
-	Plus,
-	Route,
-	Trash2
-} from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowUpToLine, Camera, Link, Plus, Route, Trash2 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { canEditCameraSettingsAtom } from '../../../../../lib/stores/publisher-config-store'
 import { DrillDownTrigger } from '../../drill-down'
@@ -53,9 +44,6 @@ const DURATION_PRESETS: SliderPreset[] = [
 	{ value: 500, label: 'Quick' },
 	{ value: 2000, label: 'Slow' }
 ]
-
-/** How long "View captured" stays on the button after a capture. */
-const CAPTURED_FEEDBACK_MS = 1800
 
 /** Camera editing is read-only in preview, where cameras are only reviewed. */
 const useIsCameraEditingLocked = () => !useAtomValue(canEditCameraSettingsAtom)
@@ -278,23 +266,14 @@ export function CameraDetail({
 		setNameDraft(savedName)
 	}, [selectedCamera?.cameraId, savedName])
 
-	const [capturedView, setCapturedView] = useState(false)
-	const capturedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-	useEffect(
-		() => () => {
-			if (capturedTimerRef.current) clearTimeout(capturedTimerRef.current)
-		},
-		[]
-	)
-
-	const handleCapture = async () => {
-		if (!(await cameras.captureCurrentView())) return
-		if (capturedTimerRef.current) clearTimeout(capturedTimerRef.current)
-		setCapturedView(true)
-		capturedTimerRef.current = setTimeout(
-			() => setCapturedView(false),
-			CAPTURED_FEEDBACK_MS
-		)
+	// The moved actions leave once used, with focus in them; it goes to the
+	// camera's heading rather than dropping to the page. The heading is found
+	// before the action runs, since the action unmounts the button.
+	const headingFocuser = (from: HTMLElement) => {
+		const heading = from
+			.closest('section')
+			?.querySelector<HTMLElement>('[data-drill-down-heading]')
+		return () => requestAnimationFrame(() => heading?.focus())
 	}
 
 	return (
@@ -324,36 +303,45 @@ export function CameraDetail({
 				)}
 			</SettingRow>
 
-			<Button
-				variant="secondary"
-				disabled={isLocked}
-				className={cn(
-					'w-full transition-colors duration-300',
-					capturedView &&
-						'bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400'
-				)}
-				onClick={() => {
-					void handleCapture()
-				}}
-			>
-				<span className="relative h-4 w-4 shrink-0">
-					<Camera
-						className={cn(
-							'absolute inset-0 h-4 w-4 transition-all duration-200',
-							capturedView ? 'scale-50 opacity-0' : 'scale-100 opacity-100'
-						)}
-					/>
-					<Check
-						className={cn(
-							'absolute inset-0 h-4 w-4 transition-all duration-200',
-							capturedView ? 'scale-100 opacity-100' : 'scale-50 opacity-0'
-						)}
-					/>
-				</span>
-				<span className="transition-all duration-200">
-					{capturedView ? 'View captured' : 'Set camera to current view'}
-				</span>
-			</Button>
+			{cameras.isViewMoved && !isLocked && (
+				<div className="space-y-2">
+					<Button
+						className="w-full"
+						onClick={async (event) => {
+							const focusHeading = headingFocuser(event.currentTarget)
+							await cameras.add()
+							focusHeading()
+						}}
+					>
+						<Plus className="size-4" />
+						Save as new camera
+					</Button>
+					<Button
+						variant="secondary"
+						className="w-full min-w-0"
+						onClick={async (event) => {
+							const focusHeading = headingFocuser(event.currentTarget)
+							if (await cameras.captureCurrentView()) focusHeading()
+						}}
+					>
+						<Camera className="size-4 shrink-0" />
+						<span className="truncate">
+							Update “{cameraName(selectedCamera ?? {})}” to this view
+						</span>
+					</Button>
+					<button
+						type="button"
+						className="shell-focus text-muted-foreground hover:text-foreground mx-auto block rounded-md px-1 py-0.5 text-xs font-medium underline-offset-4 transition-colors hover:underline"
+						onClick={(event) => {
+							const focusHeading = headingFocuser(event.currentTarget)
+							cameras.backToCamera()
+							focusHeading()
+						}}
+					>
+						Back to camera
+					</button>
+				</div>
+			)}
 
 			<Slider
 				label="Field of view"
@@ -363,7 +351,7 @@ export function CameraDetail({
 				presets={FOV_PRESETS}
 				formatValue={(value) => `${Math.round(value)}°`}
 				disabled={isLocked}
-				value={selectedCamera?.fov ?? 60}
+				value={cameras.viewFov ?? 60}
 				onValueChange={cameras.setFov}
 			/>
 

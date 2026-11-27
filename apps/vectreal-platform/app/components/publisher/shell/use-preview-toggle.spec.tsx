@@ -8,6 +8,8 @@ import { describe, expect, it, vi } from 'vitest'
 
 import {
 	isPreviewModeAtom,
+	viewLensAtom,
+	viewMovedAtom,
 	viewportControlsAtom
 } from '../../../lib/stores/publisher-config-store'
 import {
@@ -41,7 +43,9 @@ const setup = (snapshot: null | SceneCameraSnapshot) => {
 		]
 	})
 	store.set(selectedCameraIdAtom, 'detail')
-	const restore = vi.fn()
+	const restore = vi.fn((_view: SceneCameraSnapshot, onApplied?: () => void) =>
+		onApplied?.()
+	)
 	const wrapper = ({ children }: { children: ReactNode }) => (
 		<Provider store={store}>
 			<PublisherViewerCaptureProvider>
@@ -79,6 +83,19 @@ describe('usePreviewToggle', () => {
 		expect(store.get(viewportControlsAtom).maxPolarAngle).toBe(Math.PI)
 	})
 
+	it('keeps a moved view moved across preview, with its own lens', async () => {
+		const { store, toggle } = setup(view)
+		store.set(viewMovedAtom, true)
+
+		await act(() => toggle().enterPreview())
+		// The flight to the opening camera ends a moved view, as any arrival does.
+		store.set(viewMovedAtom, false)
+		act(() => toggle().exitPreview())
+
+		expect(store.get(viewMovedAtom)).toBe(true)
+		expect(store.get(viewLensAtom)).toBe(view.fov)
+	})
+
 	it('restores nothing when no view could be read', async () => {
 		const { restore, toggle } = setup(null)
 
@@ -104,5 +121,19 @@ describe('the publisher route wires the restore', () => {
 		expect(route).toContain(
 			'onCameraSnapshotRestoreReady={registerSceneCameraSnapshotRestore}'
 		)
+	})
+
+	it('ends a moved view when the viewer arrives at a camera', () => {
+		const route = readFileSync(
+			join(
+				import.meta.dirname,
+				'../../../routes/publisher-page/publisher.$sceneId.tsx'
+			),
+			'utf8'
+		)
+		const arrival = route.slice(
+			route.indexOf("event.type === 'camera_changed'")
+		)
+		expect(arrival.slice(0, 400)).toContain('viewArrived()')
 	})
 })

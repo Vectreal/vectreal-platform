@@ -17,6 +17,10 @@ import {
 	repointInteractions
 } from '../../../../../lib/domain/scene/scene-hotspot-camera-links'
 import {
+	viewLensAtom,
+	viewMovedAtom
+} from '../../../../../lib/stores/publisher-config-store'
+import {
 	cameraAtom,
 	exitHotspotCameraAtom,
 	hotspotCameraModeAtom,
@@ -53,7 +57,10 @@ export function useSceneCameras() {
 	const hotspotCameraMode = useAtomValue(hotspotCameraModeAtom)
 	const [hotspots, setHotspots] = useAtom(hotspotsAtom)
 	const [interactions, setInteractions] = useAtom(interactionsAtom)
-	const { requestSceneCameraSnapshot } = usePublisherViewerCapture()
+	const { requestSceneCameraSnapshot, commandExecutor } =
+		usePublisherViewerCapture()
+	const [isViewMoved, setViewMoved] = useAtom(viewMovedAtom)
+	const [viewLens, setViewLens] = useAtom(viewLensAtom)
 	const { setOpeningView } = useOpeningViewCapture()
 
 	const normalizedCamera = useMemo(() => normalizeCameraState(camera), [camera])
@@ -136,10 +143,26 @@ export function useSceneCameras() {
 		[selectedCameraId, setCamera]
 	)
 
+	/**
+	 * On the camera, a new lens is the camera's, and the view takes it where it
+	 * is. Once the author has moved off it, the lens is tried out on the view
+	 * alone until the view is saved into a camera.
+	 */
 	const setFov = useCallback(
-		(fov: number) => updateSelected((entry) => ({ ...entry, fov })),
-		[updateSelected]
+		(fov: number) => {
+			if (isViewMoved) setViewLens(fov)
+			else updateSelected((entry) => ({ ...entry, fov }))
+		},
+		[isViewMoved, setViewLens, updateSelected]
 	)
+
+	/** Drops a moved view and flies back to the camera as saved. */
+	const backToCamera = useCallback(() => {
+		commandExecutor.current?.execute({
+			type: 'activate_camera',
+			cameraId: editorTargetCameraId
+		})
+	}, [commandExecutor, editorTargetCameraId])
 
 	/**
 	 * Selecting only changes the selection and moves the viewport. Writing the
@@ -337,15 +360,28 @@ export function useSceneCameras() {
 	 * Resolves to whether a view was captured.
 	 */
 	const captureCurrentView = useCallback(async (): Promise<boolean> => {
-		if (isEditingDefaultCamera) return setOpeningView()
-		const snapshot = await requestSceneCameraSnapshot()
-		if (!snapshot) return false
-		updateSelected((entry) => applySnapshotToCamera(entry, snapshot))
-		return true
+		let captured: boolean
+		if (isEditingDefaultCamera) {
+			captured = await setOpeningView()
+		} else {
+			const snapshot = await requestSceneCameraSnapshot()
+			if (snapshot) {
+				updateSelected((entry) => applySnapshotToCamera(entry, snapshot))
+			}
+			captured = !!snapshot
+		}
+		// The camera now holds the view, lens included: it is on the camera.
+		if (captured) {
+			setViewMoved(false)
+			setViewLens(null)
+		}
+		return captured
 	}, [
 		isEditingDefaultCamera,
 		requestSceneCameraSnapshot,
 		setOpeningView,
+		setViewLens,
+		setViewMoved,
 		updateSelected
 	])
 
@@ -365,7 +401,12 @@ export function useSceneCameras() {
 		reorder,
 		moveSelectedToTop,
 		setFov,
-		captureCurrentView
+		captureCurrentView,
+		/** Whether the view has moved off the selected camera. */
+		isViewMoved,
+		/** The lens on screen: a moved view's own, else the camera's. */
+		viewFov: (isViewMoved ? viewLens : null) ?? selectedCamera?.fov,
+		backToCamera
 	}
 }
 

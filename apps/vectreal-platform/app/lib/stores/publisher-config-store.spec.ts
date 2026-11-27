@@ -31,6 +31,7 @@ import {
 	processAtom,
 	processInitialState,
 	stageLightingAtom,
+	viewMovedAtom,
 	viewportControlsAtom
 } from './publisher-config-store'
 import {
@@ -455,10 +456,17 @@ describe('preview keeps the editor view', () => {
 
 		store.set(enterPreviewModeAtom, view)
 		expect(store.get(selectedCameraIdAtom)).toBe('opening')
-		expect(store.set(exitPreviewModeAtom)).toBe(view)
+		expect(store.set(exitPreviewModeAtom)).toEqual({ view, viewMoved: false })
 		expect(store.get(selectedCameraIdAtom)).toBe('detail')
 		// A second exit has nothing left to hand back.
 		expect(store.set(exitPreviewModeAtom)).toBeNull()
+	})
+
+	it('remembers that the view had moved off the camera', () => {
+		const store = createStore()
+		store.set(viewMovedAtom, true)
+		store.set(enterPreviewModeAtom, view)
+		expect(store.set(exitPreviewModeAtom)).toEqual({ view, viewMoved: true })
 	})
 
 	it('hands nothing back when entering read no view', () => {

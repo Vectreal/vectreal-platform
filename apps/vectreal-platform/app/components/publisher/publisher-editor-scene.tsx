@@ -1,7 +1,7 @@
 import { TransformControls } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { useAtom, useAtomValue, useStore } from 'jotai/react'
+import { useAtom, useAtomValue, useSetAtom, useStore } from 'jotai/react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 
@@ -13,7 +13,10 @@ import {
 } from '../../lib/domain/scene/scene-hotspot-placement'
 import {
 	openComposeToolAtom,
-	isClickToPlaceActiveAtom
+	isClickToPlaceActiveAtom,
+	viewArrivalsAtom,
+	viewLensAtom,
+	viewMovedAtom
 } from '../../lib/stores/publisher-config-store'
 import {
 	activeHotspotIdAtom,
@@ -334,6 +337,148 @@ function ClickToPlace({
 }
 
 // ---------------------------------------------------------------------------
+// The editor view
+// ---------------------------------------------------------------------------
+
+/** Outlasts the viewer's double-click focus flight (`FOCUS_FLIGHT_MS`). */
+const FOCUS_INPUT_MS = 1000
+/** Two touches closer than this are a double-tap, as the viewer reads them. */
+const DOUBLE_TAP_MS = 300
+
+/**
+ * Notes when the author moves the view off the camera it last went to, and
+ * gives a moved view the lens the author is trying out.
+ *
+ * Moved means the camera changed (OrbitControls' `change`) while the author's
+ * own input was under way: a press on the canvas until it is released, a wheel
+ * turn or a key aimed at the viewer for one frame, a double-click or
+ * double-tap focus for its flight. A press that turns nothing moves nothing, and a flight or a
+ * framing changes the camera with no input under way. Arriving at a camera
+ * ends whatever input set it off (Home, Enter on Back to camera, a
+ * double-click on the background), so the flight there does not count. The
+ * view cube (`onTurn` on `PublisherViewCube`) is the author's too.
+ */
+export function EditorViewTracker() {
+	const camera = useThree((state) => state.camera)
+	const controls = useThree((state) => state.controls) as null | {
+		addEventListener: (type: 'change', listener: () => void) => void
+		removeEventListener: (type: 'change', listener: () => void) => void
+	}
+	const canvas = useThree((state) => state.gl.domElement)
+	const invalidate = useThree((state) => state.invalidate)
+	const setViewMoved = useSetAtom(viewMovedAtom)
+	const viewLens = useAtomValue(viewLensAtom)
+	const viewLensRef = useRef(viewLens)
+	viewLensRef.current = viewLens
+
+	const store = useStore()
+
+	useEffect(() => {
+		let pressed = false
+		let brief = false
+		let focusing = false
+		let briefFrame = 0
+		let focusTimer: ReturnType<typeof setTimeout> | undefined
+		const endInput = () => {
+			brief = false
+			focusing = false
+			cancelAnimationFrame(briefFrame)
+			clearTimeout(focusTimer)
+		}
+		const press = () => {
+			pressed = true
+		}
+		// The viewer focuses on a double-tap from its own pointerup, after this
+		// one, so a quick second touch opens the focus window first.
+		let lastTouchUp = 0
+		const release = (event: PointerEvent) => {
+			pressed = false
+			if (event.pointerType !== 'touch' || event.target !== canvas) return
+			if (event.timeStamp - lastTouchUp <= DOUBLE_TAP_MS) openFocus()
+			lastTouchUp = event.timeStamp
+		}
+		// A wheel turn or a key moves the camera in its own handler, so the
+		// input stays under way until the next frame. Keys count only when
+		// aimed at the viewer, whose element holds the canvas.
+		const nudge = (event: Event) => {
+			const target = event.target
+			if (
+				event.type === 'keydown' &&
+				!(
+					target instanceof Element &&
+					target !== document.body &&
+					target !== document.documentElement &&
+					target.contains(canvas)
+				)
+			) {
+				return
+			}
+			brief = true
+			cancelAnimationFrame(briefFrame)
+			briefFrame = requestAnimationFrame(() => {
+				brief = false
+			})
+		}
+		// A double-click on the model focuses it with a short flight, or at once
+		// under reduced motion; on the background it sends the view home, an
+		// arrival that ends the window within the same event. Opened in the
+		// capture phase, so it is open before the viewer acts on the click.
+		const openFocus = () => {
+			focusing = true
+			clearTimeout(focusTimer)
+			focusTimer = setTimeout(() => {
+				focusing = false
+			}, FOCUS_INPUT_MS)
+		}
+		const changed = () => {
+			if (pressed || brief || focusing) setViewMoved(true)
+			// A flight carries the lens it started with; a moved view keeps the
+			// one the author is trying out.
+			const lens = viewLensRef.current
+			if (
+				lens !== null &&
+				camera instanceof THREE.PerspectiveCamera &&
+				camera.fov !== lens
+			) {
+				camera.fov = lens
+				camera.updateProjectionMatrix()
+			}
+		}
+
+		const unsubscribe = store.sub(viewArrivalsAtom, endInput)
+		canvas.addEventListener('pointerdown', press, true)
+		window.addEventListener('pointerup', release, true)
+		window.addEventListener('pointercancel', release, true)
+		canvas.addEventListener('wheel', nudge, { capture: true, passive: true })
+		window.addEventListener('keydown', nudge, true)
+		canvas.addEventListener('dblclick', openFocus, true)
+		controls?.addEventListener('change', changed)
+		return () => {
+			endInput()
+			unsubscribe()
+			canvas.removeEventListener('pointerdown', press, true)
+			window.removeEventListener('pointerup', release, true)
+			window.removeEventListener('pointercancel', release, true)
+			canvas.removeEventListener('wheel', nudge, true)
+			window.removeEventListener('keydown', nudge, true)
+			canvas.removeEventListener('dblclick', openFocus, true)
+			controls?.removeEventListener('change', changed)
+		}
+	}, [camera, canvas, controls, setViewMoved, store])
+
+	useEffect(() => {
+		if (viewLens === null || !(camera instanceof THREE.PerspectiveCamera)) {
+			return
+		}
+		camera.fov = viewLens
+		camera.updateProjectionMatrix()
+		invalidate()
+	}, [camera, invalidate, viewLens])
+
+	return null
+}
+
+// ---------------------------------------------------------------------------
 // Main editor scene
 // ---------------------------------------------------------------------------
 
@@ -354,6 +499,8 @@ export const PublisherEditorScene = memo(() => {
 	const [isClickToPlaceActive, setIsClickToPlaceActive] = useAtom(
 		isClickToPlaceActiveAtom
 	)
+	const setViewMoved = useSetAtom(viewMovedAtom)
+	const markViewMoved = useCallback(() => setViewMoved(true), [setViewMoved])
 	const openComposeTool = useAtomValue(openComposeToolAtom)
 	// The tool whose panel is open, never the one merely selected: closing the
 	// drawer has to take the gizmo and click-to-place with it.
@@ -404,6 +551,8 @@ export const PublisherEditorScene = memo(() => {
 
 	return (
 		<>
+			<EditorViewTracker />
+
 			{isHotspotToolActive && activeHotspot && (
 				<HotspotGizmo
 					key={activeHotspot.id}
@@ -430,7 +579,7 @@ export const PublisherEditorScene = memo(() => {
 			 * and disarming, so the affordance vanishes in the same moment. Taking
 			 * the cube off screen removes the overlap rather than guarding it.
 			 */}
-			{!isPlacementArmed && <PublisherViewCube />}
+			{!isPlacementArmed && <PublisherViewCube onTurn={markViewMoved} />}
 		</>
 	)
 })

@@ -184,7 +184,41 @@ const previewModeStateAtom = atom<{
 	returnToCameraId: null | string
 	/** Where the author was looking, put back on exit. */
 	returnView: null | SceneCameraSnapshot
-}>({ active: false, returnTo: null, returnToCameraId: null, returnView: null })
+	/** Whether that view had moved away from the selected camera. */
+	returnViewMoved: boolean
+}>({
+	active: false,
+	returnTo: null,
+	returnToCameraId: null,
+	returnView: null,
+	returnViewMoved: false
+})
+
+/**
+ * Whether the author has moved the editor view away from the camera it last
+ * went to (orbit, zoom, pan, double-click, the view cube). Arriving at a
+ * camera ends it; until then the Camera tool offers to save the view.
+ */
+const viewMovedAtom = atom(false)
+
+/**
+ * The lens of a moved view, while the author tries one out before saving it
+ * into a camera. Null means the view has the camera's own lens.
+ */
+const viewLensAtom = atom<null | number>(null)
+
+/** How many times the viewer has arrived at a camera (`viewArrivedAtom`). */
+const viewArrivalsAtom = atom(0)
+
+/**
+ * The viewer arrived at a camera (`camera_changed`): the view is on it, with
+ * its lens, and any input under way when it set off is no longer moving it.
+ */
+const viewArrivedAtom = atom(null, (_get, set) => {
+	set(viewMovedAtom, false)
+	set(viewLensAtom, null)
+	set(viewArrivalsAtom, (count) => count + 1)
+})
 
 const isPreviewModeAtom = atom((get) => get(previewModeStateAtom).active)
 
@@ -201,7 +235,8 @@ const enterPreviewModeAtom = atom(
 			active: true,
 			returnTo: { mode, activeComposeTool, showSidebar, showPublishPanel },
 			returnToCameraId: get(selectedCameraIdAtom),
-			returnView
+			returnView,
+			returnViewMoved: get(viewMovedAtom)
 		})
 		set(processAtom, (prev) => ({
 			...prev,
@@ -214,26 +249,28 @@ const enterPreviewModeAtom = atom(
 )
 
 /**
- * Leaves preview, handing back the view entering it recorded, if any, for
- * the viewer to put back on screen (`usePreviewToggle`).
+ * Leaves preview, handing back the view entering it recorded, if any, and
+ * whether it had moved off the selected camera, for `usePreviewToggle` to put
+ * back.
  */
 const exitPreviewModeAtom = atom(
 	null,
-	(get, set): null | SceneCameraSnapshot => {
-		const { active, returnTo, returnToCameraId, returnView } =
+	(get, set): null | { view: SceneCameraSnapshot; viewMoved: boolean } => {
+		const { active, returnTo, returnToCameraId, returnView, returnViewMoved } =
 			get(previewModeStateAtom)
 		if (!active) return null
 		set(previewModeStateAtom, {
 			active: false,
 			returnTo: null,
 			returnToCameraId: null,
-			returnView: null
+			returnView: null,
+			returnViewMoved: false
 		})
 		if (returnTo) {
 			set(processAtom, (prev) => ({ ...prev, ...returnTo }))
 		}
 		if (returnToCameraId) set(selectedCameraIdAtom, returnToCameraId)
-		return returnView
+		return returnView ? { view: returnView, viewMoved: returnViewMoved } : null
 	}
 )
 
@@ -468,6 +505,10 @@ export {
 	isPreviewModeAtom,
 	enterPreviewModeAtom,
 	exitPreviewModeAtom,
+	viewArrivalsAtom,
+	viewArrivedAtom,
+	viewLensAtom,
+	viewMovedAtom,
 	viewportControlsAtom,
 	cameraToolOpenRequestAtom,
 	openCameraInCameraToolAtom,
