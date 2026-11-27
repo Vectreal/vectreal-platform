@@ -190,6 +190,47 @@ The editor affordances exist for editing surfaces such as the Publisher: `static
 
 ---
 
+### Showing a poster until the visitor asks
+
+`ViewerPoster`, from `@vctrl/viewer/poster`, is the scene's still image with one
+**View in 3D** button. That entry imports React and the viewer's words and
+stylesheet, not three.js, so a page that shows the poster first downloads the
+viewer only once someone presses it. Nothing of the scene is mounted behind it:
+no hotspot, control or key responds, and the page scrolls as usual.
+
+```tsx
+import { ViewerPoster } from '@vctrl/viewer/poster'
+import { lazy, Suspense, useState } from 'react'
+
+const VectrealViewer = lazy(() =>
+  import('@vctrl/viewer').then((module) => ({ default: module.VectrealViewer }))
+)
+
+function Scene() {
+  const [started, setStarted] = useState(false)
+  const poster = (
+    <ViewerPoster
+      thumbnail="/scene-thumbnail.webp"
+      label="A ceramic vase"
+      state={started ? 'loading' : 'idle'}
+      onActivate={() => setStarted(true)}
+    />
+  )
+  if (!started) return poster
+  return (
+    <Suspense fallback={poster}>
+      <VectrealViewer src="/vase.glb" label="A ceramic vase" />
+    </Suspense>
+  )
+}
+```
+
+`state` is `idle`, `loading` (the viewer's loader where the button was) or
+`failed` (a "Couldn't load, try again" button); `loader` replaces the loader,
+and `locale`, `messages` and `theme` work as on `VectrealViewer`. The image is
+laid out as the viewer lays out a contained `loadingThumbnail`, so passing the
+same image there lines the two up.
+
 ## Camera options (`CameraProps`)
 
 `cameraOptions` accepts:

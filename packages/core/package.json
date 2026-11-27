@@ -69,6 +69,10 @@
 			"types": "./camera-schema/index.d.ts",
 			"default": "./camera-schema/index.js"
 		},
+		"./viewer-locale": {
+			"types": "./viewer-locale/index.d.ts",
+			"default": "./viewer-locale/index.js"
+		},
 		"./node": {
 			"types": "./node/index.d.ts",
 			"default": "./node/index.js"

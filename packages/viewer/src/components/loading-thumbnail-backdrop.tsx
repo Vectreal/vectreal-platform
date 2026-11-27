@@ -1,5 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
+import { useSettledImage } from '../hooks/use-settled-image'
 import { useThumbnailEdgeBands } from '../hooks/use-thumbnail-edge-bands'
 import { cn, withHostClasses } from './class-names'
 import { useViewerMessages } from './viewer-messages'
@@ -36,29 +37,7 @@ const LoadingThumbnailBackdrop = ({
 	const fillsBands = isContained && !thumbnail.className
 	useThumbnailEdgeBands(bandsRef, imageRef, fillsBands, thumbnail.src)
 
-	/*
-	  Which source has settled, and how. Until the current one has loaded the
-	  image is invisible: Safari draws its alt text and a broken-image icon
-	  for an image that is still on its way, not only for one that failed.
-	  One that fails is left out, so the loader shows over the stage alone.
-	*/
-	const [settled, setSettled] = useState<null | {
-		src: string
-		loaded: boolean
-	}>(null)
-	const status =
-		settled?.src !== thumbnail.src
-			? 'loading'
-			: settled.loaded
-				? 'loaded'
-				: 'failed'
-	// A cached image can finish before React attaches its `load` listener.
-	useLayoutEffect(() => {
-		const image = imageRef.current
-		if (image?.complete && image.naturalWidth > 0) {
-			setSettled({ src: thumbnail.src, loaded: true })
-		}
-	}, [thumbnail.src])
+	const { status, onLoad, onError } = useSettledImage(imageRef, thumbnail.src)
 
 	useEffect(() => {
 		const frameId = requestAnimationFrame(() => {
@@ -120,8 +99,8 @@ const LoadingThumbnailBackdrop = ({
 					src={thumbnail.src}
 					alt={thumbnail.alt || messages.loadingThumbnailAlt}
 					className={cn(imageClassName, status === 'loading' && 'vv:invisible')}
-					onLoad={() => setSettled({ src: thumbnail.src, loaded: true })}
-					onError={() => setSettled({ src: thumbnail.src, loaded: false })}
+					onLoad={onLoad}
+					onError={onError}
 				/>
 			)}
 			{thumbnail.scrim !== false && (

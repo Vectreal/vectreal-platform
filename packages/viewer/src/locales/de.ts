@@ -2,6 +2,9 @@ import type { ViewerMessages } from './en'
 
 /** The viewer's words in German. */
 export const de: ViewerMessages = {
+	viewInThreeD: 'In 3D ansehen',
+	viewInThreeDLabel: '{name} in 3D ansehen',
+	posterLoadFailed: 'Laden fehlgeschlagen, erneut versuchen',
 	tapToRotate: 'Zum Drehen tippen',
 	clickToRotate: 'Zum Drehen klicken',
 	doneRotating: 'Fertig',

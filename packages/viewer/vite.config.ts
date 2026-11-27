@@ -43,6 +43,9 @@ export default defineConfig({
 					import.meta.dirname,
 					'src/camera-flight.ts'
 				),
+				// React only: the still a scene shows until a visitor asks for it,
+				// for a page that must not download three before then.
+				poster: path.resolve(import.meta.dirname, 'src/poster.ts'),
 				// Each language its own file, `@vctrl/viewer/locales/de`, which the
 				// viewer also loads on demand: a page gets only the one it shows.
 				...Object.fromEntries(

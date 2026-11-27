@@ -47,6 +47,10 @@
 			"types": "./camera-flight.d.ts",
 			"default": "./camera-flight.js"
 		},
+		"./poster": {
+			"types": "./poster.d.ts",
+			"default": "./poster.js"
+		},
 		"./locales/*": {
 			"types": "./locales/*.d.ts",
 			"default": "./locales/*.js"

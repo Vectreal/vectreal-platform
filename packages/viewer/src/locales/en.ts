@@ -11,6 +11,12 @@ export const en = {
 	tapToRotate: 'Tap to rotate',
 	/** The same button with a mouse. */
 	clickToRotate: 'Click to rotate',
+	/** The poster's button, which loads the scene. */
+	viewInThreeD: 'View in 3D',
+	/** The same button's accessible name, with the scene's alt text. */
+	viewInThreeDLabel: 'View {name} in 3D',
+	/** The poster's button after the scene failed to load. */
+	posterLoadFailed: "Couldn't load, try again",
 	/** The way back to scrolling once the scene took the touch. */
 	doneRotating: 'Done',
 	doneRotatingLabel: 'Done rotating, back to scrolling',

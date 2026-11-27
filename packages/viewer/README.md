@@ -75,7 +75,7 @@ Or, with a model already hosted somewhere, give it the address:
 | `showFullscreenButton` | `boolean` | No | Draws a button in the bottom-right corner, above any playback controls, that shows the viewer full screen, where the browser allows it (an iframe needs `allowfullscreen`). Default `false` |
 | `showInteractionHint` | `boolean` | No | Shows a short line on how to move the scene once it is ready, worded for touch, mouse or keys and the controls that are on, gone on the first interaction or after a few seconds, once per page view. Default `false`; `set_interaction_hint` withdraws it |
 | `unloadWhenOffscreen` | `boolean` | No | With viewport rendering on, frees the WebGL context while the viewer is out of view and shows its last frame on return until it draws again. `false` keeps the scene in memory and only stops drawing off-screen. Default `true` |
-| `interactionStart` | `'immediate' \| 'tap'` | No | `tap` holds every input until the visitor presses a "Tap to rotate" button in the middle of the scene: until then touches, swipes and the wheel scroll the page, and auto-rotate keeps turning. Once started, a "Done" button in the bottom-right corner hands scrolling back. A host's `set_controls_enabled` takes over from the button. Default `immediate` |
+| `interactionStart` | `'immediate' \| 'tap'` | No | Deprecated, and removed in the next major version: show a `ViewerPoster` (below) until the visitor asks for the scene instead. `tap` holds orbit, zoom and pan until the visitor presses a "Tap to rotate" button, and a "Done" button hands scrolling back. Default `immediate` |
 | `locale` | `string` | No | A BCP 47 tag for the language of the viewer's own words: its buttons, the first-time hint, "How to move" and what screen readers hear. `de` or `de-AT` loads the German catalog the first time it is needed, and English shows meanwhile and for a language with no catalog. Default: the browser's language. See [Languages](#languages) |
 | `messages` | `Partial<ViewerMessages>` | No | Words to show instead of the catalog's, by key. Keys left out come from the catalog `locale` picked. See [Languages](#languages) |
 | `animations` | `AnimationClip[]` | No | The model's animation clips, as parsed from the same glTF. Without them no animation runtime is mounted |
@@ -127,6 +127,47 @@ A still viewer stops drawing. Once the camera stops it renders a few dozen extra
 The editor affordances exist for editing surfaces such as the Publisher: `staticShadowBake`, `bakedShadow`, `onShadowBakeReady`, and the hotspot props above - `selectedHotspotId`, `showInternalHotspots`, `showHiddenHotspots`, `onHotspotSelect`, `revealedHotspotId` and `onHotspotPositionSetterReady`. Public and embedded viewers omit them.
 
 `shadowLightEditable`, `editableLightRole` and `onShadowLightChange` are deprecated and go in the next major version: a light aimed on its own leaves the environment's bright region it was set against. Turn `lighting.environment.rotation` instead, which moves every light with the environment.
+
+### Showing a poster until the visitor asks
+
+`ViewerPoster`, from `@vctrl/viewer/poster`, is the scene's still image with one
+**View in 3D** button. That entry imports React and the viewer's words and
+stylesheet, not three.js, so a page that shows the poster first downloads the
+viewer only once someone presses it. Nothing of the scene is mounted behind it:
+no hotspot, control or key responds, and the page scrolls as usual.
+
+```tsx
+import { ViewerPoster } from '@vctrl/viewer/poster'
+import { lazy, Suspense, useState } from 'react'
+
+const VectrealViewer = lazy(() =>
+  import('@vctrl/viewer').then((module) => ({ default: module.VectrealViewer }))
+)
+
+function Scene() {
+  const [started, setStarted] = useState(false)
+  const poster = (
+    <ViewerPoster
+      thumbnail="/scene-thumbnail.webp"
+      label="A ceramic vase"
+      state={started ? 'loading' : 'idle'}
+      onActivate={() => setStarted(true)}
+    />
+  )
+  if (!started) return poster
+  return (
+    <Suspense fallback={poster}>
+      <VectrealViewer src="/vase.glb" label="A ceramic vase" />
+    </Suspense>
+  )
+}
+```
+
+`state` is `idle`, `loading` (the viewer's loader where the button was) or
+`failed` (a "Couldn't load, try again" button); `loader` replaces the loader,
+and `locale`, `messages` and `theme` work as on `VectrealViewer`. The image is
+laid out as the viewer lays out a contained `loadingThumbnail`, so passing the
+same image there lines the two up.
 
 ---
 
