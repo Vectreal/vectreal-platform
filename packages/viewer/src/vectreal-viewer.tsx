@@ -35,6 +35,7 @@ import {
 	ShadowsProps
 } from '@vctrl/core'
 import {
+	resolveCameraConstraints,
 	resolveHotspotCameraTargets,
 	type OpeningPose
 } from '@vctrl/core/scene-camera'
@@ -73,6 +74,7 @@ import {
 	SceneBounds,
 	SceneCamera,
 	SceneControls,
+	defaultControlsOptions,
 	type ViewerView,
 	SceneEnvironment,
 	resolveHotspotMarkers,
@@ -294,6 +296,13 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * opens on. Defaults to `controlsOptions`.
 	 */
 	captureControlsOptions?: ControlsProps
+
+	/**
+	 * The host's own editing view: each camera's own limits do not apply, and
+	 * the orbit point is free to leave the model. `controlsOptions` still
+	 * applies, so an editor sets its own. Off by default: what a visitor gets.
+	 */
+	freeCamera?: boolean
 
 	/**
 	 * How the scene is lit: an environment map and up to three studio lights,
@@ -715,6 +724,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		cameraOptions,
 		controlsOptions,
 		captureControlsOptions,
+		freeCamera = false,
 		lighting,
 		envOptions,
 		shadowsOptions,
@@ -1031,6 +1041,48 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		() => resolveHotspotCameraTargets(cameraOptions?.cameras, hotspots),
 		[cameraOptions?.cameras, hotspots]
 	)
+	/*
+	  The limits a camera holds a visitor to: its own, or the scene-wide
+	  controls for a camera saved before cameras had limits, with the viewer's
+	  default vertical limit under them. Primitives as dependencies, as above.
+	*/
+	const sceneLimits = useMemo(
+		() => ({
+			enableZoom: controlsOptions?.enableZoom,
+			enablePan: controlsOptions?.enablePan,
+			enableRotate: controlsOptions?.enableRotate,
+			minDistance: controlsOptions?.minDistance,
+			maxDistance: controlsOptions?.maxDistance,
+			minPolarAngle: controlsOptions?.minPolarAngle,
+			maxPolarAngle:
+				controlsOptions?.maxPolarAngle ?? defaultControlsOptions.maxPolarAngle,
+			minAzimuthAngle: controlsOptions?.minAzimuthAngle,
+			maxAzimuthAngle: controlsOptions?.maxAzimuthAngle
+		}),
+		[
+			controlsOptions?.enableZoom,
+			controlsOptions?.enablePan,
+			controlsOptions?.enableRotate,
+			controlsOptions?.minDistance,
+			controlsOptions?.maxDistance,
+			controlsOptions?.minPolarAngle,
+			controlsOptions?.maxPolarAngle,
+			controlsOptions?.minAzimuthAngle,
+			controlsOptions?.maxAzimuthAngle
+		]
+	)
+	const constraintsFor = useCallback(
+		(cameraId: string) =>
+			resolveCameraConstraints(
+				freeCamera
+					? undefined
+					: aimedCameras?.find((camera) => camera.cameraId === cameraId)
+							?.constraints,
+				sceneLimits
+			),
+		[aimedCameras, freeCamera, sceneLimits]
+	)
+
 	// The capture resolves the same cameras the camera layer flies to, so a
 	// hotspot camera with no target of its own is aimed at its hotspot there too.
 	const captureCameraOptions = useMemo(
@@ -1048,6 +1100,31 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 	 * all move the camera without touching it.
 	 */
 	const [activeCameraId, setActiveCameraId] = useState<null | string>(null)
+	/**
+	 * What the camera in view lets a visitor do. The camera layer writes its
+	 * angle and distance limits; zoom, pan and rotation are switches the
+	 * controls and the keyboard read from here. A camera limited in orbit does
+	 * not turn by itself: it would stall against the limit. A host that turns
+	 * auto rotate on itself (`set_auto_rotate`) still wins.
+	 *
+	 * Before the first view is framed, the camera asked for, or the one marked
+	 * initial: the camera layer holds it from the start.
+	 */
+	const activeConstraints = useMemo(
+		() =>
+			constraintsFor(
+				activeCameraId ??
+					cameraOptions?.activeCameraId ??
+					aimedCameras?.find((camera) => camera.initial)?.cameraId ??
+					''
+			),
+		[
+			activeCameraId,
+			aimedCameras,
+			cameraOptions?.activeCameraId,
+			constraintsFor
+		]
+	)
 
 	const activateCamera = useCallback(
 		(cameraId: string) =>
@@ -1164,19 +1241,16 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 					// override, so it wins there and here alike.
 					enabled:
 						controlsOptions?.enabled ?? controlsEnabledOverride ?? undefined,
-					enableRotate: controlsOptions?.enableRotate,
-					enableZoom:
-						controlsOptionsOverride?.zoom ?? controlsOptions?.enableZoom,
-					enablePan: controlsOptionsOverride?.pan ?? controlsOptions?.enablePan
+					enableRotate: activeConstraints.rotate,
+					enableZoom: controlsOptionsOverride?.zoom ?? activeConstraints.zoom,
+					enablePan: controlsOptionsOverride?.pan ?? activeConstraints.pan
 				},
 				{ canReturnHome: activeCameraId !== null }
 			),
 		[
 			controlsEnabledOverride,
 			controlsOptions?.enabled,
-			controlsOptions?.enableRotate,
-			controlsOptions?.enableZoom,
-			controlsOptions?.enablePan,
+			activeConstraints,
 			controlsOptionsOverride,
 			activeCameraId
 		]
@@ -1495,6 +1569,12 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 										/>
 										<SceneControls
 											{...controlsOptions}
+											enableZoom={activeConstraints.zoom}
+											enablePan={activeConstraints.pan}
+											enableRotate={activeConstraints.rotate}
+											{...(activeConstraints.azimuth.relative
+												? { autoRotate: false }
+												: {})}
 											enabledOverride={controlsEnabledOverride}
 											inputLocked={inputLocked}
 											onViewChange={onViewChange}
@@ -1529,7 +1609,8 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 											<SceneCamera
 												{...cameraOptions}
 												cameras={aimedCameras}
-												distanceLimits={orbitDistanceLimits}
+												constraintsFor={constraintsFor}
+												freeCamera={freeCamera}
 												transitionOverride={transitionOverride}
 												openingPose={openingPose}
 												framingReset={resetCameraFraming}
