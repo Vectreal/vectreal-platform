@@ -113,6 +113,19 @@ export default function handleRequest(
 ) {
 	return new Promise((resolve, reject) => {
 		let shellRendered = false
+		/*
+		  A HEAD response has no body, and React Router throws away the one we
+		  return: it answers HEAD with `new Response(null, ...)`, never cancels
+		  ours, and the adapter's finished response means `request.signal`
+		  never aborts. So nothing stopped a HEAD render. It ran to the end for
+		  nobody, and under a burst of probes, any render still unfinished at
+		  the timeout below was aborted and every pending boundary reached
+		  `onError` as a server error with no visitor behind it. The shell
+		  already settles the status and the headers, so a HEAD request stops
+		  there.
+		*/
+		const headersOnly = request.method === 'HEAD'
+		let stoppedAtShell = false
 		const userAgent = request.headers.get('user-agent')
 
 		// Ensure requests from bots and SPA Mode renders wait for all content to load before responding
@@ -127,11 +140,25 @@ export default function handleRequest(
 			{
 				[readyOption]() {
 					shellRendered = true
-					const body = new PassThrough()
-					const stream = createReadableStreamFromReadable(body)
 
 					responseHeaders.set('Content-Type', 'text/html')
 					applyDefaultCacheHeaders(request, responseHeaders, responseStatusCode)
+
+					if (headersOnly) {
+						resolve(
+							new Response(null, {
+								headers: responseHeaders,
+								status: responseStatusCode
+							})
+						)
+						// Set first: `abort` reports each pending boundary synchronously.
+						stoppedAtShell = true
+						abort()
+						return
+					}
+
+					const body = new PassThrough()
+					const stream = createReadableStreamFromReadable(body)
 
 					resolve(
 						new Response(stream, {
@@ -152,8 +179,9 @@ export default function handleRequest(
 					  during initial shell rendering are left alone: those reject the
 					  render, and the rejection reaches `handleError` above, so
 					  reporting them here as well would double every one of them.
+					  Nor is the abort that stops a HEAD render at its shell.
 					*/
-					if (shellRendered) {
+					if (shellRendered && !stoppedAtShell) {
 						reportServerError(error, { request })
 					}
 				}
