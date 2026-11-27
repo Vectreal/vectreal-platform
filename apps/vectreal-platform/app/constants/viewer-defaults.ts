@@ -1,6 +1,7 @@
 import {
 	DEFAULT_LIGHTING_SETUP,
 	DEFAULT_SCENE_TRANSITION,
+	defaultCameraConstraints,
 	LIGHTING_SETUPS,
 	NORMALIZATION_DEFAULT_MAX_SIZE,
 	NORMALIZATION_DEFAULT_MIN_SIZE
@@ -44,6 +45,21 @@ export const defaultCameraOptions: CameraProps = {
 	// clear of the model's bounds, so a new scene's first moves turn around the
 	// subject rather than through it.
 	sceneTransition: DEFAULT_SCENE_TRANSITION
+}
+
+/**
+ * The cameras a new scene starts with: the default camera, holding visitors to
+ * the default limits (`defaultCameraConstraints`). Only a new scene: one that
+ * was saved without cameras keeps `defaultCameraOptions`, so opening it never
+ * changes what its visitors get. The first framing looks level at the model,
+ * so the camera's own elevation is 0°.
+ */
+export const newSceneCameraOptions: CameraProps = {
+	...defaultCameraOptions,
+	cameras: defaultCameraOptions.cameras?.map((camera) => ({
+		...camera,
+		constraints: defaultCameraConstraints(0)
+	}))
 }
 /*
   How dragging the scene feels, as one choice. OrbitControls applies

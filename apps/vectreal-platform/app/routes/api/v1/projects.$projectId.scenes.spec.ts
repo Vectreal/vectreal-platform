@@ -12,6 +12,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MAX_STORED_FILE_BYTES } from '../../../constants/utility-constants'
 import {
 	defaultEnvOptions,
+	newSceneCameraOptions,
 	withSceneSettingsDefaults
 } from '../../../constants/viewer-defaults'
 import { agentActorContext } from '../../../lib/domain/agent/agent-actor-context'
@@ -303,8 +304,10 @@ describe('POST /api/v1/projects/:projectId/scenes', () => {
 			projectId: PROJECT,
 			userId: 'user-1',
 			meta: { name: 'Chair', description: '', thumbnailUrl: '' },
-			// The legacy defaults, with the environment map compressed.
+			// The legacy defaults, with the environment map compressed and the
+			// new-scene cameras.
 			settings: withSceneSettingsDefaults({
+				camera: newSceneCameraOptions,
 				environment: { ...defaultEnvOptions, environmentQuality: 'compressed' }
 			}),
 			sceneAssetIds: ['asset-gltf', 'asset-bin']

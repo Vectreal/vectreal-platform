@@ -3,6 +3,7 @@ import { atom } from 'jotai'
 import {
 	defaultBoundsOptions,
 	defaultCameraOptions,
+	newSceneCameraOptions,
 	defaultControlsOptions,
 	defaultEnvOptions,
 	defaultLighting,
@@ -48,7 +49,7 @@ const animationDriftAtom = atom<Pick<
 	'added' | 'dropped' | 'remapped'
 > | null>(null)
 const boundsAtom = atom<BoundsProps>(defaultBoundsOptions)
-const cameraAtom = atom<CameraProps>(defaultCameraOptions)
+const cameraAtom = atom<CameraProps>(newSceneCameraOptions)
 const selectedCameraIdAtom = atom<string>(
 	defaultCameraOptions.activeCameraId ??
 		defaultCameraOptions.cameras?.[0]?.cameraId ??
