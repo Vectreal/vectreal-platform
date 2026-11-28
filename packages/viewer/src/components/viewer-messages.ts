@@ -1,4 +1,4 @@
-import { matchViewerLocale, type ViewerLocale } from '@vctrl/core'
+import { matchViewerLocale, type ViewerLocale } from '@vctrl/core/viewer-locale'
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 
 import { en, type ViewerMessages } from '../locales/en'

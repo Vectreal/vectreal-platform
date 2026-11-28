@@ -414,6 +414,10 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * Started, a "Done" button gives the page its scrolling back.
 	 *
 	 * A host that sends `set_controls_enabled` takes over from the button.
+	 *
+	 * @deprecated Removed in the next major version. Show a `ViewerPoster`
+	 * from `@vctrl/viewer/poster` until the visitor asks for the scene, then
+	 * mount the viewer: nothing loads or responds before that.
 	 */
 	interactionStart?: SceneInteractionStart
 	/**

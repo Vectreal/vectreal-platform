@@ -35,6 +35,7 @@
 			"@vctrl/viewer": ["packages/viewer/src/index.ts"],
 			"@vctrl/viewer/hotspots": ["packages/viewer/src/hotspots.ts"],
 			"@vctrl/viewer/camera-flight": ["packages/viewer/src/camera-flight.ts"],
+			"@vctrl/viewer/poster": ["packages/viewer/src/poster.ts"],
 			"@vctrl/viewer/locales/*": ["packages/viewer/src/locales/*.ts"],
 			"@vctrl/core": ["packages/core/src/index.ts"],
 			"@vctrl/core/model-formats": ["packages/core/src/model-formats/index.ts"],
@@ -52,6 +53,7 @@
 			],
 			"@vctrl/core/scene-camera": ["packages/core/src/scene-camera/index.ts"],
 			"@vctrl/core/camera-schema": ["packages/core/src/camera-schema/index.ts"],
+			"@vctrl/core/viewer-locale": ["packages/core/src/viewer-locale/index.ts"],
 			"@vctrl/embed": ["./packages/embed/src/index.ts"],
 			"@vctrl/sdk": ["./packages/sdk/src/index.ts"]
 		},

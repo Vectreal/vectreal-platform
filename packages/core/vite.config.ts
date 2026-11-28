@@ -53,6 +53,12 @@ export default defineConfig({
 					import.meta.dirname,
 					'src/scene-camera/index.ts'
 				),
+				// Dependency-free: the viewer's languages, for a page that shows a
+				// scene's poster before it downloads anything that draws in 3D.
+				'viewer-locale': path.resolve(
+					import.meta.dirname,
+					'src/viewer-locale/index.ts'
+				),
 				'camera-schema': path.resolve(
 					import.meta.dirname,
 					'src/camera-schema/index.ts'
