@@ -172,6 +172,26 @@ export function isEmbedServableAssetId(
 }
 
 /**
+ * What an embed fetches beside the published GLB, in bytes: the shadow bake,
+ * the loading thumbnail and marker artwork, each only when servable. Read
+ * from the same set the manifest and the asset route are built from, so the
+ * download size cannot count a file an embed is refused, or miss one it gets.
+ */
+export function sideAssetBytes(
+	servable: EmbedServableAssets,
+	sceneAssets: readonly EmbedAssetRow[]
+): number {
+	const served = new Set<string>(servable.hotspotArtworkAssetIds)
+	if (servable.bakeAssetId) served.add(servable.bakeAssetId)
+	if (servable.thumbnailAssetId) served.add(servable.thumbnailAssetId)
+	return sceneAssets.reduce(
+		(total, asset) =>
+			served.has(asset.id) ? total + (asset.fileSize ?? 0) : total,
+		0
+	)
+}
+
+/**
  * The manifest's `assetRefs` for an embed: the bake and the loading thumbnail,
  * when servable, and nothing else. The published GLB is referenced separately
  * as `publishedModel`, because the loader treats it as the model rather than

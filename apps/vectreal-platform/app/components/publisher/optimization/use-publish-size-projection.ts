@@ -8,7 +8,10 @@ import {
 	projectPublishedGlbBytes,
 	resolvePublishGeometryOptions
 } from '../../../lib/domain/scene/client/publish-export'
-import { sceneEnvironmentBytes } from '../../../lib/domain/scene/scene-environment-bytes'
+import {
+	sceneEnvironmentBytes,
+	type DownloadExtras
+} from '../../../lib/domain/scene/scene-environment-bytes'
 import { shouldCompressTexturesForGpu } from '../../../lib/domain/scene/scene-presentation'
 import { bakesKey } from '../../../lib/domain/scene/studio-finish'
 import { lastSavedSettingsAtom } from '../../../lib/stores/publisher-config-store'
@@ -35,6 +38,23 @@ export function useEnvironmentMapBytes(
 	const lastSaved = useAtomValue(lastSavedSettingsAtom)
 	return sceneEnvironmentBytes(
 		settings === 'saved' && lastSaved ? lastSaved : { lighting, environment }
+	)
+}
+
+/**
+ * What a visitor downloads besides the model: the environment map (as
+ * `useEnvironmentMapBytes` reads it) and the files an embed fetches beside
+ * the GLB, which the server measured from the saved scene.
+ */
+export function useDownloadExtras(
+	settings: 'edited' | 'saved' = 'edited'
+): DownloadExtras {
+	const environmentBytes = useEnvironmentMapBytes(settings)
+	const sideAssetBytes =
+		useAtomValue(optimizationRuntimeAtom).latestSceneStats?.sideAssetBytes ?? 0
+	return useMemo(
+		() => ({ environmentBytes, sideAssetBytes }),
+		[environmentBytes, sideAssetBytes]
 	)
 }
 

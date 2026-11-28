@@ -396,6 +396,11 @@ export interface SceneStatsData {
 	 * Null when nothing is published, or published before this was recorded.
 	 */
 	readonly publishedIsCurrent?: boolean | null
+	/**
+	 * What an embed fetches beside the GLB under the saved settings: shadow
+	 * bake, loading thumbnail, marker artwork. See `sceneDownloadBytes`.
+	 */
+	readonly sideAssetBytes?: number
 	readonly appliedOptimizations?: string[] | null
 	readonly optimizationSettings?: Optimizations | null
 	// Extended persisted metrics that do not fit the snapshot count schema.

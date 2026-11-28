@@ -30,6 +30,10 @@ import {
 	selectUnreferencedAssetIds
 } from '../../asset/asset-storage.server'
 import { optimizationsMatch } from '../client/optimization-inference'
+import {
+	selectEmbedServableAssets,
+	sideAssetBytes
+} from '../embed-asset-policy'
 import { findNewRemoteArtwork } from '../hotspot-artwork'
 import {
 	describeFinishSource,
@@ -38,6 +42,7 @@ import {
 	storedFinishSource
 } from '../publish-source'
 import { isUrlServedSceneAsset } from '../scene-asset-roles'
+import { shouldShowLoadingThumbnail } from '../scene-presentation'
 import { haveSceneSettingsChanged } from '../scene-settings-comparison'
 import {
 	sceneMetadataPatch,
@@ -949,10 +954,37 @@ class SceneSettingsService {
 					publishSourceMatches(published.sourceFingerprint, current)
 				: null
 
+			/*
+			  What an embed fetches beside the GLB, from the saved settings an
+			  embed reads live, so every surface adds the same files to the
+			  download size. The GLB itself is not counted here, so its id does
+			  not matter to the sum.
+			*/
+			const saved = await getSceneSettingsWithAssetsRow(tx, sceneId)
+			const servedBesideModelBytes = saved
+				? sideAssetBytes(
+						selectEmbedServableAssets({
+							sceneId,
+							publishedAssetId: '',
+							sceneAssets: saved.assets,
+							bakedShadowAssetId: saved.settings.shadows?.baked?.assetId,
+							showsLoadingThumbnail: shouldShowLoadingThumbnail(
+								saved.settings.presentation
+							),
+							hotspots: await getHotspotsBySceneSettingsId(
+								tx,
+								saved.settings.id
+							)
+						}),
+						saved.assets
+					)
+				: 0
+
 			return {
 				...stats,
 				currentSceneBytes: published?.fileSize ?? null,
-				publishedIsCurrent
+				publishedIsCurrent,
+				sideAssetBytes: servedBesideModelBytes
 			}
 		})
 	}

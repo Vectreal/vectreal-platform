@@ -4,6 +4,7 @@ import { ScenePublishStateControl } from '../../publishing/scene-publish-state-c
 import { SceneLoadingThumbnailSetting } from './scene-loading-thumbnail-setting'
 import { SceneSurfaceDrawer } from './scene-surface-drawer'
 
+import type { DownloadExtras } from '../../../lib/domain/scene/scene-environment-bytes'
 import type { ScenePublishStateResponse } from '../../../types/api'
 import type { ScenePresentationSettings } from '@vctrl/core'
 
@@ -11,11 +12,8 @@ interface SceneShareDrawerProps {
 	sceneId: string
 	projectId: string
 	publishState: ScenePublishStateResponse
-	/**
-	 * What the scene's environment map adds to a visitor's download, when
-	 * its size is known.
-	 */
-	environmentMapBytes: number | null
+	/** What a visitor downloads besides the model: environment map, side files. */
+	downloadExtras: DownloadExtras
 	presentation: ScenePresentationSettings | null
 	canUpdateScene: boolean
 	/** Publishing happens in the publisher; this navigates there. */
@@ -42,7 +40,7 @@ export function SceneShareDrawer({
 	sceneId,
 	projectId,
 	publishState,
-	environmentMapBytes,
+	downloadExtras,
 	presentation,
 	canUpdateScene,
 	onPublish,
@@ -60,7 +58,7 @@ export function SceneShareDrawer({
 			<DetailPanelSection title="Publishing">
 				<ScenePublishStateControl
 					publishState={publishState}
-					environmentMapBytes={environmentMapBytes}
+					downloadExtras={downloadExtras}
 					onPublish={onPublish}
 					draftActionMode="immediate"
 					publishButtonText="Open Publisher to Publish"

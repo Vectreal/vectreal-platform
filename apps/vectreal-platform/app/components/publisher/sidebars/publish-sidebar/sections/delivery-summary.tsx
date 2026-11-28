@@ -6,7 +6,11 @@ import {
 	DELIVERY_REFERENCE_LABEL,
 	estimateDeliveryTime
 } from '../../../../../lib/domain/scene/scene-delivery-estimate'
-import { sceneDownloadBytes } from '../../../../../lib/domain/scene/scene-environment-bytes'
+import {
+	NO_DOWNLOAD_EXTRAS,
+	sceneDownloadBytes,
+	type DownloadExtras
+} from '../../../../../lib/domain/scene/scene-environment-bytes'
 import { InfoTooltip } from '../../../../info-tooltip'
 
 import type { FC } from 'react'
@@ -17,10 +21,11 @@ const TEXTURE_ENCODING_EXPLANATION =
 interface DeliverySummaryProps {
 	/** The published model, or what publishing would ship. */
 	modelBytes?: null | number
-	/** The environment map at the scene's quality, when its size is known. */
-	environmentBytes?: null | number
+	/** What a visitor downloads besides the model. */
+	downloadExtras?: DownloadExtras
 	sizeReductionPercent: null | number
-	sizeDeltaLabel: null | string
+	/** The original upload, which the model is compared against once optimized. */
+	originalBytes?: null | number
 	/** The size leaves out GPU texture encoding, which only publishing measures. */
 	sizeExcludesTextureEncoding?: boolean
 	onOpenOptimization?: () => void
@@ -45,14 +50,14 @@ interface DeliverySummaryProps {
  */
 export const DeliverySummary: FC<DeliverySummaryProps> = ({
 	modelBytes,
-	environmentBytes = null,
+	downloadExtras = NO_DOWNLOAD_EXTRAS,
 	sizeReductionPercent,
-	sizeDeltaLabel,
+	originalBytes = null,
 	sizeExcludesTextureEncoding = false,
 	onOpenOptimization
 }) => {
-	// What a visitor downloads: the model and the map that lights it.
-	const sceneBytes = sceneDownloadBytes(modelBytes, environmentBytes)
+	const sceneBytes = sceneDownloadBytes(modelBytes, downloadExtras)
+	const environmentBytes = downloadExtras.environmentBytes
 	const estimate = estimateDeliveryTime(sceneBytes)
 	const hasOptimized = sizeReductionPercent !== null
 	const includesMap =
@@ -88,9 +93,9 @@ export const DeliverySummary: FC<DeliverySummaryProps> = ({
 				<span className="text-2xl font-medium tracking-tight tabular-nums">
 					{typeof sceneBytes === 'number' ? formatFileSize(sceneBytes) : '-'}
 				</span>
-				{hasOptimized && sizeDeltaLabel ? (
+				{hasOptimized && typeof originalBytes === 'number' ? (
 					<span className="text-muted-foreground text-xs tabular-nums">
-						/ {sizeDeltaLabel}
+						/ from {formatFileSize(originalBytes)} original
 					</span>
 				) : null}
 			</p>

@@ -13,15 +13,16 @@ import { DeliverySummary } from './delivery-summary'
 
 const renderSummary = (
 	sizeExcludesTextureEncoding: boolean,
-	environmentBytes: null | number = null
+	environmentBytes: null | number = null,
+	sideAssetBytes = 0
 ) =>
 	render(
 		<TooltipProvider>
 			<DeliverySummary
 				modelBytes={881_392}
-				environmentBytes={environmentBytes}
+				downloadExtras={{ environmentBytes, sideAssetBytes }}
 				sizeReductionPercent={43}
-				sizeDeltaLabel="642 KB smaller"
+				originalBytes={1_523_000}
 				sizeExcludesTextureEncoding={sizeExcludesTextureEncoding}
 			/>
 		</TooltipProvider>
@@ -46,5 +47,21 @@ describe('DeliverySummary', () => {
 		renderSummary(false, 73_838)
 
 		expect(screen.getByText(formatFileSize(881_392 + 73_838))).toBeTruthy()
+	})
+
+	it('counts the files an embed fetches beside the model', () => {
+		renderSummary(false, 73_838, 31_494)
+
+		expect(
+			screen.getByText(formatFileSize(881_392 + 73_838 + 31_494))
+		).toBeTruthy()
+	})
+
+	it('compares the model with the original upload, not the download', () => {
+		renderSummary(false, 73_838)
+
+		expect(
+			screen.getByText(`/ from ${formatFileSize(1_523_000)} original`)
+		).toBeTruthy()
 	})
 })

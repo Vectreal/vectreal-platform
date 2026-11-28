@@ -9,6 +9,7 @@ import { ScenePublishPanel } from './scene-publish-panel'
 
 import type { DashboardEntityRef } from '../../../lib/domain/dashboard/dashboard-confirmation'
 import type { TextureThumbnailUrls } from '../../../lib/domain/dashboard/scene-texture-thumbnails'
+import type { DownloadExtras } from '../../../lib/domain/scene/scene-environment-bytes'
 import type { ScenePublishStateResponse } from '../../../types/api'
 import type { SceneDetailsSummary } from '../../../types/dashboard'
 import type { ScenePresentationSettings } from '@vctrl/core'
@@ -19,11 +20,8 @@ interface SceneAsideProps {
 	sceneId: string
 	projectId: string
 	publishState: ScenePublishStateResponse
-	/**
-	 * What the scene's environment map adds to a visitor's download, when
-	 * its size is known.
-	 */
-	environmentMapBytes: number | null
+	/** What a visitor downloads besides the model: environment map, side files. */
+	downloadExtras: DownloadExtras
 	presentation: ScenePresentationSettings | null
 	canUpdateScene: boolean
 	publisherPath: string
@@ -73,7 +71,7 @@ export function SceneAside({
 	sceneId,
 	projectId,
 	publishState,
-	environmentMapBytes,
+	downloadExtras,
 	presentation,
 	canUpdateScene,
 	publisherPath,
@@ -116,7 +114,7 @@ export function SceneAside({
 				sceneId={sceneId}
 				projectId={projectId}
 				publishState={publishState}
-				environmentMapBytes={environmentMapBytes}
+				downloadExtras={downloadExtras}
 				presentation={presentation}
 				canUpdateScene={canUpdateScene}
 				publisherPath={publisherPath}

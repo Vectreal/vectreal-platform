@@ -102,7 +102,10 @@ vi.mock('./sidebars/use-scene-size-initializer', () => ({
 vi.mock('./optimization/use-publish-size-projection', () => ({
 	usePublishSizeProjection: () => undefined,
 	useSizeExcludesTextureEncoding: () => sizeLabel.excludesTextureEncoding,
-	useEnvironmentMapBytes: () => sizeLabel.environmentBytes
+	useDownloadExtras: () => ({
+		environmentBytes: sizeLabel.environmentBytes,
+		sideAssetBytes: 0
+	})
 }))
 vi.mock('../../hooks/use-publisher-scene', () => ({
 	usePublisherScene: () => ({

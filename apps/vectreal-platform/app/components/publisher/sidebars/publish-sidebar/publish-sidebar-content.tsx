@@ -1,6 +1,5 @@
 import { Button } from '@shared/components/ui/button'
 import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
-import { formatFileSize } from '@shared/utils'
 import { motion } from 'framer-motion'
 import { useAtomValue } from 'jotai/react'
 import { Code, Globe, Save } from 'lucide-react'
@@ -10,7 +9,7 @@ import { usePublisherSaveAction } from '../../../../hooks/use-publisher-save-act
 import { isSaveActionBlocked } from '../../../../lib/domain/scene'
 import { isSavingAtom } from '../../../../lib/stores/publisher-config-store'
 import {
-	useEnvironmentMapBytes,
+	useDownloadExtras,
 	useSizeExcludesTextureEncoding
 } from '../../optimization/use-publish-size-projection'
 import { sidebarContentVariants } from '../animation'
@@ -25,22 +24,6 @@ import { SaveOptions } from './sections/save-options'
 import { ScenePreview } from './sections/scene-preview'
 
 import type { FC } from 'react'
-
-const getSizeDeltaLabel = (deltaBytes?: number | null) => {
-	if (typeof deltaBytes !== 'number') {
-		return null
-	}
-
-	if (deltaBytes > 0) {
-		return `${formatFileSize(deltaBytes)} smaller`
-	}
-
-	if (deltaBytes < 0) {
-		return `${formatFileSize(Math.abs(deltaBytes))} larger`
-	}
-
-	return 'No size change'
-}
 
 /**
  * The publish sidebar's body: the delivery summary and preview at the top,
@@ -68,10 +51,9 @@ const PublishSidebarContent: FC = () => {
 	})
 	const isSaveDisabled = isSaving || isSaveActionBlocked(saveAvailability)
 
-	const sizeDeltaLabel = getSizeDeltaLabel(viewModel.sizeDeltaBytes)
 	const sizeExcludesTextureEncoding = useSizeExcludesTextureEncoding()
 	const currentSceneBytes = viewModel.publishMetricSizeInfo.currentSceneBytes
-	const environmentMapBytes = useEnvironmentMapBytes()
+	const downloadExtras = useDownloadExtras()
 	const isAuthenticated = viewModel.isAuthenticated
 	const hasSavedScene = viewModel.hasSavedScene
 	const canAccessPublishFeatures = viewModel.canAccessPublishFeatures
@@ -97,9 +79,9 @@ const PublishSidebarContent: FC = () => {
 					<DrillDownView id="root" className="space-y-3">
 						<DeliverySummary
 							modelBytes={currentSceneBytes}
-							environmentBytes={environmentMapBytes}
+							downloadExtras={downloadExtras}
 							sizeReductionPercent={viewModel.sizeReductionPercent}
-							sizeDeltaLabel={sizeDeltaLabel}
+							originalBytes={viewModel.publishMetricSizeInfo.initialSceneBytes}
 							sizeExcludesTextureEncoding={sizeExcludesTextureEncoding}
 							onOpenOptimization={onOpenOptimizationDrawer}
 						/>

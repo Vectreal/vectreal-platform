@@ -10,7 +10,6 @@ type PublishMetricSizeInfo = {
 export interface PublishSidebarViewModel {
 	metrics: ResolvedSceneMetrics | null
 	sizeReductionPercent: null | number
-	sizeDeltaBytes: null | number
 	isHydratingInitialMetrics: boolean
 	publishMetricSizeInfo: PublishMetricSizeInfo
 	publishState: ScenePublishStateResponse
@@ -35,17 +34,6 @@ const getSizeReductionPercent = (
 	return Math.round(((before - after) / before) * 100)
 }
 
-const getSizeDeltaBytes = (
-	before?: number | null,
-	after?: number | null
-): null | number => {
-	if (typeof before !== 'number' || typeof after !== 'number') {
-		return null
-	}
-
-	return before - after
-}
-
 export const buildPublishSidebarViewModel = ({
 	sceneId,
 	sessionSavedSceneId,
@@ -66,10 +54,6 @@ export const buildPublishSidebarViewModel = ({
 		metrics?.sceneBytes.initial,
 		metrics?.sceneBytes.current
 	)
-	const sizeDeltaBytes = getSizeDeltaBytes(
-		metrics?.sceneBytes.initial,
-		metrics?.sceneBytes.current
-	)
 	const isHydratingInitialMetrics = Boolean(metrics?.isInitialMetricsHydrating)
 	const isAuthenticated = Boolean(userId)
 	// Treat the scene as saved when the route already carries its id OR a save has
@@ -87,7 +71,6 @@ export const buildPublishSidebarViewModel = ({
 	return {
 		metrics,
 		sizeReductionPercent,
-		sizeDeltaBytes,
 		isHydratingInitialMetrics,
 		publishMetricSizeInfo: {
 			initialSceneBytes: metrics?.sceneBytes.initial,

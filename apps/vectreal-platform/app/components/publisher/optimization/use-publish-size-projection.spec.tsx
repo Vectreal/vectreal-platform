@@ -27,6 +27,7 @@ import {
 	presentationAtom
 } from '../../../lib/stores/scene-settings-store'
 import {
+	useDownloadExtras,
 	usePublishedFileIsCurrent,
 	usePublishSizeProjection,
 	useSizeExcludesTextureEncoding
@@ -383,6 +384,31 @@ describe('usePublishSizeProjection', () => {
 
 		await waitFor(() => expect(runtime().optimizedSceneBytes).toBe(861))
 		expect(projectPublishedGlbBytes).toHaveBeenCalledTimes(2)
+	})
+})
+
+/*
+  The files an embed fetches beside the GLB come from the server's stats, so
+  the Publisher adds exactly what scene detail adds.
+*/
+describe('useDownloadExtras', () => {
+	const renderExtras = () =>
+		renderHook(() => useDownloadExtras(), {
+			wrapper: ({ children }: { children: ReactNode }) =>
+				createElement(Provider, { store }, children)
+		})
+
+	it('adds the side files the saved scene serves', () => {
+		store.set(optimizationRuntimeAtom, (prev) => ({
+			...prev,
+			latestSceneStats: { sideAssetBytes: 31_494 } as never
+		}))
+
+		expect(renderExtras().result.current.sideAssetBytes).toBe(31_494)
+	})
+
+	it('adds none before the scene has stats', () => {
+		expect(renderExtras().result.current.sideAssetBytes).toBe(0)
 	})
 })
 
