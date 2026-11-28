@@ -231,7 +231,8 @@ export function ScenePublishStateControl({
 						{downloadBytes === null ? '-' : formatFileSize(downloadBytes)}
 						{environmentMapBytes !== null && downloadBytes !== null && (
 							<>
-								, with the {formatFileSize(environmentMapBytes)} environment map
+								, including the {formatFileSize(environmentMapBytes)}{' '}
+								environment map
 							</>
 						)}
 					</motion.p>

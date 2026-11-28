@@ -475,6 +475,14 @@ describe('marker artwork', () => {
 		expect(isEmbedServableAssetId(ARTWORK_ID, servable)).toBe(true)
 	})
 
+	it('counts the artwork it serves into the bytes beside the model', () => {
+		const servable = servableFor([
+			marker(buildHotspotArtworkUrl(SCENE_ID, ARTWORK_ID))
+		])
+
+		expect(sideAssetBytes(servable, rows)).toBe(2048)
+	})
+
 	it('never serves a linked texture a crafted marker names as its artwork', () => {
 		const servable = servableFor([
 			marker(buildHotspotArtworkUrl(SCENE_ID, TEXTURE_ID))

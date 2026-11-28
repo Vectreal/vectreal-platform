@@ -24,6 +24,11 @@ import { PERSISTED_BAKE_FILENAME, SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
 import { eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
+import {
+	buildHotspotArtworkUrl,
+	hotspotArtworkFileName
+} from '../../app/lib/domain/scene/hotspot-artwork'
+
 import type { Optimizations, SceneSettings } from '@vctrl/core'
 
 vi.mock(
@@ -272,6 +277,38 @@ describe('whether the published file is current', () => {
 		expect(
 			(await sceneSettingsService.getSceneStats(sceneId))?.sideAssetBytes
 		).toBe(1024)
+
+		// Marker artwork comes from the scene's stored hotspots.
+		const hotspotId = randomUUID()
+		const artwork = randomUUID()
+		await db.insert(schema.assets).values({
+			id: artwork,
+			folderId: assetFolderId,
+			name: hotspotArtworkFileName(hotspotId, 'image/png'),
+			type: 'texture',
+			mimeType: 'image/png',
+			filePath: `smoke/${artwork}/artwork.png`,
+			fileSize: 4096,
+			ownerId
+		})
+		await save(sceneId, [...model, bake, thumbnail, artwork], {
+			shadows: { baked: { assetId: bake } },
+			presentation: { showLoadingThumbnail: false },
+			hotspots: [
+				{
+					id: hotspotId,
+					name: 'Badge',
+					worldPosition: [0, 0, 0],
+					visible: true,
+					internalOnly: false,
+					stylePreset: 'image',
+					payloadUrl: buildHotspotArtworkUrl(sceneId, artwork)
+				}
+			]
+		} as Partial<SceneSettings>)
+		expect(
+			(await sceneSettingsService.getSceneStats(sceneId))?.sideAssetBytes
+		).toBe(1024 + 4096)
 	})
 
 	it('cannot say for a scene that is not published', async () => {
