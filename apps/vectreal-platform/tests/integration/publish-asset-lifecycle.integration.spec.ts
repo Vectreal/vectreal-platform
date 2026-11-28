@@ -267,6 +267,39 @@ describe('publish asset lifecycle', () => {
 		})
 	})
 
+	/*
+	  Saves before #1047 overwrote `current_scene_bytes` with their own
+	  projection after a publish, so on production "Meat boy" the column says
+	  2,448,692 while its published GLB is 7,751,232. Every reader takes the
+	  published size from the file instead.
+	*/
+	it('reads the published size from the stored file, not the copied column', async () => {
+		const assetId = await makeAsset('drifted.glb', 7_751_232)
+		const sceneId = await makeScene('drifted')
+		await publishRow(sceneId, assetId)
+		await db.insert(schema.sceneStats).values({
+			sceneId,
+			createdBy: ownerId,
+			initialSceneBytes: 27_493_112,
+			currentSceneBytes: 2_448_692
+		})
+
+		const stats = await sceneSettingsService.getSceneStats(sceneId)
+		expect(stats?.currentSceneBytes).toBe(7_751_232)
+	})
+
+	it('reports no published size for a scene with a stale column and no publish', async () => {
+		const sceneId = await makeScene('stale-unpublished')
+		await db.insert(schema.sceneStats).values({
+			sceneId,
+			createdBy: ownerId,
+			currentSceneBytes: 1234
+		})
+
+		const stats = await sceneSettingsService.getSceneStats(sceneId)
+		expect(stats?.currentSceneBytes).toBeNull()
+	})
+
 	// The size is the published GLB's, so unpublishing leaves none.
 	it('clears the scene size when a scene is unpublished', async () => {
 		const assetId = await makeAsset('revoked-size.glb', 777)
