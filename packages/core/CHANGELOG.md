@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.6.0](https://github.com/Vectreal/vectreal-platform/compare/core-v3.5.0...core-v3.6.0) (2026-11-28)
+
+
+### Features
+
+* **core:** a saved camera carries its own visitor limits, resolved with the scene-wide fallback ([#1461](https://github.com/Vectreal/vectreal-platform/issues/1461)) ([b3b39fa](https://github.com/Vectreal/vectreal-platform/commit/b3b39fa7ba71c3d53f16b40455d6f0de905716c8))
+
+
+### Bug Fixes
+
+* **core:** take three from the host, so its objects are the host's three ([#1466](https://github.com/Vectreal/vectreal-platform/issues/1466)) ([bbf3fe6](https://github.com/Vectreal/vectreal-platform/commit/bbf3fe61f1b3d71bf5ab718d82214bdecb5c2631))
+* **viewer:** a lens edit to the camera in view keeps the view where it is ([#1452](https://github.com/Vectreal/vectreal-platform/issues/1452)) ([1bcc0d0](https://github.com/Vectreal/vectreal-platform/commit/1bcc0d05bc2b82da0cec014fb0a935f75a973fdb))
+
 ## [3.5.0](https://github.com/Vectreal/vectreal-platform/compare/core-v3.4.0...core-v3.5.0) (2026-11-27)
 
 

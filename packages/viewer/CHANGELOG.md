@@ -1,5 +1,30 @@
 # Changelog
 
+## [3.6.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v3.5.0...viewer-v3.6.0) (2026-11-28)
+
+
+### Features
+
+* **viewer:** the camera in view holds a visitor to its own limits ([#1462](https://github.com/Vectreal/vectreal-platform/issues/1462)) ([d8058e5](https://github.com/Vectreal/vectreal-platform/commit/d8058e573af66bd17a749306aaf00d414464bba5))
+
+
+### Bug Fixes
+
+* **publisher:** exiting Preview puts the editor view back where it was ([#1456](https://github.com/Vectreal/vectreal-platform/issues/1456)) ([21b6d09](https://github.com/Vectreal/vectreal-platform/commit/21b6d09b6c95612783c0f762dd4428557b39b4a8))
+* **publisher:** the editor viewport moves freely and only Preview applies the published interaction ([#1455](https://github.com/Vectreal/vectreal-platform/issues/1455)) ([6d1ba17](https://github.com/Vectreal/vectreal-platform/commit/6d1ba1776455369a9c7fdd9678992c21ed32e3ba))
+* **viewer:** a camera with no pose of its own frames the model from level, never from below ([#1470](https://github.com/Vectreal/vectreal-platform/issues/1470)) ([62bb618](https://github.com/Vectreal/vectreal-platform/commit/62bb6181a12587630ac7809f98fc51c681ea0453))
+* **viewer:** a lens edit to the camera in view keeps the view where it is ([#1452](https://github.com/Vectreal/vectreal-platform/issues/1452)) ([1bcc0d0](https://github.com/Vectreal/vectreal-platform/commit/1bcc0d05bc2b82da0cec014fb0a935f75a973fdb))
+* **viewer:** a visitor's move never takes the camera inside the model ([#1467](https://github.com/Vectreal/vectreal-platform/issues/1467)) ([9f1727b](https://github.com/Vectreal/vectreal-platform/commit/9f1727b999b75f5d30923c4c94bce363ae6a1202))
+* **viewer:** require React 19, which the viewer's renderer already needs ([#1464](https://github.com/Vectreal/vectreal-platform/issues/1464)) ([2f74410](https://github.com/Vectreal/vectreal-platform/commit/2f7441066a6fb8874019faf7c8fd0d8fa00076e3))
+* **viewer:** take @react-three/fiber from the host, so children share its Canvas ([#1465](https://github.com/Vectreal/vectreal-platform/issues/1465)) ([29ce8f0](https://github.com/Vectreal/vectreal-platform/commit/29ce8f05094f0dadfff82509921ebbc06a46dc1a))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 3.6.0
+
 ## [3.5.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v3.4.0...viewer-v3.5.0) (2026-11-27)
 
 
