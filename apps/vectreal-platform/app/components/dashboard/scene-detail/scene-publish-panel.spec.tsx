@@ -16,8 +16,10 @@ import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
 
+import { NO_DOWNLOAD_EXTRAS } from '../../../lib/domain/scene/scene-environment-bytes'
 import { ScenePublishPanel } from './scene-publish-panel'
 
+import type { DownloadExtras } from '../../../lib/domain/scene/scene-environment-bytes'
 import type { ScenePublishStateResponse } from '../../../types/api'
 
 /*
@@ -51,14 +53,14 @@ const PUBLISHED: ScenePublishStateResponse = {
 
 function renderPanel(
 	publishState: ScenePublishStateResponse,
-	environmentMapBytes: number | null = null
+	downloadExtras: DownloadExtras = NO_DOWNLOAD_EXTRAS
 ) {
 	return render(
 		<ScenePublishPanel
 			sceneId="scene-1"
 			projectId="project-1"
 			publishState={publishState}
-			environmentMapBytes={environmentMapBytes}
+			downloadExtras={downloadExtras}
 			presentation={null}
 			canUpdateScene
 			publisherPath="/publisher/scene-1"
@@ -131,10 +133,24 @@ describe('a published scene', () => {
 	})
 
 	it('counts the environment map into the size a visitor downloads', () => {
-		const { container } = renderPanel(PUBLISHED, 73_838)
+		const { container } = renderPanel(PUBLISHED, {
+			environmentBytes: 73_838,
+			sideAssetBytes: 0
+		})
 
 		// 2,202,009 + 73,838 bytes.
 		expect(container.textContent).toContain('2.2 MB')
+	})
+
+	it('counts the files an embed fetches beside the model', () => {
+		const { container } = renderPanel(PUBLISHED, {
+			environmentBytes: null,
+			sideAssetBytes: 150_000
+		})
+
+		// 2,202,009 + 150,000 bytes: 2.24 MiB.
+		expect(container.textContent).toContain('2.2 MB')
+		expect(container.textContent).not.toContain('2.1 MB')
 	})
 
 	it('opens onto the snippet rather than prompting a publish', () => {

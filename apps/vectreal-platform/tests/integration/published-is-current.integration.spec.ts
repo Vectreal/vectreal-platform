@@ -247,6 +247,33 @@ describe('whether the published file is current', () => {
 		expect(await isCurrent(sceneId)).toBe(true)
 	})
 
+	/*
+	  Read with the same stats, because the download size adds it to the
+	  published file: what an embed fetches beside the GLB under the saved
+	  settings. 1,024 bytes per file here (`makeAsset`).
+	*/
+	it('reports the bytes an embed fetches beside the model', async () => {
+		const { sceneId, model } = await publishedScene()
+		const bake = await makeAsset(PERSISTED_BAKE_FILENAME)
+		const thumbnail = await makeAsset(SCENE_THUMBNAIL_FILENAME)
+
+		await save(sceneId, [...model, bake, thumbnail], {
+			shadows: { baked: { assetId: bake } },
+			presentation: { showLoadingThumbnail: true }
+		} as Partial<SceneSettings>)
+		expect(
+			(await sceneSettingsService.getSceneStats(sceneId))?.sideAssetBytes
+		).toBe(2048)
+
+		await save(sceneId, [...model, bake, thumbnail], {
+			shadows: { baked: { assetId: bake } },
+			presentation: { showLoadingThumbnail: false }
+		} as Partial<SceneSettings>)
+		expect(
+			(await sceneSettingsService.getSceneStats(sceneId))?.sideAssetBytes
+		).toBe(1024)
+	})
+
 	it('cannot say for a scene that is not published', async () => {
 		const { sceneId } = await publishedScene()
 		await sceneSettingsService.revokeScenePublication({

@@ -17,7 +17,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useFetcher } from 'react-router'
 import { toast } from 'sonner'
 
-import { sceneDownloadBytes } from '../../lib/domain/scene/scene-environment-bytes'
+import {
+	NO_DOWNLOAD_EXTRAS,
+	sceneDownloadBytes,
+	type DownloadExtras
+} from '../../lib/domain/scene/scene-environment-bytes'
 
 import type { ScenePublishStateResponse } from '../../types/api'
 
@@ -33,11 +37,8 @@ type MutationEnvelope = {
 
 interface ScenePublishStateControlProps {
 	publishState: ScenePublishStateResponse
-	/**
-	 * What the scene's environment map adds to a visitor's download, when its
-	 * size is known.
-	 */
-	environmentMapBytes?: number | null
+	/** What a visitor downloads besides the model: environment map, side files. */
+	downloadExtras?: DownloadExtras
 	onPublish: () =>
 		Promise<ScenePublishStateResponse | void> | ScenePublishStateResponse | void
 	publishButtonText?: string
@@ -56,7 +57,7 @@ interface ScenePublishStateControlProps {
 
 export function ScenePublishStateControl({
 	publishState,
-	environmentMapBytes = null,
+	downloadExtras = NO_DOWNLOAD_EXTRAS,
 	onPublish,
 	publishButtonText = 'Publish Scene',
 	republishButtonText = 'Republish Scene',
@@ -130,11 +131,11 @@ export function ScenePublishStateControl({
 	const effectivePublishState = optimisticState ?? publishState
 
 	const isPublished = effectivePublishState.status === 'published'
-	// What a visitor downloads: the published model and its environment map.
 	const downloadBytes = sceneDownloadBytes(
 		effectivePublishState.publishedAssetSizeBytes,
-		environmentMapBytes
+		downloadExtras
 	)
+	const environmentMapBytes = downloadExtras.environmentBytes
 	const isPublishBusy = isRunningPublishAction || isPublishActionPending
 	const isMutationBusy = revokeFetcherState !== 'idle' || isPublishBusy
 	const canPublish = !isPublishActionDisabled && !isMutationBusy

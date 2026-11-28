@@ -31,7 +31,7 @@ import { optimizationRuntimeAtom } from '../../lib/stores/scene-optimization-sto
 import { PublisherLoaderData } from '../../types/api'
 import OptimizationDrawer from './optimization/optimization-drawer'
 import {
-	useEnvironmentMapBytes,
+	useDownloadExtras,
 	usePublishSizeProjection,
 	useSizeExcludesTextureEncoding
 } from './optimization/use-publish-size-projection'
@@ -100,7 +100,7 @@ const OverlayControls = ({
 	useSceneSizeInitializer()
 	usePublishSizeProjection()
 	const sizeExcludesTextureEncoding = useSizeExcludesTextureEncoding()
-	const environmentMapBytes = useEnvironmentMapBytes()
+	const downloadExtras = useDownloadExtras()
 
 	// Save location comes from the Jotai atom - initialized in publisher-layout
 	// and updated by the shell-level SceneNameAndLocation picker.
@@ -427,7 +427,7 @@ const OverlayControls = ({
 							<PublishCard
 								sceneBytes={sceneDownloadBytes(
 									currentSceneBytes,
-									environmentMapBytes
+									downloadExtras
 								)}
 								isSceneSizeLoading={isSceneSizeComputing}
 								sizeExcludesTextureEncoding={sizeExcludesTextureEncoding}

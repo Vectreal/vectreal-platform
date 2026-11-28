@@ -190,11 +190,14 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 			publishedAssetId: publishedMeta?.publishedAssetId ?? null,
 			publishedAssetSizeBytes: publishedMeta?.publishedAssetSizeBytes ?? null
 		},
-		// Null when the settings could not be read: the model alone is shown.
-		environmentMapBytes:
-			settingsData instanceof EmbedSettingsReadFailure || !settingsData
-				? null
-				: sceneEnvironmentBytes(settingsData.settings ?? {}),
+		downloadExtras: {
+			// Null when the settings could not be read: the map is left out.
+			environmentBytes:
+				settingsData instanceof EmbedSettingsReadFailure || !settingsData
+					? null
+					: sceneEnvironmentBytes(settingsData.settings ?? {}),
+			sideAssetBytes: stats?.sideAssetBytes ?? 0
+		},
 		folderPath,
 		sceneDetails,
 		textureUrls: buildTextureThumbnailUrls(sceneAssets, (assetId) =>
@@ -250,7 +253,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 		sceneDetails,
 		textureUrls,
 		publishState,
-		environmentMapBytes,
+		downloadExtras,
 		presentation,
 		shadowNotStored,
 		canDeleteScene,
@@ -504,7 +507,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 					sceneId={sceneState.id}
 					projectId={project.id}
 					publishState={publishState}
-					environmentMapBytes={environmentMapBytes}
+					downloadExtras={downloadExtras}
 					presentation={presentation}
 					canUpdateScene={canUpdateScene}
 					publisherPath={publisherPath}

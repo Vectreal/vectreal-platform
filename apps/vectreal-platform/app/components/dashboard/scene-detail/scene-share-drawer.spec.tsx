@@ -16,6 +16,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { NO_DOWNLOAD_EXTRAS } from '../../../lib/domain/scene/scene-environment-bytes'
 import { SceneShareDrawer } from './scene-share-drawer'
 
 import type { ScenePublishStateResponse } from '../../../types/api'
@@ -131,7 +132,7 @@ function open(
 			sceneId="scene-1"
 			projectId="project-1"
 			publishState={publishState}
-			environmentMapBytes={null}
+			downloadExtras={NO_DOWNLOAD_EXTRAS}
 			presentation={{ showLoadingThumbnail: true }}
 			canUpdateScene={canUpdateScene}
 			onPublish={onPublish}

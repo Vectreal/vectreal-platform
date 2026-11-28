@@ -27,6 +27,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
+import { NO_DOWNLOAD_EXTRAS } from '../../../lib/domain/scene/scene-environment-bytes'
 import { SceneAside } from './scene-aside'
 
 /*
@@ -138,7 +139,7 @@ function renderAside(sceneDetails: SceneDetailsSummary = details()) {
 	return render(
 		<SceneAside
 			details={sceneDetails}
-			environmentMapBytes={null}
+			downloadExtras={NO_DOWNLOAD_EXTRAS}
 			sceneId="scene-1"
 			projectId="project-1"
 			publishState={PUBLISH_STATE}

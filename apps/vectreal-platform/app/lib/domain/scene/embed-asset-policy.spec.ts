@@ -7,6 +7,7 @@ import {
 	extensionsUsedFromMetadata,
 	isEmbedServableAssetId,
 	selectEmbedServableAssets,
+	sideAssetBytes,
 	type EmbedAssetRow
 } from './embed-asset-policy'
 import { redactSettingsForEmbed } from './embed-settings-policy'
@@ -381,6 +382,39 @@ describe('the loading thumbnail', () => {
 				showsLoadingThumbnail: true
 			}).thumbnailAssetId
 		).toBeNull()
+	})
+})
+
+/**
+ * The download size counts what an embed fetches beside the GLB, from the
+ * same servable set the asset route answers by: a file the route refuses is
+ * not counted, and one it serves is.
+ */
+describe('the bytes an embed fetches beside the model', () => {
+	it('counts the bake and a shown thumbnail, never the working copy', () => {
+		const servable = selectEmbedServableAssets({
+			sceneId: SCENE_ID,
+			publishedAssetId: PUBLISHED_ASSET_ID,
+			sceneAssets: SCENE_ASSETS,
+			bakedShadowAssetId: BAKE_ASSET_ID,
+			showsLoadingThumbnail: true
+		})
+
+		expect(sideAssetBytes(servable, SCENE_ASSETS)).toBe(27530 + 4096)
+	})
+
+	it('leaves out a thumbnail the author has not chosen to show', () => {
+		expect(sideAssetBytes(servableWithBake(), SCENE_ASSETS)).toBe(27530)
+	})
+
+	it('is nothing for a scene with no bake, thumbnail or artwork served', () => {
+		const servable = selectEmbedServableAssets({
+			sceneId: SCENE_ID,
+			publishedAssetId: PUBLISHED_ASSET_ID,
+			sceneAssets: SCENE_ASSETS
+		})
+
+		expect(sideAssetBytes(servable, SCENE_ASSETS)).toBe(0)
 	})
 })
 
