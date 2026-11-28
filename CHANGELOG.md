@@ -1,5 +1,35 @@
 # Changelog
 
+## [3.6.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v3.5.0...workspace-v3.6.0) (2026-11-28)
+
+
+### Features
+
+* **core:** a saved camera carries its own visitor limits, resolved with the scene-wide fallback ([#1461](https://github.com/Vectreal/vectreal-platform/issues/1461)) ([b3b39fa](https://github.com/Vectreal/vectreal-platform/commit/b3b39fa7ba71c3d53f16b40455d6f0de905716c8))
+* **observability:** every exception says which deployment and build it came from ([#1459](https://github.com/Vectreal/vectreal-platform/issues/1459)) ([43b500b](https://github.com/Vectreal/vectreal-platform/commit/43b500b01ee6ab6544e8bcc1d7b6f33b9a635e30))
+* **publisher:** a new scene's first camera starts with the default visitor limits ([#1471](https://github.com/Vectreal/vectreal-platform/issues/1471)) ([685d11a](https://github.com/Vectreal/vectreal-platform/commit/685d11ab78232500ada92420ff3ec47bd509c4d7))
+* **publisher:** each camera sets how far visitors can move from its view ([#1468](https://github.com/Vectreal/vectreal-platform/issues/1468)) ([05c26cc](https://github.com/Vectreal/vectreal-platform/commit/05c26cc941286ebc9c0642f1a7cb4475b8b90c1e))
+* **publisher:** the camera detail offers to save a view once it leaves the camera ([#1457](https://github.com/Vectreal/vectreal-platform/issues/1457)) ([b11464f](https://github.com/Vectreal/vectreal-platform/commit/b11464f7b31c862501c76c1da719bd96d643c65d))
+* **viewer:** the camera in view holds a visitor to its own limits ([#1462](https://github.com/Vectreal/vectreal-platform/issues/1462)) ([d8058e5](https://github.com/Vectreal/vectreal-platform/commit/d8058e573af66bd17a749306aaf00d414464bba5))
+
+
+### Bug Fixes
+
+* **analytics:** email addresses never reach PostHog, the request log or error reports ([#1451](https://github.com/Vectreal/vectreal-platform/issues/1451)) ([9dd1b1e](https://github.com/Vectreal/vectreal-platform/commit/9dd1b1e60955f8e692531656a06e1b1abf855076))
+* **core:** take three from the host, so its objects are the host's three ([#1466](https://github.com/Vectreal/vectreal-platform/issues/1466)) ([bbf3fe6](https://github.com/Vectreal/vectreal-platform/commit/bbf3fe61f1b3d71bf5ab718d82214bdecb5c2631))
+* **publisher:** a saved scene reads as saved while its model loads ([#1469](https://github.com/Vectreal/vectreal-platform/issues/1469)) ([fea2c7d](https://github.com/Vectreal/vectreal-platform/commit/fea2c7d9ca935f5c211233fd79ed52bdf14a11c4))
+* **publisher:** exiting Preview puts the editor view back where it was ([#1456](https://github.com/Vectreal/vectreal-platform/issues/1456)) ([21b6d09](https://github.com/Vectreal/vectreal-platform/commit/21b6d09b6c95612783c0f762dd4428557b39b4a8))
+* **publisher:** renaming a camera keeps its id ([#1454](https://github.com/Vectreal/vectreal-platform/issues/1454)) ([768d431](https://github.com/Vectreal/vectreal-platform/commit/768d4310cc33268ad48b89df7a4232a3cd4fe542))
+* **publisher:** the editor viewport moves freely and only Preview applies the published interaction ([#1455](https://github.com/Vectreal/vectreal-platform/issues/1455)) ([6d1ba17](https://github.com/Vectreal/vectreal-platform/commit/6d1ba1776455369a9c7fdd9678992c21ed32e3ba))
+* **scene:** read the published size from the stored file, not its copy ([#1472](https://github.com/Vectreal/vectreal-platform/issues/1472)) ([ad4fdbb](https://github.com/Vectreal/vectreal-platform/commit/ad4fdbb215a08e88d1bc603ff03b8af6d6fd8249))
+* **scene:** the download size counts every file an embed fetches ([#1474](https://github.com/Vectreal/vectreal-platform/issues/1474)) ([35f062c](https://github.com/Vectreal/vectreal-platform/commit/35f062ca1e0ec30c2fea4608688b0f736282c876))
+* **ssr:** a HEAD request stops rendering at its shell, so its aborts never reach the error sink ([#1460](https://github.com/Vectreal/vectreal-platform/issues/1460)) ([62adb42](https://github.com/Vectreal/vectreal-platform/commit/62adb42e9e6bd8c0066c4e5549f99a5ea9c5cc45))
+* **viewer:** a camera with no pose of its own frames the model from level, never from below ([#1470](https://github.com/Vectreal/vectreal-platform/issues/1470)) ([62bb618](https://github.com/Vectreal/vectreal-platform/commit/62bb6181a12587630ac7809f98fc51c681ea0453))
+* **viewer:** a lens edit to the camera in view keeps the view where it is ([#1452](https://github.com/Vectreal/vectreal-platform/issues/1452)) ([1bcc0d0](https://github.com/Vectreal/vectreal-platform/commit/1bcc0d05bc2b82da0cec014fb0a935f75a973fdb))
+* **viewer:** a visitor's move never takes the camera inside the model ([#1467](https://github.com/Vectreal/vectreal-platform/issues/1467)) ([9f1727b](https://github.com/Vectreal/vectreal-platform/commit/9f1727b999b75f5d30923c4c94bce363ae6a1202))
+* **viewer:** require React 19, which the viewer's renderer already needs ([#1464](https://github.com/Vectreal/vectreal-platform/issues/1464)) ([2f74410](https://github.com/Vectreal/vectreal-platform/commit/2f7441066a6fb8874019faf7c8fd0d8fa00076e3))
+* **viewer:** take @react-three/fiber from the host, so children share its Canvas ([#1465](https://github.com/Vectreal/vectreal-platform/issues/1465)) ([29ce8f0](https://github.com/Vectreal/vectreal-platform/commit/29ce8f05094f0dadfff82509921ebbc06a46dc1a))
+
 ## [3.5.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v3.4.0...workspace-v3.5.0) (2026-11-27)
 
 
