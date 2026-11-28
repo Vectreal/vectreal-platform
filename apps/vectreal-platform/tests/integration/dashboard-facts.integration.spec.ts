@@ -71,6 +71,25 @@ describe('dashboard facts', () => {
 		await db.delete(schema.users).where(eq(schema.users.id, ownerId))
 	})
 
+	it('leaves out a scene that is not published, whatever its column says', async () => {
+		const sceneId = randomUUID()
+		await db
+			.insert(schema.scenes)
+			.values({ id: sceneId, projectId, folderId: null, name: 'revoked' })
+		await db.insert(schema.sceneStats).values({
+			sceneId,
+			createdBy: ownerId,
+			initialSceneBytes: 9_000_000,
+			currentSceneBytes: 1_000
+		})
+
+		const facts = await getDashboardFactsForUser(ownerId)
+
+		expect(facts.measuredSceneCount).toBe(0)
+		expect(facts.currentBytes).toBe(0)
+		expect(facts.biggestCut).toBeNull()
+	})
+
 	it('sums the published file, not the copied column', async () => {
 		const sceneId = randomUUID()
 		const assetId = randomUUID()
